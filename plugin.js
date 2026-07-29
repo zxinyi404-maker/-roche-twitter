@@ -67,7 +67,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '1.4.5',
+    version: '1.4.6',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -2376,7 +2376,7 @@ function renderUI(container, roche) {
         <div class="settings-section">
           <div class="setting-item">
             <div class="setting-label">版本</div>
-            <div class="setting-value">v1.4.4</div>
+            <div class="setting-value">v1.4.6</div>
           </div>
           <div class="setting-item" id="setting-about">
             <div class="setting-label">关于 Twitter 插件</div>
@@ -2555,13 +2555,15 @@ function bindEvents(container, roche) {
   document.getElementById('top-bar-menu').addEventListener('click', (e) => {
     e.stopPropagation();
     const dropdown = document.getElementById('top-bar-dropdown');
-    dropdown.classList.toggle('active');
+    if (dropdown) {
+      dropdown.classList.toggle('active');
+    }
   });
 
   // 点击页面其他地方关闭下拉菜单
   document.addEventListener('click', () => {
     const dropdown = document.getElementById('top-bar-dropdown');
-    if (dropdown.classList.contains('active')) {
+    if (dropdown && dropdown.classList.contains('active')) {
       dropdown.classList.remove('active');
     }
   });
@@ -2576,7 +2578,7 @@ function bindEvents(container, roche) {
     exitApp(container, roche);
     // 关闭下拉菜单
     const dropdown = document.getElementById('top-bar-dropdown');
-    if (dropdown.classList.contains('active')) {
+    if (dropdown && dropdown.classList.contains('active')) {
       dropdown.classList.remove('active');
     }
   });
@@ -2683,8 +2685,14 @@ function bindEvents(container, roche) {
 
   // 聊天页返回按钮
   document.getElementById('chat-back-btn').addEventListener('click', () => {
-    document.getElementById('chat-view').classList.remove('active');
-    document.getElementById('messages-list-view').classList.remove('hidden');
+    const chatView = document.getElementById('chat-view');
+    const messagesListView = document.getElementById('messages-list-view');
+    if (chatView) {
+      chatView.classList.remove('active');
+    }
+    if (messagesListView) {
+      messagesListView.classList.remove('hidden');
+    }
   });
 
   // 聊天输入
@@ -2720,23 +2728,41 @@ function openSidebar(roche) {
   if (!user) return;
 
   // 更新当前用户信息
-  document.getElementById('sidebar-user-avatar').src = user.avatar;
-  document.getElementById('sidebar-user-name').textContent = user.name;
-  document.getElementById('sidebar-user-username').textContent = user.username;
-  document.getElementById('sidebar-following').textContent = user.following || 0;
-  document.getElementById('sidebar-followers').textContent = user.followers || 0;
+  const sidebarAvatar = document.getElementById('sidebar-user-avatar');
+  const sidebarName = document.getElementById('sidebar-user-name');
+  const sidebarUsername = document.getElementById('sidebar-user-username');
+  const sidebarFollowing = document.getElementById('sidebar-following');
+  const sidebarFollowers = document.getElementById('sidebar-followers');
+
+  if (sidebarAvatar) sidebarAvatar.src = user.avatar;
+  if (sidebarName) sidebarName.textContent = user.name;
+  if (sidebarUsername) sidebarUsername.textContent = user.username;
+  if (sidebarFollowing) sidebarFollowing.textContent = user.following || 0;
+  if (sidebarFollowers) sidebarFollowers.textContent = user.followers || 0;
 
   // 显示侧边栏
-  document.getElementById('sidebar-overlay').classList.add('active');
-  document.getElementById('sidebar-drawer').classList.add('active');
+  const overlay = document.getElementById('sidebar-overlay');
+  const drawer = document.getElementById('sidebar-drawer');
+  if (overlay) {
+    overlay.classList.add('active');
+  }
+  if (drawer) {
+    drawer.classList.add('active');
+  }
 }
 
 /**
  * 关闭侧边栏
  */
 function closeSidebar() {
-  document.getElementById('sidebar-overlay').classList.remove('active');
-  document.getElementById('sidebar-drawer').classList.remove('active');
+  const overlay = document.getElementById('sidebar-overlay');
+  const drawer = document.getElementById('sidebar-drawer');
+  if (overlay) {
+    overlay.classList.remove('active');
+  }
+  if (drawer) {
+    drawer.classList.remove('active');
+  }
 }
 
 /**
@@ -3115,12 +3141,12 @@ function switchView(view) {
   // 隐藏所有视图
   if (timelineView) timelineView.style.display = 'none';
   if (timelineTabs) timelineTabs.style.display = 'none';
-  detailView.classList.remove('active');
-  searchView.classList.remove('active');
-  notificationsView.classList.remove('active');
-  messagesView.classList.remove('active');
-  profileView.classList.remove('active');
-  settingsView.classList.remove('active');
+  if (detailView) detailView.classList.remove('active');
+  if (searchView) searchView.classList.remove('active');
+  if (notificationsView) notificationsView.classList.remove('active');
+  if (messagesView) messagesView.classList.remove('active');
+  if (profileView) profileView.classList.remove('active');
+  if (settingsView) settingsView.classList.remove('active');
   if (privacySettingsView) privacySettingsView.classList.remove('active');
   if (switchAccountView) switchAccountView.classList.remove('active');
 
@@ -3128,43 +3154,44 @@ function switchView(view) {
     // 显示时间线
     if (timelineView) timelineView.style.display = 'block';
     if (timelineTabs) timelineTabs.style.display = 'flex';
-    topBar.style.display = 'flex';
+    if (topBar) topBar.style.display = 'flex';
 
     // 重置底部导航
     document.querySelectorAll('.bottom-nav-item').forEach(i => i.classList.remove('active'));
-    document.querySelector('[data-nav="home"]').classList.add('active');
+    const homeNav = document.querySelector('[data-nav="home"]');
+    if (homeNav) homeNav.classList.add('active');
   } else if (view === 'tweetDetail') {
     // 显示详情页
-    detailView.classList.add('active');
-    topBar.style.display = 'none';
+    if (detailView) detailView.classList.add('active');
+    if (topBar) topBar.style.display = 'none';
   } else if (view === 'search') {
     // 显示搜索页
-    searchView.classList.add('active');
-    topBar.style.display = 'flex';
+    if (searchView) searchView.classList.add('active');
+    if (topBar) topBar.style.display = 'flex';
   } else if (view === 'notifications') {
     // 显示通知页
-    notificationsView.classList.add('active');
-    topBar.style.display = 'flex';
+    if (notificationsView) notificationsView.classList.add('active');
+    if (topBar) topBar.style.display = 'flex';
   } else if (view === 'messages') {
     // 显示私信页
-    messagesView.classList.add('active');
-    topBar.style.display = 'flex';
+    if (messagesView) messagesView.classList.add('active');
+    if (topBar) topBar.style.display = 'flex';
   } else if (view === 'profile') {
     // 显示个人资料页
-    profileView.classList.add('active');
-    topBar.style.display = 'flex';
+    if (profileView) profileView.classList.add('active');
+    if (topBar) topBar.style.display = 'flex';
   } else if (view === 'settings') {
     // 显示设置页
-    settingsView.classList.add('active');
-    topBar.style.display = 'flex';
+    if (settingsView) settingsView.classList.add('active');
+    if (topBar) topBar.style.display = 'flex';
   } else if (view === 'privacySettings') {
     // 显示设置和隐私页
     if (privacySettingsView) privacySettingsView.classList.add('active');
-    topBar.style.display = 'flex';
+    if (topBar) topBar.style.display = 'flex';
   } else if (view === 'switchAccount') {
     // 显示切换账号页
     if (switchAccountView) switchAccountView.classList.add('active');
-    topBar.style.display = 'flex';
+    if (topBar) topBar.style.display = 'flex';
   }
 }
 
@@ -3315,53 +3342,78 @@ async function postReply(roche, tweetId, content) {
  * 退出应用
  */
 function exitApp(container, roche) {
-  console.log('[Twitter] exitApp 被调用');
-  console.log('[Twitter] container:', container);
-  console.log('[Twitter] roche:', roche);
+  console.log('[Twitter] 开始退出流程');
 
   try {
-    // 获取容器（如果没有传入，尝试查找）
-    const appContainer = container || document.getElementById('twitter-app')?.parentElement;
+    // 1. 先显示退出提示
+    showToast('正在退出...', 'success');
 
-    // 清空容器
-    if (appContainer) {
-      appContainer.replaceChildren();
+    // 2. 清空容器
+    if (container) {
+      container.innerHTML = '';
       console.log('[Twitter] 容器已清空');
     }
 
-    // 方式1: 如果是在 iframe 中，通知父窗口
-    if (window.parent !== window) {
-      window.parent.postMessage({ type: 'CLOSE_APP', app: 'twitter' }, '*');
-      console.log('[Twitter] 已发送关闭消息到父窗口');
+    // 3. 移除 Twitter DOM
+    const app = document.querySelector('#twitter-app');
+    if (app) {
+      app.remove();
+      console.log('[Twitter] Twitter DOM 已移除');
     }
 
-    // 方式2: 如果有 Roche 提供的关闭方法
-    if (roche?.ui?.close) {
-      roche.ui.close();
-      console.log('[Twitter] 已调用 roche.ui.close()');
+    // 4. 尝试多种返回方式
+
+    // 方式 A: 直接关闭当前插件窗口（最推荐）
+    if (window.close) {
+      console.log('[Twitter] 尝试 window.close()');
+      window.close();
     }
 
-    // 方式3: 尝试调用 unmount
-    if (roche?.app?.unmount) {
-      roche.app.unmount();
-      console.log('[Twitter] 已调用 roche.app.unmount()');
+    // 方式 B: 通知父窗口关闭
+    if (window.parent && window.parent !== window) {
+      console.log('[Twitter] 通知父窗口关闭');
+      window.parent.postMessage({
+        type: 'CLOSE_PLUGIN',
+        plugin: 'twitter'
+      }, '*');
     }
 
-    // 方式4: 使用 history API
-    if (window.history.length > 1) {
+    // 方式 C: 触发浏览器返回
+    setTimeout(() => {
+      console.log('[Twitter] 执行 history.back()');
       window.history.back();
-      console.log('[Twitter] 已调用 history.back()');
-    }
+    }, 100);
 
-    // 方式5: 触发返回事件
-    window.dispatchEvent(new PopStateEvent('popstate'));
-    console.log('[Twitter] 已触发 popstate 事件');
+    // 方式 D: 尝试触发 popstate
+    setTimeout(() => {
+      console.log('[Twitter] 触发 popstate 事件');
+      const event = new PopStateEvent('popstate', { state: null });
+      window.dispatchEvent(event);
+    }, 200);
 
-    showToast('已退出 Twitter', 'success');
+    // 方式 E: 如果什么都不行，至少显示返回提示
+    setTimeout(() => {
+      if (container) {
+        container.innerHTML = `
+          <div style="
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            text-align: center;
+            padding: 20px;
+          ">
+            <div style="font-size: 48px; margin-bottom: 20px;">✓</div>
+            <div style="font-size: 18px; color: #0f1419; margin-bottom: 10px;">已退出 Twitter</div>
+            <div style="font-size: 14px; color: #536471;">如果未自动返回，请手动返回主页</div>
+          </div>
+        `;
+      }
+    }, 500);
 
   } catch (error) {
     console.error('[Twitter] 退出失败:', error);
-    showToast('退出失败: ' + error.message, 'error');
   }
 }
 
@@ -3789,8 +3841,14 @@ function openChat(userId, roche) {
   }, 100);
 
   // 显示聊天界面
-  document.getElementById('messages-list-view').classList.add('hidden');
-  document.getElementById('chat-view').classList.add('active');
+  const messagesListView = document.getElementById('messages-list-view');
+  const chatView = document.getElementById('chat-view');
+  if (messagesListView) {
+    messagesListView.classList.add('hidden');
+  }
+  if (chatView) {
+    chatView.classList.add('active');
+  }
 }
 
 /**
@@ -3990,7 +4048,7 @@ function showSettings(roche) {
   });
 
   document.getElementById('setting-about').addEventListener('click', () => {
-    showToast('Twitter 插件 v1.4.4 - 修复退出功能', 'info');
+    showToast('Twitter 插件 v1.4.6 - 修复空值检查和退出功能', 'info');
   });
 
   // 切换到设置视图
