@@ -67,7 +67,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '1.4.4',
+    version: '1.4.5',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -2517,7 +2517,7 @@ function renderUI(container, roche) {
   initializeMessages();
 
   // 绑定事件
-  bindEvents(roche);
+  bindEvents(container, roche);
 
   // 更新当前用户显示
   updateCurrentUserDisplay();
@@ -2550,7 +2550,7 @@ function initializeMessages() {
 /**
  * 绑定事件处理 - 移动端
  */
-function bindEvents(roche) {
+function bindEvents(container, roche) {
   // 顶部菜单按钮
   document.getElementById('top-bar-menu').addEventListener('click', (e) => {
     e.stopPropagation();
