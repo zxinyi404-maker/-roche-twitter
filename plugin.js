@@ -2233,7 +2233,6 @@ function renderUI(container, roche) {
       <div class="timeline-content">
         <div class="tweets-list" id="tweets-list">
           <div class="empty-state">
-            <div class="empty-state-icon">🐦</div>
             <div>还没有推文</div>
             <div style="margin-top: 8px; font-size: 14px;">发布你的第一条推文吧！</div>
           </div>
