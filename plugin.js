@@ -3,6 +3,9 @@
  * 黑白配色，完整功能实现
  */
 
+(function() {
+  'use strict';
+
 const PLUGIN_ID = 'roche-twitter';
 const STORAGE_KEY = 'twitter_data';
 
@@ -967,3 +970,5 @@ function escapeHtml(text) {
   div.textContent = text;
   return div.innerHTML;
 }
+
+})(); // 立即执行函数结束
