@@ -17,6 +17,14 @@ let twitterData = {
   nextTweetId: 1
 };
 
+// 插件设置
+let settings = {
+  enableMemory: true,        // 启用记忆
+  autoSummary: true,         // 自动总结
+  memoryTarget: 'current',   // 保存到当前会话
+  notificationSound: true
+};
+
 // 当前登录用户
 let currentUser = null;
 
@@ -59,7 +67,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '1.3.2',
+    version: '1.4.0',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -68,6 +76,9 @@ function showToast(message, type = 'success') {
         try {
           // 加载数据
           await loadData(roche);
+
+          // 加载设置
+          await loadSettings(roche);
 
           // 初始化用户
           await initializeUsers(roche);
@@ -200,7 +211,8 @@ const icons = {
   settings: `<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M10.54 1.75h2.92l1.57 2.36c.11.17.32.25.53.21l2.53-.59 2.17 2.17-.58 2.54c-.05.2.04.41.21.53l2.36 1.57v2.92l-2.36 1.57c-.17.12-.26.33-.21.53l.58 2.54-2.17 2.17-2.53-.59c-.21-.04-.42.04-.53.21l-1.57 2.36h-2.92l-1.58-2.36c-.11-.17-.32-.25-.52-.21l-2.54.59-2.17-2.17.58-2.54c.05-.2-.03-.41-.21-.53l-2.35-1.57v-2.92L4.1 8.97c.18-.12.26-.33.21-.53L3.73 5.9 5.9 3.73l2.54.59c.2.04.41-.04.52-.21l1.58-2.36zm1.07 2l-.98 1.47C10.05 6.08 9 6.5 7.99 6.27l-1.46-.34-.6.6.33 1.46c.24 1.01-.18 2.07-1.05 2.64l-1.47.98v.78l1.47.98c.87.57 1.29 1.63 1.05 2.64l-.33 1.46.6.6 1.46-.34c1.01-.23 2.06.19 2.64 1.05l.98 1.47h.78l.97-1.47c.58-.86 1.63-1.28 2.65-1.05l1.45.34.61-.6-.34-1.46c-.23-1.01.18-2.07 1.05-2.64l1.47-.98v-.78l-1.47-.98c-.87-.57-1.28-1.63-1.05-2.64l.34-1.46-.61-.6-1.45.34c-1.02.23-2.07-.19-2.65-1.05l-.97-1.47h-.78zM12 10.5c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5c.82 0 1.5-.67 1.5-1.5s-.68-1.5-1.5-1.5zM8.5 12c0-1.93 1.56-3.5 3.5-3.5 1.93 0 3.5 1.57 3.5 3.5s-1.57 3.5-3.5 3.5c-1.94 0-3.5-1.57-3.5-3.5z"/></svg>`,
   calendar: `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M7 4V3h2v1h6V3h2v1h1.5C19.89 4 21 5.12 21 6.5v12c0 1.38-1.11 2.5-2.5 2.5h-13C4.12 21 3 19.88 3 18.5v-12C3 5.12 4.12 4 5.5 4H7zm0 2H5.5c-.27 0-.5.22-.5.5V8h14V6.5c0-.28-.22-.5-.5-.5H16v1h-2V6H10v1H8V6zm12 4H5v8.5c0 .28.22.5.5.5h13c.28 0 .5-.22.5-.5V10z"/></svg>`,
   verified: `<svg viewBox="0 0 24 24" width="18" height="18" fill="#1d9bf0"><path d="M8.52 3.59c.89-1.38 3.05-1.38 3.94 0l.53.82c.23.36.63.61 1.07.67l.96.13c1.61.22 2.39 2.15 1.44 3.53l-.57.82c-.25.36-.31.81-.17 1.23l.31.92c.52 1.54-.78 3.04-2.39 2.75l-.95-.17c-.43-.08-.88.04-1.21.31l-.74.6c-1.24 1.01-3.05.41-3.31-1.1l-.16-.96c-.07-.43-.33-.8-.7-1l-.81-.43c-1.37-.73-1.63-2.59-.48-3.73l.69-.68c.3-.3.45-.73.39-1.15l-.13-.96c-.22-1.61 1.12-2.96 2.73-2.5l.96.27c.43.12.89.05 1.24-.19l.76-.53zm2.63 1.3c-.3-.46-1.02-.46-1.32 0l-.53.82c-.47.72-1.23 1.23-2.08 1.35l-.96.13c-.54.07-.8.72-.48 1.18l.57.82c.4.58.51 1.3.29 1.97l-.31.92c-.17.52.26 1.02.8.92l.95-.17c.68-.12 1.38.07 1.93.49l.74.6c.42.34 1.02.14 1.11-.37l.16-.96c.12-.68.53-1.28 1.12-1.6l.81-.43c.46-.24.55-.87.16-1.25l-.69-.68c-.48-.48-.72-1.17-.62-1.83l.13-.96c.07-.54-.37-.99-.91-.84l-.96.27c-.68.19-1.42.08-2-.37l-.76-.53zm-.11 6.44l-2.83-2.83-1.41 1.41 4.24 4.25 5.66-5.66-1.42-1.41-4.24 4.24z"/></svg>`,
-  follow: `<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M17.863 13.44c1.477 1.58 2.366 3.8 2.632 6.46l.11 1.1H3.395l.11-1.1c.266-2.66 1.155-4.88 2.632-6.46C7.627 11.85 9.648 11 12 11s4.373.85 5.863 2.44zM12 2C9.791 2 8 3.79 8 6s1.791 4 4 4 4-1.79 4-4-1.791-4-4-4z"/></svg>`
+  follow: `<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M17.863 13.44c1.477 1.58 2.366 3.8 2.632 6.46l.11 1.1H3.395l.11-1.1c.266-2.66 1.155-4.88 2.632-6.46C7.627 11.85 9.648 11 12 11s4.373.85 5.863 2.44zM12 2C9.791 2 8 3.79 8 6s1.791 4 4 4 4-1.79 4-4-1.791-4-4-4z"/></svg>`,
+  memory: `<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M3 3h8v8H3V3zm10 0h8v8h-8V3zM3 13h8v8H3v-8zm10 0h8v8h-8v-8z"/></svg>`
 };
 
 /**
@@ -1933,6 +1945,115 @@ function renderUI(container, roche) {
         width: 100%;
       }
 
+      /* 设置页 */
+      .settings-section {
+        border-top: 1px solid #eff3f4;
+        border-bottom: 1px solid #eff3f4;
+      }
+
+      .setting-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px;
+        cursor: pointer;
+        transition: background 0.2s;
+        border-bottom: 1px solid #eff3f4;
+      }
+
+      .setting-item:last-child {
+        border-bottom: none;
+      }
+
+      .setting-item:hover {
+        background: rgba(0, 0, 0, 0.03);
+      }
+
+      .setting-item:active {
+        background: rgba(0, 0, 0, 0.06);
+      }
+
+      .setting-info {
+        flex: 1;
+      }
+
+      .setting-label {
+        font-size: 15px;
+        font-weight: 400;
+        color: #0f1419;
+      }
+
+      .setting-description {
+        font-size: 13px;
+        color: #536471;
+        margin-top: 2px;
+      }
+
+      .setting-value {
+        font-size: 15px;
+        color: #536471;
+      }
+
+      .setting-arrow {
+        font-size: 24px;
+        color: #536471;
+        margin-left: 12px;
+      }
+
+      .setting-toggle {
+        cursor: default;
+      }
+
+      .setting-toggle:hover {
+        background: transparent;
+      }
+
+      .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 50px;
+        height: 28px;
+        cursor: pointer;
+      }
+
+      .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+
+      .toggle-slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #cfd9de;
+        transition: 0.3s;
+        border-radius: 28px;
+      }
+
+      .toggle-slider:before {
+        position: absolute;
+        content: "";
+        height: 22px;
+        width: 22px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        transition: 0.3s;
+        border-radius: 50%;
+      }
+
+      input:checked + .toggle-slider {
+        background-color: #1d9bf0;
+      }
+
+      input:checked + .toggle-slider:before {
+        transform: translateX(22px);
+      }
+
       /* 响应式 */
       @media (max-width: 768px) {
         #twitter-app {
@@ -2186,6 +2307,79 @@ function renderUI(container, roche) {
       </div>
     </div>
 
+    <!-- 设置页 -->
+    <div class="page-view" id="settings-view">
+      <div class="profile-header">
+        <div class="profile-back-btn" id="settings-back-btn">${icons.back}</div>
+        <div class="profile-header-info">
+          <div class="profile-header-name">设置</div>
+        </div>
+      </div>
+      <div class="profile-content">
+        <h2 class="section-title">账号设置</h2>
+        <div class="settings-section">
+          <div class="setting-item" id="setting-edit-profile">
+            <div class="setting-label">编辑个人资料</div>
+            <div class="setting-arrow">›</div>
+          </div>
+          <div class="setting-item" id="setting-privacy">
+            <div class="setting-label">隐私和安全</div>
+            <div class="setting-arrow">›</div>
+          </div>
+          <div class="setting-item" id="setting-notifications">
+            <div class="setting-label">通知</div>
+            <div class="setting-arrow">›</div>
+          </div>
+        </div>
+
+        <h2 class="section-title" style="margin-top: 20px;">
+          ${icons.memory} 记忆设置
+        </h2>
+        <div class="settings-section">
+          <div class="setting-item setting-toggle">
+            <div class="setting-info">
+              <div class="setting-label">启用推文记忆</div>
+              <div class="setting-description">自动保存推文到记忆系统</div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggle-memory" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="setting-item setting-toggle">
+            <div class="setting-info">
+              <div class="setting-label">自动总结对话</div>
+              <div class="setting-description">使用 AI 自动总结推文对话</div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggle-summary" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="setting-item">
+            <div class="setting-label">记忆保存到</div>
+            <div class="setting-value" id="memory-target-value">当前会话</div>
+          </div>
+          <div class="setting-item" id="setting-clear-memory">
+            <div class="setting-label" style="color: #f4212e;">清除所有记忆</div>
+            <div class="setting-arrow">›</div>
+          </div>
+        </div>
+
+        <h2 class="section-title" style="margin-top: 20px;">关于</h2>
+        <div class="settings-section">
+          <div class="setting-item">
+            <div class="setting-label">版本</div>
+            <div class="setting-value">v1.4.0</div>
+          </div>
+          <div class="setting-item" id="setting-about">
+            <div class="setting-label">关于 Twitter 插件</div>
+            <div class="setting-arrow">›</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- 个人资料页 -->
     <div class="page-view" id="profile-view">
       <div class="profile-header">
@@ -2290,7 +2484,7 @@ function bindEvents(roche) {
 
   // 下拉菜单 - 设置
   document.getElementById('dropdown-settings').addEventListener('click', () => {
-    showToast('设置功能开发中...', 'info');
+    showSettings(roche);
   });
 
   // 下拉菜单 - 退出
@@ -2685,6 +2879,9 @@ async function postTweet(roche, content) {
   twitterData.tweets.unshift(tweet);
   await saveData(roche);
 
+  // 保存到记忆系统
+  await saveTweetToMemory(tweet, roche);
+
   renderTweets(roche);
 
   showToast('推文已发布！', 'success');
@@ -2845,6 +3042,7 @@ function switchView(view) {
   const notificationsView = document.getElementById('notifications-view');
   const messagesView = document.getElementById('messages-view');
   const profileView = document.getElementById('profile-view');
+  const settingsView = document.getElementById('settings-view');
   const topBar = document.querySelector('.mobile-top-bar');
 
   // 隐藏所有视图
@@ -2855,6 +3053,7 @@ function switchView(view) {
   notificationsView.classList.remove('active');
   messagesView.classList.remove('active');
   profileView.classList.remove('active');
+  settingsView.classList.remove('active');
 
   if (view === 'timeline') {
     // 显示时间线
@@ -2884,6 +3083,10 @@ function switchView(view) {
   } else if (view === 'profile') {
     // 显示个人资料页
     profileView.classList.add('active');
+    topBar.style.display = 'flex';
+  } else if (view === 'settings') {
+    // 显示设置页
+    settingsView.classList.add('active');
     topBar.style.display = 'flex';
   }
 }
@@ -3019,6 +3222,12 @@ async function postReply(roche, tweetId, content) {
   tweet.replies.push(reply);
 
   await saveData(roche);
+
+  // 如果有多个回复，触发自动总结
+  if (tweet.replies.length >= 2) {
+    await summarizeConversation(tweet, tweet.replies, roche);
+  }
+
   showToast('回复已发布！', 'success');
 
   // 刷新详情页
@@ -3364,7 +3573,7 @@ function renderMessages(roche) {
 
   // 生成一些示例对话
   if (Object.keys(twitterData.conversations).length === 0) {
-    const users = Object.values(twitterData.users).filter(u => u.id !== currentUser && u.isCharacter);
+    const users = Object.values(twitterData.users).filter(u => u.id !== currentUser && u.isPersona);
 
     users.slice(0, 3).forEach(user => {
       twitterData.conversations[user.id] = {
@@ -3612,6 +3821,195 @@ function showProfile(userId, roche) {
 
   // 切换到个人资料视图
   switchView('profile');
+}
+
+/**
+ * 显示设置页面
+ */
+function showSettings(roche) {
+  // 绑定设置页返回按钮
+  const backBtn = document.getElementById('settings-back-btn');
+  backBtn.replaceWith(backBtn.cloneNode(true)); // 移除旧事件
+  document.getElementById('settings-back-btn').addEventListener('click', () => {
+    switchView('timeline');
+  });
+
+  // 加载当前设置
+  document.getElementById('toggle-memory').checked = settings.enableMemory;
+  document.getElementById('toggle-summary').checked = settings.autoSummary;
+
+  // 绑定开关事件
+  document.getElementById('toggle-memory').addEventListener('change', async (e) => {
+    settings.enableMemory = e.target.checked;
+    await saveSettings(roche);
+    showToast(settings.enableMemory ? '已启用推文记忆' : '已禁用推文记忆', 'success');
+  });
+
+  document.getElementById('toggle-summary').addEventListener('change', async (e) => {
+    settings.autoSummary = e.target.checked;
+    await saveSettings(roche);
+    showToast(settings.autoSummary ? '已启用自动总结' : '已禁用自动总结', 'success');
+  });
+
+  // 绑定设置项点击
+  document.getElementById('setting-edit-profile').addEventListener('click', () => {
+    showToast('编辑个人资料功能开发中...', 'info');
+  });
+
+  document.getElementById('setting-privacy').addEventListener('click', () => {
+    showToast('隐私和安全功能开发中...', 'info');
+  });
+
+  document.getElementById('setting-notifications').addEventListener('click', () => {
+    showToast('通知设置功能开发中...', 'info');
+  });
+
+  document.getElementById('setting-clear-memory').addEventListener('click', async () => {
+    if (confirm('确定要清除所有记忆吗？此操作无法撤销。')) {
+      await clearAllMemories(roche);
+      showToast('已清除所有记忆', 'success');
+    }
+  });
+
+  document.getElementById('setting-about').addEventListener('click', () => {
+    showToast('Twitter 插件 v1.4.0 - 集成记忆系统', 'info');
+  });
+
+  // 切换到设置视图
+  switchView('settings');
+}
+
+/**
+ * 保存设置到存储
+ */
+async function saveSettings(roche) {
+  await roche.storage.set('twitter_settings', JSON.stringify(settings));
+}
+
+/**
+ * 加载设置
+ */
+async function loadSettings(roche) {
+  const stored = await roche.storage.get('twitter_settings');
+  if (stored) {
+    settings = { ...settings, ...JSON.parse(stored) };
+  }
+}
+
+/**
+ * 保存推文到记忆系统
+ */
+async function saveTweetToMemory(tweet, roche) {
+  if (!settings.enableMemory) return;
+
+  try {
+    const user = twitterData.users[tweet.userId];
+    const content = `推文 by ${user.name} (@${user.username}): ${tweet.content}`;
+
+    // 保存到当前 Persona 的会话记忆
+    const conversationId = currentUser;
+
+    // 使用 roche.memory.addFact 保存
+    if (roche.memory && roche.memory.addFact) {
+      await roche.memory.addFact({
+        conversationId: conversationId,
+        content: content,
+        tags: ['twitter', 'tweet', 'post'],
+        metadata: {
+          tweetId: tweet.id,
+          userId: tweet.userId,
+          timestamp: tweet.timestamp
+        }
+      });
+    }
+  } catch (error) {
+    console.error('保存推文到记忆失败:', error);
+  }
+}
+
+/**
+ * 自动总结对话（推文线程）
+ */
+async function summarizeConversation(tweet, replies, roche) {
+  if (!settings.autoSummary) return;
+
+  try {
+    // 构建对话内容
+    const user = twitterData.users[tweet.userId];
+    let conversationText = `原推文 by ${user.name}: ${tweet.content}\n\n回复:\n`;
+
+    replies.forEach(reply => {
+      const replyUser = twitterData.users[reply.userId];
+      conversationText += `- ${replyUser.name}: ${reply.content}\n`;
+    });
+
+    // 使用 AI 总结（如果有足够的回复）
+    if (replies.length >= 2 && roche.ai && roche.ai.chat) {
+      const response = await roche.ai.chat({
+        messages: [
+          { role: 'user', content: `请简要总结这个推文对话（50字以内）:\n${conversationText}` }
+        ]
+      });
+
+      const summary = response.content || '对话总结';
+
+      // 保存总结到记忆
+      if (roche.memory && roche.memory.addFact) {
+        await roche.memory.addFact({
+          conversationId: currentUser,
+          content: `对话总结: ${summary}`,
+          tags: ['twitter', 'summary', 'conversation'],
+          metadata: {
+            tweetId: tweet.id,
+            replyCount: replies.length,
+            timestamp: Date.now()
+          }
+        });
+      }
+    }
+  } catch (error) {
+    console.error('自动总结失败:', error);
+  }
+}
+
+/**
+ * 从记忆中加载历史推文
+ */
+async function loadTwitterMemories(roche) {
+  if (!settings.enableMemory) return [];
+
+  try {
+    if (roche.memory && roche.memory.getLongTerm) {
+      const result = await roche.memory.getLongTerm({
+        conversationId: currentUser,
+        tags: ['twitter'],
+        limit: 50
+      });
+
+      return result.facts || [];
+    }
+  } catch (error) {
+    console.error('加载记忆失败:', error);
+  }
+
+  return [];
+}
+
+/**
+ * 清除所有记忆
+ */
+async function clearAllMemories(roche) {
+  try {
+    // 如果 Roche 提供了清除记忆的 API
+    if (roche.memory && roche.memory.clear) {
+      await roche.memory.clear({
+        conversationId: currentUser,
+        tags: ['twitter']
+      });
+    }
+  } catch (error) {
+    console.error('清除记忆失败:', error);
+  }
 }
 
 })(); // 立即执行函数结束
