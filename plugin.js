@@ -26,7 +26,7 @@ let currentUser = null;
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '1.0.5',
+    version: '1.0.6',
     apps: [{
       id: 'twitter-home',
       name: 'Twitter',
