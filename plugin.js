@@ -1120,28 +1120,39 @@ function renderUI(container, roche) {
       .detail-follow-btn {
         padding: 6px 16px;
         border-radius: 20px;
-        border: 1px solid #536471;
-        background: transparent;
-        color: #0f1419;
+        border: none;
+        background: #0f1419;
+        color: #ffffff;
         font-weight: 700;
         font-size: 14px;
         cursor: pointer;
         transition: all 0.2s;
+        min-width: 80px;
       }
 
       .detail-follow-btn:hover {
-        background: rgba(0, 0, 0, 0.05);
+        background: #272c30;
       }
 
       .detail-follow-btn.following {
-        background: #0f1419;
-        color: #ffffff;
-        border-color: #0f1419;
+        background: transparent;
+        color: #0f1419;
+        border: 1px solid #cfd9de;
       }
 
       .detail-follow-btn.following:hover {
-        background: #272c30;
-        border-color: #272c30;
+        background: rgba(244, 33, 46, 0.1);
+        border-color: rgba(244, 33, 46, 0.4);
+        color: #f4212e;
+      }
+
+      .detail-follow-btn.following:hover::after {
+        content: '取消关注';
+        position: absolute;
+      }
+
+      .detail-follow-btn.following:hover span {
+        display: none;
       }
 
       .detail-translate-link {
@@ -3383,13 +3394,12 @@ async function renderTweets(roche, filter = 'recommended') {
       const tweetId = el.dataset.tweetId;
       const isNews = el.dataset.isNews === 'true';
 
-      // 新闻推文暂不支持详情页（因为 ID 是字符串）
       if (isNews) {
-        showToast('新闻推文详情功能开发中...', 'info');
-        return;
+        // 新闻推文也支持详情页
+        showNewsTweetDetail(tweetId, roche);
+      } else {
+        showTweetDetail(parseInt(tweetId), roche);
       }
-
-      showTweetDetail(parseInt(tweetId), roche);
     });
   });
 
@@ -3549,19 +3559,24 @@ function showTweetDetail(tweetId, roche) {
           </div>
           ${!isSelf ? `
             <button class="detail-follow-btn ${isFollowing ? 'following' : ''}" id="detail-follow-btn">
-              ${isFollowing ? '正在关注' : '关注'}
+              <span>${isFollowing ? '正在关注' : '关注'}</span>
             </button>
           ` : ''}
         </div>
-        <div class="detail-translate-link">
+        <div class="detail-translate-link" id="translate-link">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="#1d9bf0"><path d="M12.87 2.27c-.5-.5-1.29-.5-1.79 0l-6.36 6.37c-.5.5-.5 1.29 0 1.79l1.41 1.41c.5.5 1.29.5 1.79 0L10 9.77V18c0 .55.45 1 1 1s1-.45 1-1V9.77l2.09 2.09c.5.5 1.29.5 1.79 0l1.41-1.41c.5-.5.5-1.29 0-1.79l-6.36-6.37z"></path></svg>
           <span style="color: #1d9bf0; font-size: 15px;">显示翻译</span>
         </div>
       </div>
 
       <!-- 推文内容 -->
-      <div class="detail-tweet-content">
+      <div class="detail-tweet-content" id="detail-tweet-content">
         ${escapeHtml(tweet.content)}
+      </div>
+
+      <!-- 翻译内容（隐藏） -->
+      <div class="detail-tweet-translation" id="detail-tweet-translation" style="display: none; padding: 16px; background: #f7f9f9; border-radius: 12px; margin-top: 12px; color: #536471; font-size: 15px;">
+        正在翻译...
       </div>
 
       <!-- 时间和查看数 -->
@@ -3622,6 +3637,41 @@ function showTweetDetail(tweetId, roche) {
 
   // 更新回复输入框头像
   document.getElementById('detail-reply-avatar').src = currentUserData.avatar;
+
+  // 绑定翻译按钮
+  const translateLink = document.getElementById('translate-link');
+  const translationDiv = document.getElementById('detail-tweet-translation');
+  const contentDiv = document.getElementById('detail-tweet-content');
+  let isTranslated = false;
+
+  if (translateLink) {
+    translateLink.addEventListener('click', async () => {
+      if (isTranslated) {
+        // 隐藏翻译
+        translationDiv.style.display = 'none';
+        translateLink.querySelector('span').textContent = '显示翻译';
+        isTranslated = false;
+      } else {
+        // 显示翻译
+        translationDiv.style.display = 'block';
+        translateLink.querySelector('span').textContent = '显示原文';
+        isTranslated = true;
+
+        // 使用 AI 翻译
+        try {
+          translationDiv.textContent = '正在翻译...';
+          const originalText = tweet.content;
+          const response = await roche.ai.chat([
+            { role: 'user', content: `请将以下内容翻译成英文，只返回翻译结果，不要任何解释：\n\n${originalText}` }
+          ]);
+          translationDiv.textContent = response.content;
+        } catch (error) {
+          console.error('[Twitter] Translation failed:', error);
+          translationDiv.textContent = '翻译失败，请稍后重试';
+        }
+      }
+    });
+  }
 
   // 绑定关注按钮
   if (!isSelf) {
@@ -3740,6 +3790,178 @@ async function postReply(roche, tweetId, content) {
 
   // 刷新详情页
   showTweetDetail(tweetId, roche);
+}
+
+/**
+ * 显示新闻推文详情页
+ */
+function showNewsTweetDetail(newsId, roche) {
+  console.log('[Twitter] showNewsTweetDetail called, newsId:', newsId);
+
+  // 从搜索结果中找新闻推文
+  const tweetItem = document.querySelector(`[data-tweet-id="${newsId}"]`);
+  if (!tweetItem) {
+    console.error('[Twitter] News tweet not found:', newsId);
+    showToast('推文不存在', 'error');
+    return;
+  }
+
+  const newsData = JSON.parse(tweetItem.dataset.searchResult || '{}');
+  console.log('[Twitter] Found news:', newsData);
+
+  currentTweetId = newsId;
+  const user = twitterData.users['news_bot']; // 新闻机器人
+  const currentUserData = twitterData.users[currentUser];
+
+  // 格式化时间
+  const date = new Date();
+  const hours = date.getHours();
+  const minutes = date.getMinutes();
+  const ampm = hours >= 12 ? '下午' : '上午';
+  const displayHours = hours % 12 || 12;
+  const year = date.getFullYear() % 100;
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  const formattedDateTime = `${year}年${month}月${day}日, ${displayHours}:${minutes.toString().padStart(2, '0')} ${ampm}`;
+
+  // 模拟查看数
+  const viewCount = Math.floor(Math.random() * 500) + 100;
+
+  // 渲染详情内容
+  const detailMain = document.getElementById('detail-main');
+  detailMain.innerHTML = `
+    <div class="detail-tweet">
+      <!-- 用户信息区 -->
+      <div class="detail-user-section">
+        <div class="detail-user-header">
+          <img class="detail-tweet-avatar" src="${user.avatar}" alt="">
+          <div class="detail-user-info">
+            <div class="detail-tweet-name">${user.name}</div>
+            <div class="detail-tweet-username">${user.username}</div>
+          </div>
+        </div>
+        <div class="detail-translate-link" id="translate-link">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#1d9bf0"><path d="M12.87 2.27c-.5-.5-1.29-.5-1.79 0l-6.36 6.37c-.5.5-.5 1.29 0 1.79l1.41 1.41c.5.5 1.29.5 1.79 0L10 9.77V18c0 .55.45 1 1 1s1-.45 1-1V9.77l2.09 2.09c.5.5 1.29.5 1.79 0l1.41-1.41c.5-.5.5-1.29 0-1.79l-6.36-6.37z"></path></svg>
+          <span style="color: #1d9bf0; font-size: 15px;">显示翻译</span>
+        </div>
+      </div>
+
+      <!-- 推文内容 -->
+      <div class="detail-tweet-content" id="detail-tweet-content">
+        ${escapeHtml(newsData.snippet || newsData.title || '')}
+      </div>
+
+      <!-- 翻译内容（隐藏） -->
+      <div class="detail-tweet-translation" id="detail-tweet-translation" style="display: none; padding: 16px; background: #f7f9f9; border-radius: 12px; margin-top: 12px; color: #536471; font-size: 15px;">
+        正在翻译...
+      </div>
+
+      <!-- 时间和查看数 -->
+      <div class="detail-tweet-time">
+        <span style="color: #536471;">${formattedDateTime}</span>
+        <span style="color: #536471; margin: 0 4px;">·</span>
+        <span style="font-weight: 700; color: #0f1419;">${viewCount}</span>
+        <span style="color: #536471;"> 查看</span>
+      </div>
+
+      <!-- 只显示喜欢数 -->
+      <div class="detail-tweet-likes">
+        <span style="font-weight: 700; color: #0f1419;">0</span>
+        <span style="color: #536471; margin-left: 4px;">喜欢</span>
+      </div>
+
+      <!-- 操作按钮 -->
+      <div class="detail-action-bar">
+        <div class="detail-action-icon" data-action="reply">
+          ${icons.comment}
+        </div>
+        <div class="detail-action-icon" data-action="retweet">
+          ${icons.retweet}
+        </div>
+        <div class="detail-action-icon" data-action="like">
+          ${icons.like}
+        </div>
+        <div class="detail-action-icon" data-action="bookmark">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M4 4.5C4 3.12 5.119 2 6.5 2h11C18.881 2 20 3.12 20 4.5v18.44l-8-5.71-8 5.71V4.5z"></path></svg>
+        </div>
+        <div class="detail-action-icon" data-action="share">
+          ${icons.share}
+        </div>
+      </div>
+
+      <!-- 回复排序 -->
+      <div class="detail-replies-header">
+        <span style="font-weight: 700; font-size: 15px;">最相关的回复</span>
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="#536471"><path d="M3.543 8.96l1.414-1.42L12 14.59l7.043-7.05 1.414 1.42L12 17.41 3.543 8.96z"></path></svg>
+      </div>
+
+      <!-- 发现更多 -->
+      <div class="detail-discover-more">
+        <div style="font-weight: 700; font-size: 20px; color: #0f1419;">发现更多</div>
+      </div>
+
+      <!-- 来源标签 -->
+      <div class="detail-source-label">
+        <span style="color: #536471; font-size: 13px;">源自于整个 X</span>
+      </div>
+
+      <!-- 回复列表 -->
+      <div class="detail-replies" id="detail-replies">
+        <div style="padding: 40px 20px; text-align: center; color: #536471;">暂无回复</div>
+      </div>
+    </div>
+  `;
+
+  // 更新回复输入框头像
+  document.getElementById('detail-reply-avatar').src = currentUserData.avatar;
+
+  // 绑定翻译按钮
+  const translateLink = document.getElementById('translate-link');
+  const translationDiv = document.getElementById('detail-tweet-translation');
+  const contentDiv = document.getElementById('detail-tweet-content');
+  let isTranslated = false;
+
+  if (translateLink) {
+    translateLink.addEventListener('click', async () => {
+      if (isTranslated) {
+        // 隐藏翻译
+        translationDiv.style.display = 'none';
+        translateLink.querySelector('span').textContent = '显示翻译';
+        isTranslated = false;
+      } else {
+        // 显示翻译
+        translationDiv.style.display = 'block';
+        translateLink.querySelector('span').textContent = '显示原文';
+        isTranslated = true;
+
+        // 使用 AI 翻译
+        try {
+          translationDiv.textContent = '正在翻译...';
+          const originalText = newsData.snippet || newsData.title || '';
+          const response = await roche.ai.chat([
+            { role: 'user', content: `请将以下内容翻译成中文，只返回翻译结果，不要任何解释：\n\n${originalText}` }
+          ]);
+          translationDiv.textContent = response.content;
+        } catch (error) {
+          console.error('[Twitter] Translation failed:', error);
+          translationDiv.textContent = '翻译失败，请稍后重试';
+        }
+      }
+    });
+  }
+
+  // 绑定详情页操作按钮
+  detailMain.querySelectorAll('.detail-action-icon').forEach(el => {
+    el.addEventListener('click', (e) => {
+      const action = el.dataset.action;
+      if (action === 'reply' || action === 'retweet' || action === 'like' || action === 'bookmark' || action === 'share') {
+        showToast(`${action === 'reply' ? '回复' : action === 'retweet' ? '转发' : action === 'like' ? '点赞' : action === 'bookmark' ? '书签' : '分享'}功能开发中...`, 'info');
+      }
+    });
+  });
+
+  // 切换到详情视图
+  switchView('tweetDetail');
 }
 
 /**
