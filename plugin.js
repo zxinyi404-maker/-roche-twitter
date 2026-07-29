@@ -4052,45 +4052,75 @@ function showSettings(roche) {
 function showPrivacySettings(roche) {
   // 绑定返回按钮
   const backBtn = document.getElementById('privacy-settings-back-btn');
-  backBtn.replaceWith(backBtn.cloneNode(true)); // 移除旧事件
-  document.getElementById('privacy-settings-back-btn').addEventListener('click', () => {
-    switchView('settings');
-  });
+  if (backBtn) {
+    backBtn.replaceWith(backBtn.cloneNode(true)); // 移除旧事件
+    document.getElementById('privacy-settings-back-btn').addEventListener('click', () => {
+      switchView('settings');
+    });
+  }
 
   // 绑定账号信息
-  document.getElementById('setting-account-info').addEventListener('click', () => {
-    showToast('账号信息功能开发中...', 'info');
-  });
+  const accountInfo = document.getElementById('setting-account-info');
+  if (accountInfo) {
+    accountInfo.replaceWith(accountInfo.cloneNode(true));
+    document.getElementById('setting-account-info').addEventListener('click', () => {
+      showToast('账号信息功能开发中...', 'info');
+    });
+  }
 
   // 绑定切换账号
-  document.getElementById('setting-switch-account').addEventListener('click', () => {
-    showSwitchAccount(roche);
-  });
+  const switchAccount = document.getElementById('setting-switch-account');
+  if (switchAccount) {
+    switchAccount.replaceWith(switchAccount.cloneNode(true));
+    document.getElementById('setting-switch-account').addEventListener('click', () => {
+      showSwitchAccount(roche);
+    });
+  }
 
   // 绑定停用账号
-  document.getElementById('setting-deactivate-account').addEventListener('click', () => {
-    showToast('停用账号功能开发中...', 'info');
-  });
+  const deactivateAccount = document.getElementById('setting-deactivate-account');
+  if (deactivateAccount) {
+    deactivateAccount.replaceWith(deactivateAccount.cloneNode(true));
+    document.getElementById('setting-deactivate-account').addEventListener('click', () => {
+      showToast('停用账号功能开发中...', 'info');
+    });
+  }
 
   // 绑定广告偏好
-  document.getElementById('setting-ad-preferences').addEventListener('click', () => {
-    showToast('广告偏好设置功能开发中...', 'info');
-  });
+  const adPreferences = document.getElementById('setting-ad-preferences');
+  if (adPreferences) {
+    adPreferences.replaceWith(adPreferences.cloneNode(true));
+    document.getElementById('setting-ad-preferences').addEventListener('click', () => {
+      showToast('广告偏好设置功能开发中...', 'info');
+    });
+  }
 
   // 绑定数据共享
-  document.getElementById('setting-data-sharing').addEventListener('click', () => {
-    showToast('数据共享功能开发中...', 'info');
-  });
+  const dataSharing = document.getElementById('setting-data-sharing');
+  if (dataSharing) {
+    dataSharing.replaceWith(dataSharing.cloneNode(true));
+    document.getElementById('setting-data-sharing').addEventListener('click', () => {
+      showToast('数据共享功能开发中...', 'info');
+    });
+  }
 
   // 绑定安全性
-  document.getElementById('setting-security').addEventListener('click', () => {
-    showToast('安全性功能开发中...', 'info');
-  });
+  const security = document.getElementById('setting-security');
+  if (security) {
+    security.replaceWith(security.cloneNode(true));
+    document.getElementById('setting-security').addEventListener('click', () => {
+      showToast('安全性功能开发中...', 'info');
+    });
+  }
 
   // 绑定密码
-  document.getElementById('setting-password').addEventListener('click', () => {
-    showToast('密码功能开发中...', 'info');
-  });
+  const password = document.getElementById('setting-password');
+  if (password) {
+    password.replaceWith(password.cloneNode(true));
+    document.getElementById('setting-password').addEventListener('click', () => {
+      showToast('密码功能开发中...', 'info');
+    });
+  }
 
   // 切换到设置和隐私视图
   switchView('privacySettings');
