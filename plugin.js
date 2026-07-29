@@ -1236,6 +1236,14 @@ function renderUI(container, roche) {
         background: rgba(0, 186, 124, 0.1);
       }
 
+      .detail-action-icon.bookmarked {
+        color: #1d9bf0;
+      }
+
+      .detail-action-icon.bookmarked:hover {
+        background: rgba(29, 155, 240, 0.1);
+      }
+
       .detail-replies-header {
         display: flex;
         align-items: center;
@@ -3530,6 +3538,7 @@ function showTweetDetail(tweetId, roche) {
   const isRetweeted = tweet.retweets.includes(currentUser);
   const isFollowing = twitterData.follows[currentUser]?.includes(user.id);
   const isSelf = user.id === currentUser;
+  const isBookmarked = twitterData.bookmarks?.[currentUser]?.includes(tweetId) || false;
 
   // 格式化时间 - Twitter 格式：26年7月29日, 4:00 下午
   const date = new Date(tweet.timestamp);
@@ -3604,8 +3613,10 @@ function showTweetDetail(tweetId, roche) {
         <div class="detail-action-icon ${isLiked ? 'liked' : ''}" data-action="like">
           ${isLiked ? icons.likeFilled : icons.like}
         </div>
-        <div class="detail-action-icon" data-action="bookmark">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M4 4.5C4 3.12 5.119 2 6.5 2h11C18.881 2 20 3.12 20 4.5v18.44l-8-5.71-8 5.71V4.5z"></path></svg>
+        <div class="detail-action-icon ${isBookmarked ? 'bookmarked' : ''}" data-action="bookmark">
+          ${isBookmarked
+            ? '<svg viewBox="0 0 24 24" width="20" height="20" fill="#1d9bf0"><path d="M4 4.5C4 3.12 5.119 2 6.5 2h11C18.881 2 20 3.12 20 4.5v18.44l-8-5.71-8 5.71V4.5z"></path></svg>'
+            : '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M4 4.5C4 3.12 5.119 2 6.5 2h11C18.881 2 20 3.12 20 4.5v18.44l-8-5.71-8 5.71V4.5zM6.5 4c-.276 0-.5.224-.5.5v14.56l6-4.29 6 4.29V4.5c0-.276-.224-.5-.5-.5h-11z"></path></svg>'}
         </div>
         <div class="detail-action-icon" data-action="share">
           ${icons.share}
@@ -3749,11 +3760,29 @@ async function handleDetailAction(action, tweetId, roche) {
       break;
 
     case 'bookmark':
-      showToast('书签功能开发中...', 'info');
+      // 书签功能
+      if (!twitterData.bookmarks) {
+        twitterData.bookmarks = {};
+      }
+      if (!twitterData.bookmarks[currentUser]) {
+        twitterData.bookmarks[currentUser] = [];
+      }
+
+      const bookmarkIndex = twitterData.bookmarks[currentUser].indexOf(tweetId);
+      if (bookmarkIndex > -1) {
+        twitterData.bookmarks[currentUser].splice(bookmarkIndex, 1);
+        showToast('已移除书签', 'info');
+      } else {
+        twitterData.bookmarks[currentUser].push(tweetId);
+        showToast('已添加到书签', 'success');
+      }
+      await saveData(roche);
+      showTweetDetail(tweetId, roche);
       break;
 
     case 'share':
-      showToast('分享功能开发中...', 'info');
+      // 分享功能 - 显示分享菜单
+      showShareMenu(tweet, roche);
       break;
   }
 }
@@ -3790,6 +3819,200 @@ async function postReply(roche, tweetId, content) {
 
   // 刷新详情页
   showTweetDetail(tweetId, roche);
+}
+
+/**
+ * 显示分享菜单
+ */
+function showShareMenu(tweet, roche) {
+  const user = twitterData.users[tweet.userId];
+
+  // 创建遮罩层
+  const overlay = document.createElement('div');
+  overlay.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    z-index: 10000;
+    animation: fadeIn 0.2s;
+  `;
+
+  // 创建分享菜单
+  const menu = document.createElement('div');
+  menu.style.cssText = `
+    background: white;
+    border-radius: 16px 16px 0 0;
+    width: 100%;
+    max-width: 600px;
+    padding: 16px;
+    animation: slideUpMenu 0.3s;
+  `;
+
+  menu.innerHTML = `
+    <div style="padding: 16px 0; border-bottom: 1px solid #eff3f4;">
+      <div style="font-weight: 700; font-size: 20px; color: #0f1419; margin-bottom: 8px;">
+        分享推文
+      </div>
+      <div style="font-size: 13px; color: #536471;">
+        ${user.name}：${tweet.content.substring(0, 50)}${tweet.content.length > 50 ? '...' : ''}
+      </div>
+    </div>
+
+    <div class="share-options">
+      <div class="share-option" data-action="copy-link">
+        <div class="share-option-icon" style="background: rgba(29, 155, 240, 0.1);">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="#1d9bf0"><path d="M11.96 14.945c-.067 0-.136-.01-.203-.027-1.13-.318-2.097-.986-2.795-1.932-.832-1.125-1.176-2.508-.968-3.893s.942-2.605 2.068-3.438l3.53-2.608c2.322-1.716 5.61-1.224 7.33 1.1.83 1.127 1.175 2.51.967 3.895s-.943 2.605-2.07 3.438l-1.48 1.094c-.333.246-.804.175-1.05-.158-.246-.334-.176-.804.158-1.05l1.48-1.095c.803-.592 1.327-1.463 1.476-2.45.148-.988-.098-1.975-.69-2.778-1.225-1.656-3.572-2.01-5.23-.784l-3.53 2.608c-.802.593-1.326 1.464-1.475 2.45-.15.99.097 1.975.69 2.778.498.675 1.187 1.15 1.992 1.377.4.114.633.528.52.928-.092.33-.394.547-.722.547z"></path><path d="M7.27 22.054c-1.61 0-3.197-.735-4.225-2.125-.832-1.127-1.176-2.51-.968-3.894s.943-2.605 2.07-3.438l1.478-1.094c.333-.246.805-.175 1.05.158s.177.804-.157 1.05l-1.48 1.095c-.803.593-1.326 1.464-1.475 2.45-.148.99.097 1.975.69 2.778 1.225 1.657 3.572 2.01 5.23.785l3.528-2.608c1.658-1.225 2.01-3.57.785-5.23-.498-.674-1.187-1.15-1.992-1.376-.4-.113-.633-.527-.52-.927.112-.4.528-.63.926-.522 1.13.318 2.096.986 2.794 1.932 1.717 2.324 1.224 5.612-1.1 7.33l-3.53 2.608c-.933.693-2.023 1.026-3.105 1.026z"></path></svg>
+        </div>
+        <div class="share-option-text">
+          <div style="font-weight: 700; font-size: 15px; color: #0f1419;">复制链接</div>
+          <div style="font-size: 13px; color: #536471;">分享给朋友</div>
+        </div>
+      </div>
+
+      <div class="share-option" data-action="send-via-dm">
+        <div class="share-option-icon" style="background: rgba(29, 155, 240, 0.1);">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="#1d9bf0"><path d="M1.998 5.5c0-1.381 1.119-2.5 2.5-2.5h15c1.381 0 2.5 1.119 2.5 2.5v13c0 1.381-1.119 2.5-2.5 2.5h-15c-1.381 0-2.5-1.119-2.5-2.5v-13zm2.5-.5c-.276 0-.5.224-.5.5v.511l8.5 5.312 8.5-5.312v-.511c0-.276-.224-.5-.5-.5h-15zm-.5 2.49v10.51c0 .276.224.5.5.5h15c.276 0 .5-.224.5-.5v-10.51l-7.928 4.954c-.32.2-.73.2-1.05 0l-7.928-4.955z"></path></svg>
+        </div>
+        <div class="share-option-text">
+          <div style="font-weight: 700; font-size: 15px; color: #0f1419;">通过私信发送</div>
+          <div style="font-size: 13px; color: #536471;">分享给联系人</div>
+        </div>
+      </div>
+
+      <div class="share-option" data-action="bookmark">
+        <div class="share-option-icon" style="background: rgba(29, 155, 240, 0.1);">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="#1d9bf0"><path d="M4 4.5C4 3.12 5.119 2 6.5 2h11C18.881 2 20 3.12 20 4.5v18.44l-8-5.71-8 5.71V4.5z"></path></svg>
+        </div>
+        <div class="share-option-text">
+          <div style="font-weight: 700; font-size: 15px; color: #0f1419;">添加书签</div>
+          <div style="font-size: 13px; color: #536471;">保存以便稍后查看</div>
+        </div>
+      </div>
+    </div>
+
+    <button class="share-cancel-btn" style="
+      width: 100%;
+      padding: 16px;
+      border: none;
+      background: transparent;
+      color: #0f1419;
+      font-weight: 700;
+      font-size: 17px;
+      cursor: pointer;
+      margin-top: 8px;
+      border-radius: 8px;
+      transition: all 0.2s;
+    ">取消</button>
+
+    <style>
+      @keyframes slideUpMenu {
+        from { transform: translateY(100%); }
+        to { transform: translateY(0); }
+      }
+
+      .share-options {
+        padding: 8px 0;
+      }
+
+      .share-option {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 16px;
+        cursor: pointer;
+        border-radius: 8px;
+        transition: all 0.2s;
+      }
+
+      .share-option:hover {
+        background: rgba(0, 0, 0, 0.03);
+      }
+
+      .share-option-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .share-option-text {
+        flex: 1;
+      }
+
+      .share-cancel-btn:hover {
+        background: rgba(0, 0, 0, 0.05);
+      }
+    </style>
+  `;
+
+  overlay.appendChild(menu);
+  document.body.appendChild(overlay);
+
+  // 绑定分享选项事件
+  menu.querySelectorAll('.share-option').forEach(option => {
+    option.addEventListener('click', async () => {
+      const action = option.dataset.action;
+
+      if (action === 'copy-link') {
+        // 复制链接
+        const link = `https://twitter.com/${user.username}/status/${tweet.id}`;
+        try {
+          await navigator.clipboard.writeText(link);
+          showToast('链接已复制到剪贴板', 'success');
+        } catch (error) {
+          // 降级方案
+          const textarea = document.createElement('textarea');
+          textarea.value = link;
+          document.body.appendChild(textarea);
+          textarea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textarea);
+          showToast('链接已复制到剪贴板', 'success');
+        }
+        document.body.removeChild(overlay);
+      } else if (action === 'send-via-dm') {
+        showToast('私信分享功能开发中...', 'info');
+        document.body.removeChild(overlay);
+      } else if (action === 'bookmark') {
+        // 添加书签
+        if (!twitterData.bookmarks) {
+          twitterData.bookmarks = {};
+        }
+        if (!twitterData.bookmarks[currentUser]) {
+          twitterData.bookmarks[currentUser] = [];
+        }
+
+        if (!twitterData.bookmarks[currentUser].includes(tweet.id)) {
+          twitterData.bookmarks[currentUser].push(tweet.id);
+          await saveData(roche);
+          showToast('已添加到书签', 'success');
+        } else {
+          showToast('已在书签中', 'info');
+        }
+        document.body.removeChild(overlay);
+      }
+    });
+  });
+
+  // 取消按钮
+  menu.querySelector('.share-cancel-btn').addEventListener('click', () => {
+    document.body.removeChild(overlay);
+  });
+
+  // 点击遮罩层关闭
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) {
+      document.body.removeChild(overlay);
+    }
+  });
 }
 
 /**
