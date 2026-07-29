@@ -1600,6 +1600,76 @@ function renderUI(container, roche) {
       }
 
       /* 通知页 */
+      .notifications-top-bar {
+        position: fixed;
+        top: env(safe-area-inset-top);
+        left: 0;
+        right: 0;
+        height: 60px;
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid #eff3f4;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 16px;
+        z-index: 100;
+        max-width: 768px;
+        margin: 0 auto;
+      }
+
+      .notifications-top-left {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+
+      .notifications-avatar-btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        overflow: hidden;
+        cursor: pointer;
+        transition: opacity 0.2s;
+      }
+
+      .notifications-avatar-btn:hover {
+        opacity: 0.8;
+      }
+
+      .notifications-avatar-btn img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .notifications-title {
+        font-size: 20px;
+        font-weight: 700;
+        color: #0f1419;
+      }
+
+      .notifications-settings-btn {
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+
+      .notifications-settings-btn:hover {
+        background: rgba(0, 0, 0, 0.05);
+      }
+
+      .notifications-settings-btn svg {
+        width: 20px;
+        height: 20px;
+        fill: #0f1419;
+      }
+
       .notifications-header {
         position: fixed;
         top: calc(60px + env(safe-area-inset-top));
@@ -1652,7 +1722,7 @@ function renderUI(container, roche) {
 
       .notifications-content {
         width: 100%;
-        padding-top: 53px;
+        padding-top: calc(60px + 53px); /* 顶部栏 + 标签栏 */
       }
 
       .notification-item {
@@ -2480,12 +2550,28 @@ function renderUI(container, roche) {
 
     <!-- 通知页 -->
     <div class="page-view" id="notifications-view">
+      <!-- 通知页顶部栏 -->
+      <div class="notifications-top-bar">
+        <div class="notifications-top-left">
+          <div class="notifications-avatar-btn" id="notifications-avatar-btn">
+            <img src="" alt="" id="notifications-avatar-img">
+          </div>
+          <div class="notifications-title">通知</div>
+        </div>
+        <div class="notifications-settings-btn" id="notifications-settings-btn">
+          ${icons.settings}
+        </div>
+      </div>
+
+      <!-- 标签页 -->
       <div class="notifications-header">
         <div class="notifications-tabs">
           <div class="notifications-tab active" data-notif-tab="all">全部</div>
           <div class="notifications-tab" data-notif-tab="mentions">提及</div>
         </div>
       </div>
+
+      <!-- 通知内容 -->
       <div class="notifications-content" id="notifications-list">
         <!-- 动态加载通知 -->
       </div>
@@ -4539,6 +4625,29 @@ function renderSearch(roche) {
 function renderNotifications(roche) {
   const notificationsEl = document.getElementById('notifications-list');
   const filter = twitterData.notificationFilter || 'all';
+
+  // 更新顶部栏头像
+  const avatarImg = document.getElementById('notifications-avatar-img');
+  const currentUserData = twitterData.users[currentUser];
+  if (avatarImg && currentUserData) {
+    avatarImg.src = currentUserData.avatar;
+  }
+
+  // 绑定头像按钮点击事件（打开侧边栏）
+  const avatarBtn = document.getElementById('notifications-avatar-btn');
+  if (avatarBtn) {
+    avatarBtn.onclick = () => {
+      showProfile(currentUser, roche);
+    };
+  }
+
+  // 绑定设置按钮点击事件
+  const settingsBtn = document.getElementById('notifications-settings-btn');
+  if (settingsBtn) {
+    settingsBtn.onclick = () => {
+      switchView('settings');
+    };
+  }
 
   // 生成一些示例通知
   if (twitterData.notifications.length === 0) {
