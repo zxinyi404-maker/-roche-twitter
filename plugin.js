@@ -18,6 +18,21 @@ let twitterData = {
 let currentUser = null;
 
 /**
+ * 注册插件到 Roche 系统
+ */
+if (window.RochePlugin) {
+  window.RochePlugin.register({
+    id: PLUGIN_ID,
+    name: 'Roche Twitter',
+    description: '完整推特克隆 - 发推文、点赞、转发、关注',
+    version: '1.0.0',
+    icon: '🐦',
+    author: 'Roche',
+    main: main
+  });
+}
+
+/**
  * 插件入口
  */
 async function main() {
