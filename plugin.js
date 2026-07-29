@@ -59,7 +59,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '1.3.0',
+    version: '1.3.1',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -104,13 +104,13 @@ async function saveData(roche) {
 }
 
 /**
- * 初始化用户（使用 Conversation 和 Persona 系统）
- * - 主用户：从 conversation.list() 获取，使用 persona 信息
- * - 推荐好友：使用 roche.character.list() 获取 AI 角色
+ * 初始化用户（只使用 Conversation 和 Persona 系统）
+ * - 所有用户：从 conversation.list() 获取，使用 persona 信息
+ * - 推荐好友：显示其他 Persona（不是 character）
  * - 支持切换面具（切换 conversation）
  */
 async function initializeUsers(roche) {
-  // 获取所有对话作为可用的用户面具
+  // 获取所有对话作为可用的用户
   const conversations = await roche.conversation.list();
 
   // 默认使用第一个对话作为当前用户
@@ -154,23 +154,6 @@ async function initializeUsers(roche) {
           };
         }
       }
-    }
-  }
-
-  // Character 作为推荐好友
-  const characters = await roche.character.list();
-  for (const char of characters) {
-    if (!twitterData.users[char.id]) {
-      twitterData.users[char.id] = {
-        id: char.id,
-        name: char.name,
-        username: `@${char.name.toLowerCase().replace(/\s+/g, '_')}`,
-        avatar: char.avatar || generateAvatar(char.name),
-        bio: char.description || '这个人很神秘，什么都没留下',
-        followers: 0,
-        following: 0,
-        isCharacter: true
-      };
     }
   }
 
@@ -376,6 +359,7 @@ function renderUI(container, roche) {
         cursor: pointer;
         transition: background 0.2s;
         font-size: 19px;
+        font-weight: 400;
       }
 
       .sidebar-menu-item:hover {
@@ -392,6 +376,7 @@ function renderUI(container, roche) {
         display: flex;
         align-items: center;
         justify-content: center;
+        display: none;
       }
 
       .sidebar-section-title {
@@ -490,6 +475,67 @@ function renderUI(container, roche) {
       }
 
       .top-bar-close:active {
+        background: rgba(0, 0, 0, 0.08);
+      }
+
+      .top-bar-menu {
+        color: #0f1419;
+        cursor: pointer;
+        padding: 8px;
+        transition: background 0.2s;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+      }
+
+      .top-bar-menu:hover {
+        background: rgba(0, 0, 0, 0.03);
+      }
+
+      .top-bar-menu:active {
+        background: rgba(0, 0, 0, 0.08);
+      }
+
+      .top-bar-dropdown {
+        position: absolute;
+        top: 100%;
+        right: 0;
+        margin-top: 4px;
+        background: #ffffff;
+        border-radius: 12px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+        min-width: 200px;
+        display: none;
+        z-index: 200;
+      }
+
+      .top-bar-dropdown.active {
+        display: block;
+      }
+
+      .top-bar-dropdown-item {
+        padding: 14px 16px;
+        cursor: pointer;
+        transition: background 0.2s;
+        font-size: 15px;
+        color: #0f1419;
+      }
+
+      .top-bar-dropdown-item:first-child {
+        border-radius: 12px 12px 0 0;
+      }
+
+      .top-bar-dropdown-item:last-child {
+        border-radius: 0 0 12px 12px;
+      }
+
+      .top-bar-dropdown-item:hover {
+        background: rgba(0, 0, 0, 0.03);
+      }
+
+      .top-bar-dropdown-item:active {
         background: rgba(0, 0, 0, 0.08);
       }
 
@@ -1887,31 +1933,24 @@ function renderUI(container, roche) {
       </div>
       <div class="sidebar-menu">
         <div class="sidebar-menu-item" data-menu="profile">
-          <div class="sidebar-menu-icon">👤</div>
           <span>个人资料</span>
         </div>
         <div class="sidebar-menu-item" data-menu="premium">
-          <div class="sidebar-menu-icon">✓</div>
           <span>Premium</span>
         </div>
         <div class="sidebar-menu-item" data-menu="communities">
-          <div class="sidebar-menu-icon">👥</div>
           <span>社群</span>
         </div>
         <div class="sidebar-menu-item" data-menu="bookmarks">
-          <div class="sidebar-menu-icon">🔖</div>
           <span>书签</span>
         </div>
         <div class="sidebar-menu-item" data-menu="lists">
-          <div class="sidebar-menu-icon">📋</div>
           <span>列表</span>
         </div>
         <div class="sidebar-menu-item" data-menu="spaces">
-          <div class="sidebar-menu-icon">💫</div>
           <span>空间</span>
         </div>
         <div class="sidebar-menu-item" data-menu="creator">
-          <div class="sidebar-menu-icon">🚀</div>
           <span>创作者工作室</span>
         </div>
       </div>
@@ -1919,16 +1958,10 @@ function renderUI(container, roche) {
       <div class="sidebar-menu">
         <div class="sidebar-section-title">设置 & 支持</div>
         <div class="sidebar-menu-item" data-menu="settings">
-          <div class="sidebar-menu-icon">⚙️</div>
           <span>设置和隐私</span>
         </div>
         <div class="sidebar-menu-item" data-menu="help">
-          <div class="sidebar-menu-icon">❓</div>
           <span>帮助中心</span>
-        </div>
-        <div class="sidebar-menu-item" data-menu="darkmode">
-          <div class="sidebar-menu-icon">🌙</div>
-          <span>深色模式</span>
         </div>
       </div>
       <div class="sidebar-personas">
@@ -1941,7 +1974,17 @@ function renderUI(container, roche) {
     <div class="mobile-top-bar">
       <img class="top-bar-avatar" id="top-bar-avatar" src="" alt="" title="打开侧边栏">
       <div class="top-bar-title">𝕏</div>
-      <div class="top-bar-close" id="top-bar-close" title="关闭">${icons.close}</div>
+      <div class="top-bar-menu" id="top-bar-menu" title="菜单">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+          <circle cx="5" cy="12" r="2"></circle>
+          <circle cx="12" cy="12" r="2"></circle>
+          <circle cx="19" cy="12" r="2"></circle>
+        </svg>
+        <div class="top-bar-dropdown" id="top-bar-dropdown">
+          <div class="top-bar-dropdown-item" id="dropdown-settings">设置</div>
+          <div class="top-bar-dropdown-item" id="dropdown-exit">退出 Twitter</div>
+        </div>
+      </div>
     </div>
 
     <!-- 主内容区 -->
@@ -2144,8 +2187,28 @@ function initializeMessages() {
  * 绑定事件处理 - 移动端
  */
 function bindEvents(roche) {
-  // 顶部关闭按钮
-  document.getElementById('top-bar-close').addEventListener('click', () => {
+  // 顶部菜单按钮
+  document.getElementById('top-bar-menu').addEventListener('click', (e) => {
+    e.stopPropagation();
+    const dropdown = document.getElementById('top-bar-dropdown');
+    dropdown.classList.toggle('active');
+  });
+
+  // 点击页面其他地方关闭下拉菜单
+  document.addEventListener('click', () => {
+    const dropdown = document.getElementById('top-bar-dropdown');
+    if (dropdown.classList.contains('active')) {
+      dropdown.classList.remove('active');
+    }
+  });
+
+  // 下拉菜单 - 设置
+  document.getElementById('dropdown-settings').addEventListener('click', () => {
+    showToast('设置功能开发中...', 'info');
+  });
+
+  // 下拉菜单 - 退出
+  document.getElementById('dropdown-exit').addEventListener('click', () => {
     exitApp();
   });
 
@@ -2362,7 +2425,6 @@ function handleSidebarMenu(menu, roche) {
     case 'creator':
     case 'settings':
     case 'help':
-    case 'darkmode':
       showToast('功能开发中...', 'info');
       break;
   }
@@ -2919,7 +2981,8 @@ function escapeHtml(text) {
  */
 function renderSearch(roche) {
   const recommendedEl = document.getElementById('recommended-users');
-  const users = Object.values(twitterData.users).filter(u => u.id !== currentUser && u.isCharacter);
+  // 只显示其他 Persona（不是当前用户）
+  const users = Object.values(twitterData.users).filter(u => u.id !== currentUser && u.isPersona);
 
   recommendedEl.innerHTML = users.slice(0, 5).map(user => {
     const isFollowing = twitterData.follows[currentUser]?.includes(user.id);
