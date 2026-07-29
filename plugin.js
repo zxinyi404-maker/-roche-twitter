@@ -5252,7 +5252,7 @@ function showMessagesFilterMenu() {
   // 创建菜单（底部弹出）
   const menu = document.createElement('div');
   menu.style.cssText = `
-    background: #15202b;
+    background: white;
     border-radius: 16px 16px 0 0;
     width: 100%;
     max-width: 600px;
@@ -5265,47 +5265,47 @@ function showMessagesFilterMenu() {
 
   menu.innerHTML = `
     <div class="filter-menu-option" data-filter="all">
-      <svg viewBox="0 0 24 24" width="24" height="24" fill="#e7e9ea" style="margin-right: 16px;"><path d="M1.998 5.5c0-1.381 1.119-2.5 2.5-2.5h15c1.381 0 2.5 1.119 2.5 2.5v13c0 1.381-1.119 2.5-2.5 2.5h-15c-1.381 0-2.5-1.119-2.5-2.5v-13zm2.5-.5c-.276 0-.5.224-.5.5v.511l8.5 5.312 8.5-5.312v-.511c0-.276-.224-.5-.5-.5h-15zm-.5 2.49v10.51c0 .276.224.5.5.5h15c.276 0 .5-.224.5-.5v-10.51l-7.928 4.954c-.32.2-.73.2-1.05 0l-7.928-4.955z"></path></svg>
-      <div style="flex: 1; color: #e7e9ea; font-size: 15px; font-weight: 500;">全部</div>
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="#0f1419" style="margin-right: 16px;"><path d="M1.998 5.5c0-1.381 1.119-2.5 2.5-2.5h15c1.381 0 2.5 1.119 2.5 2.5v13c0 1.381-1.119 2.5-2.5 2.5h-15c-1.381 0-2.5-1.119-2.5-2.5v-13zm2.5-.5c-.276 0-.5.224-.5.5v.511l8.5 5.312 8.5-5.312v-.511c0-.276-.224-.5-.5-.5h-15zm-.5 2.49v10.51c0 .276.224.5.5.5h15c.276 0 .5-.224.5-.5v-10.51l-7.928 4.954c-.32.2-.73.2-1.05 0l-7.928-4.955z"></path></svg>
+      <div style="flex: 1; color: #0f1419; font-size: 15px; font-weight: 500;">全部</div>
       ${currentFilter === 'all' ? '<svg viewBox="0 0 24 24" width="20" height="20" fill="#1d9bf0"><path d="M9 20l-7-7 1.41-1.41L9 17.17 20.59 5.59 22 7l-13 13z"></path></svg>' : ''}
     </div>
 
     <div class="filter-menu-option" data-filter="unread">
-      <svg viewBox="0 0 24 24" width="24" height="24" fill="#e7e9ea" style="margin-right: 16px;"><g><path d="M1.998 5.5c0-1.381 1.119-2.5 2.5-2.5h15c1.381 0 2.5 1.119 2.5 2.5v13c0 1.381-1.119 2.5-2.5 2.5h-15c-1.381 0-2.5-1.119-2.5-2.5v-13zm2.5-.5c-.276 0-.5.224-.5.5v.511l8.5 5.312 8.5-5.312v-.511c0-.276-.224-.5-.5-.5h-15zm-.5 2.49v10.51c0 .276.224.5.5.5h15c.276 0 .5-.224.5-.5v-10.51l-7.928 4.954c-.32.2-.73.2-1.05 0l-7.928-4.955z"></path><circle cx="19" cy="6" r="3" fill="#1d9bf0"></circle></g></svg>
-      <div style="flex: 1; color: #e7e9ea; font-size: 15px; font-weight: 500;">未读</div>
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="#0f1419" style="margin-right: 16px;"><g><path d="M1.998 5.5c0-1.381 1.119-2.5 2.5-2.5h15c1.381 0 2.5 1.119 2.5 2.5v13c0 1.381-1.119 2.5-2.5 2.5h-15c-1.381 0-2.5-1.119-2.5-2.5v-13zm2.5-.5c-.276 0-.5.224-.5.5v.511l8.5 5.312 8.5-5.312v-.511c0-.276-.224-.5-.5-.5h-15zm-.5 2.49v10.51c0 .276.224.5.5.5h15c.276 0 .5-.224.5-.5v-10.51l-7.928 4.954c-.32.2-.73.2-1.05 0l-7.928-4.955z"></path><circle cx="19" cy="6" r="3" fill="#1d9bf0"></circle></g></svg>
+      <div style="flex: 1; color: #0f1419; font-size: 15px; font-weight: 500;">未读</div>
       ${currentFilter === 'unread' ? '<svg viewBox="0 0 24 24" width="20" height="20" fill="#1d9bf0"><path d="M9 20l-7-7 1.41-1.41L9 17.17 20.59 5.59 22 7l-13 13z"></path></svg>' : ''}
     </div>
 
     <div class="filter-menu-option" data-filter="direct">
-      <svg viewBox="0 0 24 24" width="24" height="24" fill="#e7e9ea" style="margin-right: 16px;"><path d="M5.651 19h12.698c-.337-1.8-1.023-3.21-1.945-4.19C15.318 13.65 13.838 13 12 13s-3.317.65-4.404 1.81c-.922.98-1.608 2.39-1.945 4.19zm.486-5.56C7.627 11.85 9.648 11 12 11s4.373.85 5.863 2.44c1.477 1.58 2.366 3.8 2.632 6.46l.11 1.1H3.395l.11-1.1c.266-2.66 1.155-4.88 2.632-6.46zM12 4c-1.105 0-2 .9-2 2s.895 2 2 2 2-.9 2-2-.895-2-2-2zM8 6c0-2.21 1.791-4 4-4s4 1.79 4 4-1.791 4-4 4-4-1.79-4-4z"></path></svg>
-      <div style="flex: 1; color: #e7e9ea; font-size: 15px; font-weight: 500;">直接</div>
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="#0f1419" style="margin-right: 16px;"><path d="M5.651 19h12.698c-.337-1.8-1.023-3.21-1.945-4.19C15.318 13.65 13.838 13 12 13s-3.317.65-4.404 1.81c-.922.98-1.608 2.39-1.945 4.19zm.486-5.56C7.627 11.85 9.648 11 12 11s4.373.85 5.863 2.44c1.477 1.58 2.366 3.8 2.632 6.46l.11 1.1H3.395l.11-1.1c.266-2.66 1.155-4.88 2.632-6.46zM12 4c-1.105 0-2 .9-2 2s.895 2 2 2 2-.9 2-2-.895-2-2-2zM8 6c0-2.21 1.791-4 4-4s4 1.79 4 4-1.791 4-4 4-4-1.79-4-4z"></path></svg>
+      <div style="flex: 1; color: #0f1419; font-size: 15px; font-weight: 500;">直接</div>
       ${currentFilter === 'direct' ? '<svg viewBox="0 0 24 24" width="20" height="20" fill="#1d9bf0"><path d="M9 20l-7-7 1.41-1.41L9 17.17 20.59 5.59 22 7l-13 13z"></path></svg>' : ''}
     </div>
 
     <div class="filter-menu-option" data-filter="group">
-      <svg viewBox="0 0 24 24" width="24" height="24" fill="#e7e9ea" style="margin-right: 16px;"><path d="M17.5 4c.828 0 1.5.67 1.5 1.5v2c0 .83-.672 1.5-1.5 1.5h-15C1.67 9 1 8.33 1 7.5v-2C1 4.67 1.67 4 2.5 4h15zM19 7.5v-2c0-1.93-1.57-3.5-3.5-3.5h-15C-1.57 2-3 3.57-3 5.5v2C-3 9.43-1.57 11-.5 11h15c1.93 0 3.5-1.57 3.5-3.5zm2 7c0-.83-.672-1.5-1.5-1.5h-15c-.828 0-1.5.67-1.5 1.5v2c0 .83.672 1.5 1.5 1.5h15c.828 0 1.5-.67 1.5-1.5v-2zm2 0v2c0 1.93-1.57 3.5-3.5 3.5h-15c-1.93 0-3.5-1.57-3.5-3.5v-2c0-1.93 1.57-3.5 3.5-3.5h15c1.93 0 3.5 1.57 3.5 3.5z"></path></svg>
-      <div style="flex: 1; color: #e7e9ea; font-size: 15px; font-weight: 500;">群组</div>
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="#0f1419" style="margin-right: 16px;"><path d="M17.5 4c.828 0 1.5.67 1.5 1.5v2c0 .83-.672 1.5-1.5 1.5h-15C1.67 9 1 8.33 1 7.5v-2C1 4.67 1.67 4 2.5 4h15zM19 7.5v-2c0-1.93-1.57-3.5-3.5-3.5h-15C-1.57 2-3 3.57-3 5.5v2C-3 9.43-1.57 11-.5 11h15c1.93 0 3.5-1.57 3.5-3.5zm2 7c0-.83-.672-1.5-1.5-1.5h-15c-.828 0-1.5.67-1.5 1.5v2c0 .83.672 1.5 1.5 1.5h15c.828 0 1.5-.67 1.5-1.5v-2zm2 0v2c0 1.93-1.57 3.5-3.5 3.5h-15c-1.93 0-3.5-1.57-3.5-3.5v-2c0-1.93 1.57-3.5 3.5-3.5h15c1.93 0 3.5 1.57 3.5 3.5z"></path></svg>
+      <div style="flex: 1; color: #0f1419; font-size: 15px; font-weight: 500;">群组</div>
       ${currentFilter === 'group' ? '<svg viewBox="0 0 24 24" width="20" height="20" fill="#1d9bf0"><path d="M9 20l-7-7 1.41-1.41L9 17.17 20.59 5.59 22 7l-13 13z"></path></svg>' : ''}
     </div>
 
     <div class="filter-menu-option" data-filter="request">
-      <svg viewBox="0 0 24 24" width="24" height="24" fill="#e7e9ea" style="margin-right: 16px;"><path d="M17.5 7H17v-.25c0-2.76-2.24-5-5-5s-5 2.24-5 5V7h-.5C5.12 7 4 8.12 4 9.5v9c0 1.38 1.12 2.5 2.5 2.5h11c1.38 0 2.5-1.12 2.5-2.5v-9C20 8.12 18.88 7 17.5 7zM9 6.75c0-1.66 1.34-3 3-3s3 1.34 3 3V7H9v-.25zm9 11.75c0 .28-.22.5-.5.5h-11c-.28 0-.5-.22-.5-.5v-9c0-.28.22-.5.5-.5h11c.28 0 .5.22.5.5v9zm-7-4c0 .55-.45 1-1 1s-1-.45-1-1 .45-1 1-1 1 .45 1 1zm3 0c0 .55-.45 1-1 1s-1-.45-1-1 .45-1 1-1 1 .45 1 1zm3 0c0 .55-.45 1-1 1s-1-.45-1-1 .45-1 1-1 1 .45 1 1z"></path></svg>
-      <div style="flex: 1; color: #e7e9ea; font-size: 15px; font-weight: 500;">请求</div>
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="#0f1419" style="margin-right: 16px;"><path d="M17.5 7H17v-.25c0-2.76-2.24-5-5-5s-5 2.24-5 5V7h-.5C5.12 7 4 8.12 4 9.5v9c0 1.38 1.12 2.5 2.5 2.5h11c1.38 0 2.5-1.12 2.5-2.5v-9C20 8.12 18.88 7 17.5 7zM9 6.75c0-1.66 1.34-3 3-3s3 1.34 3 3V7H9v-.25zm9 11.75c0 .28-.22.5-.5.5h-11c-.28 0-.5-.22-.5-.5v-9c0-.28.22-.5.5-.5h11c.28 0 .5.22.5.5v9zm-7-4c0 .55-.45 1-1 1s-1-.45-1-1 .45-1 1-1 1 .45 1 1zm3 0c0 .55-.45 1-1 1s-1-.45-1-1 .45-1 1-1 1 .45 1 1zm3 0c0 .55-.45 1-1 1s-1-.45-1-1 .45-1 1-1 1 .45 1 1z"></path></svg>
+      <div style="flex: 1; color: #0f1419; font-size: 15px; font-weight: 500;">请求</div>
       ${currentFilter === 'request' ? '<svg viewBox="0 0 24 24" width="20" height="20" fill="#1d9bf0"><path d="M9 20l-7-7 1.41-1.41L9 17.17 20.59 5.59 22 7l-13 13z"></path></svg>' : ''}
     </div>
 
-    <div style="height: 1px; background: #2f3336; margin: 8px 0;"></div>
+    <div style="height: 1px; background: #eff3f4; margin: 8px 0;"></div>
 
     <div class="filter-menu-option" data-action="settings">
-      <svg viewBox="0 0 24 24" width="24" height="24" fill="#e7e9ea" style="margin-right: 16px;"><path d="M10.54 1.75h2.92l1.57 2.36c.11.17.32.25.53.21l2.53-.59 2.17 2.17-.58 2.54c-.05.2.04.41.21.53l2.36 1.57v2.92l-2.36 1.57c-.17.12-.26.33-.21.53l.58 2.54-2.17 2.17-2.53-.59c-.21-.04-.42.04-.53.21l-1.57 2.36h-2.92l-1.58-2.36c-.11-.17-.32-.25-.52-.21l-2.54.59-2.17-2.17.58-2.54c.05-.2-.03-.41-.21-.53l-2.35-1.57v-2.92L4.1 8.97c.18-.12.26-.33.21-.53L3.73 5.9 5.9 3.73l2.54.59c.2.04.41-.04.52-.21l1.58-2.36zm1.07 2l-.98 1.47C10.05 6.08 9 6.5 7.99 6.27l-1.46-.34-.6.6.33 1.46c.24 1.01-.18 2.07-1.05 2.64l-1.46.98v.78l1.46.98c.87.57 1.29 1.63 1.05 2.64l-.33 1.46.6.6 1.46-.34c1.01-.23 2.06.19 2.64 1.05l.98 1.47h.78l.97-1.47c.58-.86 1.63-1.28 2.65-1.05l1.45.34.61-.6-.34-1.46c-.23-1.01.18-2.07 1.05-2.64l1.47-.98v-.78l-1.47-.98c-.87-.57-1.28-1.63-1.05-2.64l.34-1.46-.61-.6-1.45.34c-1.02.23-2.07-.19-2.65-1.05l-.97-1.47h-.78zM12 10.5c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5c.82 0 1.5-.67 1.5-1.5s-.68-1.5-1.5-1.5zM8.5 12c0-1.93 1.56-3.5 3.5-3.5 1.93 0 3.5 1.57 3.5 3.5s-1.57 3.5-3.5 3.5c-1.94 0-3.5-1.57-3.5-3.5z"></path></svg>
-      <div style="flex: 1; color: #e7e9ea; font-size: 15px; font-weight: 500;">设置</div>
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="#0f1419" style="margin-right: 16px;"><path d="M10.54 1.75h2.92l1.57 2.36c.11.17.32.25.53.21l2.53-.59 2.17 2.17-.58 2.54c-.05.2.04.41.21.53l2.36 1.57v2.92l-2.36 1.57c-.17.12-.26.33-.21.53l.58 2.54-2.17 2.17-2.53-.59c-.21-.04-.42.04-.53.21l-1.57 2.36h-2.92l-1.58-2.36c-.11-.17-.32-.25-.52-.21l-2.54.59-2.17-2.17.58-2.54c.05-.2-.03-.41-.21-.53l-2.35-1.57v-2.92L4.1 8.97c.18-.12.26-.33.21-.53L3.73 5.9 5.9 3.73l2.54.59c.2.04.41-.04.52-.21l1.58-2.36zm1.07 2l-.98 1.47C10.05 6.08 9 6.5 7.99 6.27l-1.46-.34-.6.6.33 1.46c.24 1.01-.18 2.07-1.05 2.64l-1.46.98v.78l1.46.98c.87.57 1.29 1.63 1.05 2.64l-.33 1.46.6.6 1.46-.34c1.01-.23 2.06.19 2.64 1.05l.98 1.47h.78l.97-1.47c.58-.86 1.63-1.28 2.65-1.05l1.45.34.61-.6-.34-1.46c-.23-1.01.18-2.07 1.05-2.64l1.47-.98v-.78l-1.47-.98c-.87-.57-1.28-1.63-1.05-2.64l.34-1.46-.61-.6-1.45.34c-1.02.23-2.07-.19-2.65-1.05l-.97-1.47h-.78zM12 10.5c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5c.82 0 1.5-.67 1.5-1.5s-.68-1.5-1.5-1.5zM8.5 12c0-1.93 1.56-3.5 3.5-3.5 1.93 0 3.5 1.57 3.5 3.5s-1.57 3.5-3.5 3.5c-1.94 0-3.5-1.57-3.5-3.5z"></path></svg>
+      <div style="flex: 1; color: #0f1419; font-size: 15px; font-weight: 500;">设置</div>
     </div>
 
-    <div style="height: 1px; background: #2f3336; margin: 8px 0;"></div>
+    <div style="height: 1px; background: #eff3f4; margin: 8px 0;"></div>
 
     <div class="filter-menu-option" data-action="mark-read">
-      <svg viewBox="0 0 24 24" width="24" height="24" fill="#e7e9ea" style="margin-right: 16px;"><path d="M9 20l-7-7 1.41-1.41L9 17.17 20.59 5.59 22 7l-13 13z"></path></svg>
-      <div style="flex: 1; color: #e7e9ea; font-size: 15px; font-weight: 500;">全部标记为已读</div>
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="#0f1419" style="margin-right: 16px;"><path d="M9 20l-7-7 1.41-1.41L9 17.17 20.59 5.59 22 7l-13 13z"></path></svg>
+      <div style="flex: 1; color: #0f1419; font-size: 15px; font-weight: 500;">全部标记为已读</div>
     </div>
 
     <style>
@@ -5318,7 +5318,7 @@ function showMessagesFilterMenu() {
       }
 
       .filter-menu-option:hover {
-        background: rgba(255, 255, 255, 0.03);
+        background: rgba(0, 0, 0, 0.03);
       }
     </style>
   `;
@@ -5438,6 +5438,30 @@ async function showNewMessageDialog(roche) {
   // 获取对话角色列表（char）
   const conversations = await roche.conversation.list();
 
+  // 为每个对话获取记忆摘要
+  const conversationsWithInfo = await Promise.all(conversations.map(async (conv) => {
+    try {
+      // 获取长期记忆
+      const longTerm = await roche.memory.getLongTerm({ conversationId: conv.id, limit: 5 });
+      const memories = [...(longTerm.facts || []), ...(longTerm.vectors || [])];
+      const memorySummary = memories.length > 0
+        ? (memories[0].summaryText || memories[0].text || '').substring(0, 50)
+        : '暂无记忆';
+
+      return {
+        ...conv,
+        memorySummary,
+        avatar: null // 先设为 null，后续可以从记忆中提取
+      };
+    } catch (e) {
+      return {
+        ...conv,
+        memorySummary: '暂无记忆',
+        avatar: null
+      };
+    }
+  }));
+
   // 创建遮罩层
   const overlay = document.createElement('div');
   overlay.style.cssText = `
@@ -5484,17 +5508,19 @@ async function showNewMessageDialog(roche) {
     </div>
 
     <div style="flex: 1; overflow-y: auto;" id="contact-list">
-      ${conversations.map(conv => `
+      ${conversationsWithInfo.map(conv => {
+        const initial = conv.title ? conv.title.charAt(0).toUpperCase() : '?';
+        return `
         <div class="contact-item" data-conv-id="${conv.id}" style="padding: 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: background 0.2s;">
           <div style="width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; font-weight: 700;">
-            ${conv.title ? conv.title.charAt(0).toUpperCase() : '?'}
+            ${initial}
           </div>
-          <div style="flex: 1;">
+          <div style="flex: 1; min-width: 0;">
             <div style="font-size: 15px; font-weight: 700; color: #0f1419;">${conv.title || '未命名对话'}</div>
-            <div style="font-size: 13px; color: #536471;">${conv.id}</div>
+            <div style="font-size: 13px; color: #536471; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${conv.memorySummary}</div>
           </div>
         </div>
-      `).join('')}
+      `}).join('')}
     </div>
 
     <style>
