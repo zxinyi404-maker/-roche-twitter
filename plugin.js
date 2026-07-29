@@ -3996,51 +3996,80 @@ function showProfile(userId, roche) {
 function showSettings(roche) {
   // 绑定设置页返回按钮
   const backBtn = document.getElementById('settings-back-btn');
-  backBtn.replaceWith(backBtn.cloneNode(true)); // 移除旧事件
-  document.getElementById('settings-back-btn').addEventListener('click', () => {
-    switchView('timeline');
-  });
+  if (backBtn) {
+    backBtn.replaceWith(backBtn.cloneNode(true));
+    document.getElementById('settings-back-btn').addEventListener('click', () => {
+      switchView('timeline');
+    });
+  }
 
   // 加载当前设置
-  document.getElementById('toggle-memory').checked = settings.enableMemory;
-  document.getElementById('toggle-summary').checked = settings.autoSummary;
+  const toggleMemory = document.getElementById('toggle-memory');
+  const toggleSummary = document.getElementById('toggle-summary');
 
-  // 绑定开关事件
-  document.getElementById('toggle-memory').addEventListener('change', async (e) => {
-    settings.enableMemory = e.target.checked;
-    await saveSettings(roche);
-    showToast(settings.enableMemory ? '已启用推文记忆' : '已禁用推文记忆', 'success');
-  });
+  if (toggleMemory) {
+    toggleMemory.checked = settings.enableMemory;
+    toggleMemory.replaceWith(toggleMemory.cloneNode(true));
+    document.getElementById('toggle-memory').addEventListener('change', async (e) => {
+      settings.enableMemory = e.target.checked;
+      await saveSettings(roche);
+      showToast(settings.enableMemory ? '已启用推文记忆' : '已禁用推文记忆', 'success');
+    });
+  }
 
-  document.getElementById('toggle-summary').addEventListener('change', async (e) => {
-    settings.autoSummary = e.target.checked;
-    await saveSettings(roche);
-    showToast(settings.autoSummary ? '已启用自动总结' : '已禁用自动总结', 'success');
-  });
+  if (toggleSummary) {
+    toggleSummary.checked = settings.autoSummary;
+    toggleSummary.replaceWith(toggleSummary.cloneNode(true));
+    document.getElementById('toggle-summary').addEventListener('change', async (e) => {
+      settings.autoSummary = e.target.checked;
+      await saveSettings(roche);
+      showToast(settings.autoSummary ? '已启用自动总结' : '已禁用自动总结', 'success');
+    });
+  }
 
   // 绑定设置项点击
-  document.getElementById('setting-edit-profile').addEventListener('click', () => {
-    showToast('编辑个人资料功能开发中...', 'info');
-  });
+  const editProfile = document.getElementById('setting-edit-profile');
+  if (editProfile) {
+    editProfile.replaceWith(editProfile.cloneNode(true));
+    document.getElementById('setting-edit-profile').addEventListener('click', () => {
+      showToast('编辑个人资料功能开发中...', 'info');
+    });
+  }
 
-  document.getElementById('setting-privacy').addEventListener('click', () => {
-    showPrivacySettings(roche);
-  });
+  const privacy = document.getElementById('setting-privacy');
+  if (privacy) {
+    privacy.replaceWith(privacy.cloneNode(true));
+    document.getElementById('setting-privacy').addEventListener('click', () => {
+      showPrivacySettings(roche);
+    });
+  }
 
-  document.getElementById('setting-notifications').addEventListener('click', () => {
-    showToast('通知设置功能开发中...', 'info');
-  });
+  const notifications = document.getElementById('setting-notifications');
+  if (notifications) {
+    notifications.replaceWith(notifications.cloneNode(true));
+    document.getElementById('setting-notifications').addEventListener('click', () => {
+      showToast('通知设置功能开发中...', 'info');
+    });
+  }
 
-  document.getElementById('setting-clear-memory').addEventListener('click', async () => {
-    if (confirm('确定要清除所有记忆吗？此操作无法撤销。')) {
-      await clearAllMemories(roche);
-      showToast('已清除所有记忆', 'success');
-    }
-  });
+  const clearMemory = document.getElementById('setting-clear-memory');
+  if (clearMemory) {
+    clearMemory.replaceWith(clearMemory.cloneNode(true));
+    document.getElementById('setting-clear-memory').addEventListener('click', async () => {
+      if (confirm('确定要清除所有记忆吗？此操作无法撤销。')) {
+        await clearAllMemories(roche);
+        showToast('已清除所有记忆', 'success');
+      }
+    });
+  }
 
-  document.getElementById('setting-about').addEventListener('click', () => {
-    showToast('Twitter 插件 v1.5.1 - 完善设置和隐私页面功能', 'info');
-  });
+  const about = document.getElementById('setting-about');
+  if (about) {
+    about.replaceWith(about.cloneNode(true));
+    document.getElementById('setting-about').addEventListener('click', () => {
+      showToast('Twitter 插件 v1.5.2 - 真正的 Persona 切换功能', 'info');
+    });
+  }
 
   // 切换到设置视图
   switchView('settings');
