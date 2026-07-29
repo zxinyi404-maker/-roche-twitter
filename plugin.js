@@ -4159,7 +4159,7 @@ function showPrivacySettings(roche) {
 /**
  * 显示切换账号页面
  */
-function showSwitchAccount(roche) {
+async function showSwitchAccount(roche) {
   // 绑定返回按钮
   const backBtn = document.getElementById('switch-account-back-btn');
   backBtn.replaceWith(backBtn.cloneNode(true)); // 移除旧事件
@@ -4167,96 +4167,122 @@ function showSwitchAccount(roche) {
     switchView('timeline');
   });
 
-  // 渲染当前账号
+  // 先显示加载状态
   const currentAccountSection = document.getElementById('current-account-section');
-  const currentUserData = twitterData.users[currentUser];
+  const otherAccountsSection = document.getElementById('other-accounts-section');
 
-  if (currentUserData) {
-    currentAccountSection.innerHTML = `
-      <div class="setting-item" style="padding: 16px;">
-        <img src="${currentUserData.avatar}" style="width: 48px; height: 48px; border-radius: 50%; margin-right: 12px; vertical-align: middle;">
-        <div style="display: inline-block; vertical-align: middle;">
-          <div style="font-weight: 700; font-size: 15px; color: #0f1419;">${currentUserData.name}</div>
-          <div style="font-size: 15px; color: #536471;">${currentUserData.username}</div>
+  currentAccountSection.innerHTML = '<div style="padding: 20px; text-align: center; color: #536471;">加载中...</div>';
+  otherAccountsSection.innerHTML = '<div style="padding: 20px; text-align: center; color: #536471;">加载中...</div>';
+
+  try {
+    // 重新获取所有 Persona
+    const allPersonas = await roche.persona.getUserPersonas();
+    console.log('[Twitter] 获取到的所有 Persona:', allPersonas);
+
+    if (!allPersonas || allPersonas.length === 0) {
+      currentAccountSection.innerHTML = `
+        <div style="padding: 40px 20px; text-align: center; color: #536471;">
+          <div>没有找到任何账号</div>
+          <div style="margin-top: 8px; font-size: 13px;">请先在 Roche 中创建 Persona</div>
         </div>
-        <span style="float: right; color: #1d9bf0; font-size: 18px; margin-left: auto;">✓</span>
+      `;
+      otherAccountsSection.innerHTML = '';
+      switchView('switchAccount');
+      return;
+    }
+
+    // 更新 twitterData.users
+    for (const persona of allPersonas) {
+      if (!twitterData.users[persona.id]) {
+        twitterData.users[persona.id] = {
+          id: persona.id,
+          name: persona.name,
+          username: `@${persona.handle || persona.name}`,
+          avatar: persona.avatar || generateAvatar(persona.name),
+          bio: persona.bio || '',
+          followers: 0,
+          following: 0,
+          conversationId: persona.conversationId,
+          isPersona: true
+        };
+      } else {
+        // 更新已存在的 Persona 信息
+        twitterData.users[persona.id].name = persona.name;
+        twitterData.users[persona.id].username = `@${persona.handle || persona.name}`;
+        twitterData.users[persona.id].avatar = persona.avatar || generateAvatar(persona.name);
+        twitterData.users[persona.id].bio = persona.bio || '';
+      }
+    }
+
+    await saveData(roche);
+
+    // 渲染当前账号
+    const currentUserData = twitterData.users[currentUser];
+    if (currentUserData) {
+      currentAccountSection.innerHTML = `
+        <div class="setting-item" style="padding: 16px;">
+          <img src="${currentUserData.avatar}" style="width: 48px; height: 48px; border-radius: 50%; margin-right: 12px; vertical-align: middle;">
+          <div style="display: inline-block; vertical-align: middle;">
+            <div style="font-weight: 700; font-size: 15px; color: #0f1419;">${currentUserData.name}</div>
+            <div style="font-size: 15px; color: #536471;">${currentUserData.username}</div>
+          </div>
+          <span style="float: right; color: #1d9bf0; font-size: 18px; margin-left: auto;">✓</span>
+        </div>
+      `;
+    }
+
+    // 渲染其他账号
+    const otherPersonas = allPersonas.filter(p => p.id !== currentUser);
+
+    if (otherPersonas.length === 0) {
+      otherAccountsSection.innerHTML = `
+        <div style="padding: 40px 20px; text-align: center; color: #536471;">
+          <div>没有其他账号</div>
+        </div>
+      `;
+    } else {
+      otherAccountsSection.innerHTML = otherPersonas.map(persona => `
+        <div class="setting-item account-switch-item" data-persona-id="${persona.id}" style="cursor: pointer;">
+          <img src="${persona.avatar || generateAvatar(persona.name)}" style="width: 48px; height: 48px; border-radius: 50%; margin-right: 12px; vertical-align: middle;">
+          <div style="display: inline-block; vertical-align: middle;">
+            <div style="font-weight: 700; font-size: 15px; color: #0f1419;">${persona.name}</div>
+            <div style="font-size: 15px; color: #536471;">@${persona.handle || persona.name}</div>
+          </div>
+          <div class="setting-arrow" style="margin-left: auto;">›</div>
+        </div>
+      `).join('');
+
+      // 绑定切换事件
+      otherAccountsSection.querySelectorAll('.account-switch-item').forEach(item => {
+        item.addEventListener('click', async () => {
+          const personaId = item.dataset.personaId;
+          await switchPersona(personaId, roche);
+          // 切换成功后返回主页
+          switchView('timeline');
+        });
+      });
+    }
+  } catch (error) {
+    console.error('[Twitter] 获取 Persona 失败:', error);
+    currentAccountSection.innerHTML = `
+      <div style="padding: 40px 20px; text-align: center; color: #f4212e;">
+        <div>加载失败</div>
+        <div style="margin-top: 8px; font-size: 13px;">${error.message}</div>
       </div>
     `;
+    otherAccountsSection.innerHTML = '';
   }
 
-  // 渲染其他账号
-  const otherAccountsSection = document.getElementById('other-accounts-section');
-  const otherPersonas = Object.values(twitterData.users).filter(u => u.isPersona && u.id !== currentUser);
-
-  if (otherPersonas.length === 0) {
-    otherAccountsSection.innerHTML = `
-      <div style="padding: 40px 20px; text-align: center; color: #536471;">
-        <div>没有其他账号</div>
-      </div>
-    `;
-  } else {
-    otherAccountsSection.innerHTML = otherPersonas.map(persona => `
-      <div class="setting-item account-switch-item" data-persona-id="${persona.id}" style="cursor: pointer;">
-        <img src="${persona.avatar}" style="width: 48px; height: 48px; border-radius: 50%; margin-right: 12px; vertical-align: middle;">
-        <div style="display: inline-block; vertical-align: middle;">
-          <div style="font-weight: 700; font-size: 15px; color: #0f1419;">${persona.name}</div>
-          <div style="font-size: 15px; color: #536471;">${persona.username}</div>
-        </div>
-        <div class="setting-arrow" style="margin-left: auto;">›</div>
-      </div>
-    `).join('');
-
-    // 绑定切换事件
-    otherAccountsSection.querySelectorAll('.account-switch-item').forEach(item => {
-      item.addEventListener('click', async () => {
-        const personaId = item.dataset.personaId;
-        await switchPersona(personaId, roche);
-        // 切换成功后返回主页
-        switchView('timeline');
-      });
+  // 绑定刷新按钮
+  const addAccountBtn = document.getElementById('add-account-btn');
+  if (addAccountBtn) {
+    addAccountBtn.replaceWith(addAccountBtn.cloneNode(true));
+    document.getElementById('add-account-btn').addEventListener('click', async () => {
+      showToast('正在刷新...', 'info');
+      await showSwitchAccount(roche);
+      showToast('已刷新', 'success');
     });
   }
-
-  // 绑定添加账号按钮
-  const addAccountBtn = document.getElementById('add-account-btn');
-  addAccountBtn.replaceWith(addAccountBtn.cloneNode(true)); // 移除旧事件
-  document.getElementById('add-account-btn').addEventListener('click', async () => {
-    try {
-      showToast('正在刷新账号列表...', 'info');
-
-      // 重新获取所有 Persona
-      const allPersonas = await roche.persona.getUserPersonas();
-      console.log('[Twitter] 刷新后的 Persona:', allPersonas);
-
-      if (allPersonas && allPersonas.length > 0) {
-        for (const persona of allPersonas) {
-          if (!twitterData.users[persona.id]) {
-            twitterData.users[persona.id] = {
-              id: persona.id,
-              name: persona.name,
-              username: `@${persona.handle || persona.name}`,
-              avatar: persona.avatar || generateAvatar(persona.name),
-              bio: persona.bio || '',
-              followers: 0,
-              following: 0,
-              conversationId: persona.conversationId,
-              isPersona: true
-            };
-          }
-        }
-        await saveData(roche);
-
-        // 重新渲染切换账号页面
-        showSwitchAccount(roche);
-        showToast('账号列表已刷新', 'success');
-      } else {
-        showToast('没有找到新账号', 'info');
-      }
-    } catch (error) {
-      console.error('[Twitter] 刷新账号列表失败:', error);
-      showToast('刷新失败: ' + error.message, 'error');
-    }
-  });
 
   // 切换到切换账号视图
   switchView('switchAccount');
