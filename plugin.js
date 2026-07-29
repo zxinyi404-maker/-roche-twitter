@@ -25,12 +25,41 @@ let currentView = 'timeline';
 let currentTweetId = null;
 
 /**
+ * Toast 提示框
+ */
+function showToast(message, type = 'success') {
+  const toast = document.createElement('div');
+  toast.className = `twitter-toast toast-${type}`;
+  toast.textContent = message;
+  toast.style.cssText = `
+    position: fixed;
+    top: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: ${type === 'error' ? '#f4212e' : '#1d9bf0'};
+    color: white;
+    padding: 12px 24px;
+    border-radius: 8px;
+    z-index: 10000;
+    font-size: 15px;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  `;
+  document.body.appendChild(toast);
+  setTimeout(() => {
+    if (document.body.contains(toast)) {
+      document.body.removeChild(toast);
+    }
+  }, 3000);
+}
+
+/**
  * 注册插件到 Roche 系统
  */
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '1.0.9',
+    version: '1.1.0',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -48,7 +77,7 @@ let currentTweetId = null;
 
         } catch (error) {
           console.error('插件初始化失败:', error);
-          roche.ui.message('插件加载失败: ' + error.message, 'error');
+          alert('插件加载失败: ' + error.message);
         }
       },
       async unmount(container) {
@@ -966,7 +995,7 @@ function bindEvents(roche) {
 
   // 顶部头像点击 - 显示个人资料
   document.getElementById('top-bar-avatar').addEventListener('click', () => {
-    roche.ui.message('个人资料功能开发中...', 'info');
+    showToast('个人资料功能开发中...', 'info');
   });
 
   // 详情页返回按钮
@@ -1013,7 +1042,7 @@ function bindEvents(roche) {
       if (nav === 'home') {
         switchView('timeline');
       } else {
-        roche.ui.message(`${item.title}功能开发中...`, 'info');
+        showToast(`${item.title}功能开发中...`, 'info');
       }
     });
   });
@@ -1118,7 +1147,7 @@ async function postTweet(roche, content) {
 
   renderTweets(roche);
 
-  roche.ui.message('推文已发布！', 'success');
+  showToast('推文已发布！', 'success');
 }
 
 /**
@@ -1331,7 +1360,7 @@ async function handleDetailAction(action, tweetId, roche) {
       break;
 
     case 'share':
-      roche.ui.message('分享功能开发中...', 'info');
+      showToast('分享功能开发中...', 'info');
       break;
   }
 }
@@ -1358,7 +1387,7 @@ async function postReply(roche, tweetId, content) {
   tweet.replies.push(reply);
 
   await saveData(roche);
-  roche.ui.message('回复已发布！', 'success');
+  showToast('回复已发布！', 'success');
 
   // 刷新详情页
   showTweetDetail(tweetId, roche);
@@ -1404,11 +1433,11 @@ async function handleTweetAction(action, tweetId, roche) {
       break;
 
     case 'reply':
-      roche.ui.message('回复功能开发中...', 'info');
+      showToast('回复功能开发中...', 'info');
       return;
 
     case 'share':
-      roche.ui.message('分享功能开发中...', 'info');
+      showToast('分享功能开发中...', 'info');
       return;
   }
 
