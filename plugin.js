@@ -2277,31 +2277,41 @@ function renderUI(container, roche) {
       <div class="search-header">
         <div class="search-input-wrapper">
           ${icons.search}
-          <input type="text" class="search-input" placeholder="搜索 Twitter">
+          <input type="text" class="search-input" id="search-input" placeholder="搜索互联网...">
         </div>
       </div>
       <div class="search-content">
-        <div class="trends-section">
-          <h2 class="section-title">趋势</h2>
-          <div class="trend-item">
-            <div class="trend-category">日本的趋势</div>
-            <div class="trend-hashtag">#人工智能</div>
-            <div class="trend-count">125K 推文</div>
+        <!-- 搜索结果区域 -->
+        <div id="search-results-section" style="display: none;">
+          <h2 class="section-title">搜索结果</h2>
+          <div id="search-results-list"></div>
+        </div>
+
+        <!-- 默认展示：趋势和推荐 -->
+        <div id="search-default-section">
+          <div class="trends-section">
+            <h2 class="section-title">趋势</h2>
+            <div class="trend-item">
+              <div class="trend-category">日本的趋势</div>
+              <div class="trend-hashtag">#人工智能</div>
+              <div class="trend-count">125K 推文</div>
+            </div>
+            <div class="trend-item">
+              <div class="trend-category">科技 · 热门</div>
+              <div class="trend-hashtag">#ClaudeAI</div>
+              <div class="trend-count">89.3K 推文</div>
+            </div>
+            <div class="trend-item">
+              <div class="trend-category">编程 · 热门</div>
+              <div class="trend-hashtag">#JavaScript</div>
+              <div class="trend-count">56.7K 推文</div>
+            </div>
           </div>
-          <div class="trend-item">
-            <div class="trend-category">科技 · 热门</div>
-            <div class="trend-hashtag">#ClaudeAI</div>
-            <div class="trend-count">89.3K 推文</div>
-          </div>
-          <div class="trend-item">
-            <div class="trend-category">编程 · 热门</div>
-            <div class="trend-hashtag">#JavaScript</div>
-            <div class="trend-count">56.7K 推文</div>
+          <div class="recommended-section">
+            <h2 class="section-title">推荐关注</h2>
+            <div id="recommended-users"></div>
           </div>
         </div>
-        <div class="recommended-section">
-          <h2 class="section-title">推荐关注</h2>
-          <div id="recommended-users"></div>
         </div>
       </div>
     </div>
@@ -2767,6 +2777,46 @@ function bindEvents(container, roche) {
     chatInput.value = '';
     chatSendBtn.disabled = true;
   });
+
+  // 搜索框事件
+  const searchInput = document.getElementById('search-input');
+  let searchTimeout = null;
+
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      const query = e.target.value.trim();
+
+      // 清除之前的定时器
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
+
+      // 如果搜索框为空，显示默认内容
+      if (!query) {
+        document.getElementById('search-results-section').style.display = 'none';
+        document.getElementById('search-default-section').style.display = 'block';
+        return;
+      }
+
+      // 防抖：延迟 500ms 后执行搜索
+      searchTimeout = setTimeout(() => {
+        performSearch(query, roche);
+      }, 500);
+    });
+
+    // 按下回车直接搜索
+    searchInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        const query = e.target.value.trim();
+        if (query) {
+          if (searchTimeout) {
+            clearTimeout(searchTimeout);
+          }
+          performSearch(query, roche);
+        }
+      }
+    });
+  }
 }
 
 /**
@@ -4651,6 +4701,190 @@ function showFollowersList(userId, roche) {
   }
 
   switchView('followersList');
+}
+
+/**
+ * 执行搜索 - 调用智能 MCP
+ */
+async function performSearch(query, roche) {
+  const resultsSection = document.getElementById('search-results-section');
+  const defaultSection = document.getElementById('search-default-section');
+  const resultsList = document.getElementById('search-results-list');
+
+  // 显示搜索结果区域
+  resultsSection.style.display = 'block';
+  defaultSection.style.display = 'none';
+
+  // 显示加载状态
+  resultsList.innerHTML = `
+    <div style="padding: 40px 20px; text-align: center; color: #536471;">
+      <div>搜索中...</div>
+    </div>
+  `;
+
+  try {
+    // 调用 AI 搜索（使用 roche.ai.chat）
+    const response = await roche.ai.chat({
+      messages: [{
+        role: 'user',
+        content: `请使用智能 MCP 搜索工具搜索以下内容：${query}
+
+要求：
+1. 返回 3-5 条最相关的搜索结果
+2. 每条结果包括：标题、摘要（100字以内）、来源
+3. 以 JSON 数组格式返回，格式如下：
+[
+  {
+    "title": "标题",
+    "summary": "摘要内容",
+    "source": "来源网站",
+    "url": "链接（如有）"
+  }
+]`
+      }],
+      conversationId: currentUser,
+      stream: false
+    });
+
+    console.log('[搜索] AI 返回:', response);
+
+    // 解析 AI 返回的内容
+    let searchResults = [];
+    try {
+      // 尝试从响应中提取 JSON
+      const jsonMatch = response.match(/\[[\s\S]*\]/);
+      if (jsonMatch) {
+        searchResults = JSON.parse(jsonMatch[0]);
+      }
+    } catch (e) {
+      console.error('[搜索] 解析结果失败:', e);
+    }
+
+    if (searchResults.length === 0) {
+      resultsList.innerHTML = `
+        <div style="padding: 40px 20px; text-align: center; color: #536471;">
+          <div>未找到相关结果</div>
+          <div style="margin-top: 8px; font-size: 14px;">试试其他关键词吧</div>
+        </div>
+      `;
+      return;
+    }
+
+    // 渲染搜索结果为推文形式
+    resultsList.innerHTML = searchResults.map((result, index) => {
+      const newsId = `search-${Date.now()}-${index}`;
+      const newsUser = {
+        id: 'news-bot',
+        name: '𝕏 搜索',
+        username: '@XSearch',
+        avatar: generateAvatar('搜索')
+      };
+
+      return `
+        <div class="tweet-item" data-tweet-id="${newsId}" data-is-news="true" data-search-result='${JSON.stringify(result).replace(/'/g, '&apos;')}'>
+          <img class="tweet-avatar" src="${newsUser.avatar}" alt="">
+          <div class="tweet-content">
+            <div class="tweet-header">
+              <span class="tweet-author">${newsUser.name}</span>
+              <span class="tweet-username">${newsUser.username}</span>
+              <span class="tweet-time">刚刚</span>
+            </div>
+            <div class="tweet-text">
+              <div style="font-weight: 700; margin-bottom: 8px;">${escapeHtml(result.title)}</div>
+              <div>${escapeHtml(result.summary)}</div>
+              ${result.source ? `<div style="margin-top: 8px; color: #1d9bf0; font-size: 14px;">📰 ${escapeHtml(result.source)}</div>` : ''}
+            </div>
+            <div class="tweet-actions">
+              <div class="tweet-action" data-action="reply">
+                <span class="action-icon">${icons.reply}</span>
+              </div>
+              <div class="tweet-action" data-action="retweet">
+                <span class="action-icon">${icons.retweet}</span>
+              </div>
+              <div class="tweet-action" data-action="like">
+                <span class="action-icon">${icons.like}</span>
+              </div>
+              <div class="tweet-action" data-action="share">
+                <span class="action-icon">${icons.share}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // 绑定搜索结果的操作事件
+    resultsList.querySelectorAll('.tweet-action').forEach(el => {
+      el.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const action = el.dataset.action;
+        const tweetItem = el.closest('.tweet-item');
+        const searchResult = JSON.parse(tweetItem.dataset.searchResult);
+
+        await handleSearchResultAction(action, searchResult, roche);
+      });
+    });
+
+  } catch (error) {
+    console.error('[搜索] 搜索失败:', error);
+    resultsList.innerHTML = `
+      <div style="padding: 40px 20px; text-align: center; color: #f4212e;">
+        <div>搜索失败</div>
+        <div style="margin-top: 8px; font-size: 14px;">${escapeHtml(error.message)}</div>
+      </div>
+    `;
+  }
+}
+
+/**
+ * 处理搜索结果的操作（转发/评论后才保存到记忆）
+ */
+async function handleSearchResultAction(action, searchResult, roche) {
+  const currentUserData = twitterData.users[currentUser];
+
+  if (action === 'retweet') {
+    // 转发：保存到记忆
+    const memoryText = `转发了搜索结果：${searchResult.title}\n${searchResult.summary}\n来源：${searchResult.source || '未知'}`;
+
+    try {
+      await roche.memory.addEpisodic({
+        content: memoryText,
+        conversationId: currentUser,
+        tags: ['twitter', 'search', 'retweet']
+      });
+      showToast('已转发并保存到记忆', 'success');
+    } catch (error) {
+      console.error('[搜索] 保存记忆失败:', error);
+      showToast('转发成功', 'success');
+    }
+
+  } else if (action === 'reply') {
+    // 评论：显示输入框，提交后保存到记忆
+    const comment = prompt('评论这条搜索结果：');
+    if (comment && comment.trim()) {
+      const memoryText = `评论了搜索结果：${searchResult.title}\n我的评论：${comment}\n原文摘要：${searchResult.summary}`;
+
+      try {
+        await roche.memory.addEpisodic({
+          content: memoryText,
+          conversationId: currentUser,
+          tags: ['twitter', 'search', 'comment']
+        });
+        showToast('评论已保存到记忆', 'success');
+      } catch (error) {
+        console.error('[搜索] 保存记忆失败:', error);
+        showToast('评论成功', 'success');
+      }
+    }
+
+  } else if (action === 'like') {
+    // 点赞：简单提示，不保存记忆
+    showToast('已点赞', 'success');
+
+  } else if (action === 'share') {
+    // 分享：显示分享选项
+    showToast('分享功能开发中...', 'info');
+  }
 }
 
 })(); // 立即执行函数结束
