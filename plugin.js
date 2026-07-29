@@ -1442,20 +1442,68 @@ function renderUI(container, roche) {
       }
 
       /* 搜索页 */
-      .search-header {
+      .search-top-bar {
         position: fixed;
-        top: calc(60px + env(safe-area-inset-top));
+        top: env(safe-area-inset-top);
         left: 0;
         right: 0;
-        padding: 12px 16px;
-        background: #ffffff;
+        height: 60px;
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(12px);
         border-bottom: 1px solid #eff3f4;
-        z-index: 99;
+        display: flex;
+        align-items: center;
+        padding: 0 16px;
+        gap: 12px;
+        z-index: 100;
         max-width: 768px;
         margin: 0 auto;
       }
 
+      .search-avatar-btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        overflow: hidden;
+        cursor: pointer;
+        transition: opacity 0.2s;
+        flex-shrink: 0;
+      }
+
+      .search-avatar-btn:hover {
+        opacity: 0.8;
+      }
+
+      .search-avatar-btn img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .search-settings-btn {
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        cursor: pointer;
+        transition: background 0.2s;
+        flex-shrink: 0;
+      }
+
+      .search-settings-btn:hover {
+        background: rgba(0, 0, 0, 0.05);
+      }
+
+      .search-settings-btn svg {
+        width: 20px;
+        height: 20px;
+        fill: #0f1419;
+      }
+
       .search-input-wrapper {
+        flex: 1;
         display: flex;
         align-items: center;
         background: #eff3f4;
@@ -1478,8 +1526,74 @@ function renderUI(container, roche) {
         color: #536471;
       }
 
+      .search-tabs-bar {
+        position: fixed;
+        top: calc(60px + env(safe-area-inset-top));
+        left: 0;
+        right: 0;
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid #eff3f4;
+        display: flex;
+        overflow-x: auto;
+        z-index: 99;
+        max-width: 768px;
+        margin: 0 auto;
+        scrollbar-width: none;
+      }
+
+      .search-tabs-bar::-webkit-scrollbar {
+        display: none;
+      }
+
+      .search-tab {
+        padding: 16px 20px;
+        color: #536471;
+        font-weight: 500;
+        font-size: 15px;
+        cursor: pointer;
+        position: relative;
+        transition: background 0.2s;
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+
+      .search-tab:hover {
+        background: rgba(0, 0, 0, 0.03);
+      }
+
+      .search-tab.active {
+        color: #0f1419;
+        font-weight: 700;
+      }
+
+      .search-tab.active::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 60px;
+        height: 4px;
+        background: #1d9bf0;
+        border-radius: 2px;
+      }
+
       .search-content {
-        padding-top: 60px;
+        padding-top: calc(60px + 53px); /* 顶部栏 + 标签栏 */
+      }
+
+      .search-header {
+        position: fixed;
+        top: calc(60px + env(safe-area-inset-top));
+        left: 0;
+        right: 0;
+        padding: 12px 16px;
+        background: #ffffff;
+        border-bottom: 1px solid #eff3f4;
+        z-index: 99;
+        max-width: 768px;
+        margin: 0 auto;
       }
 
       .section-title {
@@ -1804,6 +1918,146 @@ function renderUI(container, roche) {
 
       .messages-list-view.hidden {
         display: none;
+      }
+
+      .messages-top-bar {
+        position: fixed;
+        top: env(safe-area-inset-top);
+        left: 0;
+        right: 0;
+        height: 60px;
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid #eff3f4;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 16px;
+        z-index: 100;
+        max-width: 768px;
+        margin: 0 auto;
+      }
+
+      .messages-avatar-btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        overflow: hidden;
+        cursor: pointer;
+        transition: opacity 0.2s;
+      }
+
+      .messages-avatar-btn:hover {
+        opacity: 0.8;
+      }
+
+      .messages-avatar-btn img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .messages-title {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 20px;
+        font-weight: 700;
+        color: #0f1419;
+      }
+
+      .messages-filter-btn {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 6px 12px;
+        border: 1px solid #cfd9de;
+        border-radius: 20px;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 15px;
+        font-weight: 700;
+        color: #0f1419;
+      }
+
+      .messages-filter-btn:hover {
+        background: rgba(0, 0, 0, 0.03);
+      }
+
+      .messages-search-bar {
+        position: fixed;
+        top: calc(60px + env(safe-area-inset-top));
+        left: 0;
+        right: 0;
+        padding: 12px 16px;
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid #eff3f4;
+        z-index: 99;
+        max-width: 768px;
+        margin: 0 auto;
+      }
+
+      .messages-search-wrapper {
+        display: flex;
+        align-items: center;
+        background: #eff3f4;
+        border-radius: 24px;
+        padding: 10px 16px;
+        gap: 12px;
+        color: #536471;
+      }
+
+      .messages-search-input {
+        flex: 1;
+        background: transparent;
+        border: none;
+        outline: none;
+        font-size: 15px;
+        color: #0f1419;
+      }
+
+      .messages-search-input::placeholder {
+        color: #536471;
+      }
+
+      .messages-content {
+        padding-top: calc(60px + 60px); /* 顶部栏 + 搜索栏 */
+      }
+
+      .messages-welcome {
+        padding: 60px 32px;
+        text-align: center;
+      }
+
+      .messages-welcome-title {
+        font-size: 31px;
+        font-weight: 800;
+        color: #0f1419;
+        margin-bottom: 12px;
+      }
+
+      .messages-welcome-desc {
+        font-size: 15px;
+        color: #536471;
+        line-height: 20px;
+        margin-bottom: 28px;
+      }
+
+      .messages-write-btn {
+        padding: 16px 32px;
+        background: #0f1419;
+        color: #ffffff;
+        border: none;
+        border-radius: 24px;
+        font-size: 17px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .messages-write-btn:hover {
+        background: #272c30;
       }
 
       .messages-list {
@@ -2506,13 +2760,31 @@ function renderUI(container, roche) {
 
     <!-- 搜索页 -->
     <div class="page-view" id="search-view">
-      <div class="search-header">
+      <!-- 搜索页顶部栏 -->
+      <div class="search-top-bar">
+        <div class="search-avatar-btn" id="search-avatar-btn">
+          <img src="" alt="" id="search-avatar-img">
+        </div>
         <div class="search-input-wrapper">
           ${icons.search}
-          <input type="text" class="search-input" id="search-input" placeholder="搜索互联网...">
+          <input type="text" class="search-input" id="search-input" placeholder="搜索 X">
+        </div>
+        <div class="search-settings-btn" id="search-settings-btn">
+          ${icons.settings}
         </div>
       </div>
-      <div class="search-content">
+
+      <!-- 搜索标签页 -->
+      <div class="search-tabs-bar">
+        <div class="search-tab active" data-search-tab="recommend">为你推荐</div>
+        <div class="search-tab" data-search-tab="trending">当前趋势</div>
+        <div class="search-tab" data-search-tab="news">新闻</div>
+        <div class="search-tab" data-search-tab="sports">体育</div>
+        <div class="search-tab" data-search-tab="entertainment">娱乐</div>
+      </div>
+
+      <!-- 搜索内容区 -->
+      <div class="search-content" id="search-content-area">
         <!-- 搜索结果区域 -->
         <div id="search-results-section" style="display: none;">
           <h2 class="section-title">搜索结果</h2>
@@ -2522,7 +2794,6 @@ function renderUI(container, roche) {
         <!-- 默认展示：趋势和推荐 -->
         <div id="search-default-section">
           <div class="trends-section">
-            <h2 class="section-title">趋势</h2>
             <div class="trend-item">
               <div class="trend-category">日本的趋势</div>
               <div class="trend-hashtag">#人工智能</div>
@@ -2539,11 +2810,6 @@ function renderUI(container, roche) {
               <div class="trend-count">56.7K 推文</div>
             </div>
           </div>
-          <div class="recommended-section">
-            <h2 class="section-title">推荐关注</h2>
-            <div id="recommended-users"></div>
-          </div>
-        </div>
         </div>
       </div>
     </div>
@@ -2579,11 +2845,45 @@ function renderUI(container, roche) {
 
     <!-- 私信页 -->
     <div class="page-view" id="messages-view">
+      <!-- 私信列表视图 -->
       <div class="messages-list-view" id="messages-list-view">
-        <div class="messages-list" id="messages-list">
-          <!-- 动态加载对话列表 -->
+        <!-- 私信页顶部栏 -->
+        <div class="messages-top-bar">
+          <div class="messages-avatar-btn" id="messages-avatar-btn">
+            <img src="" alt="" id="messages-avatar-img">
+          </div>
+          <div class="messages-title">聊天</div>
+          <div class="messages-filter-btn" id="messages-filter-btn">
+            <span>全部</span>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M3.543 8.96l1.414-1.42L12 14.59l7.043-7.05 1.414 1.42L12 17.41 3.543 8.96z"></path></svg>
+          </div>
+        </div>
+
+        <!-- 搜索框 -->
+        <div class="messages-search-bar">
+          <div class="messages-search-wrapper">
+            ${icons.search}
+            <input type="text" class="messages-search-input" placeholder="搜索">
+          </div>
+        </div>
+
+        <!-- 私信内容 -->
+        <div class="messages-content" id="messages-content">
+          <!-- 欢迎界面（无对话时显示） -->
+          <div class="messages-welcome" id="messages-welcome">
+            <div class="messages-welcome-title">欢迎来到你的收件箱！</div>
+            <div class="messages-welcome-desc">在 X 上和别人进行私密对话，大家互发私信、分享帖子等。</div>
+            <button class="messages-write-btn" id="messages-write-btn">写一封私信</button>
+          </div>
+
+          <!-- 对话列表（有对话时显示） -->
+          <div class="messages-list" id="messages-list" style="display: none;">
+            <!-- 动态加载对话列表 -->
+          </div>
         </div>
       </div>
+
+      <!-- 聊天视图 -->
       <div class="chat-view" id="chat-view">
         <div class="chat-header">
           <div class="chat-back-btn" id="chat-back-btn">${icons.back}</div>
@@ -4588,6 +4888,40 @@ function escapeHtml(text) {
  * 渲染搜索页
  */
 function renderSearch(roche) {
+  // 更新顶部栏头像
+  const avatarImg = document.getElementById('search-avatar-img');
+  const currentUserData = twitterData.users[currentUser];
+  if (avatarImg && currentUserData) {
+    avatarImg.src = currentUserData.avatar;
+  }
+
+  // 绑定头像按钮点击事件
+  const avatarBtn = document.getElementById('search-avatar-btn');
+  if (avatarBtn) {
+    avatarBtn.onclick = () => {
+      showProfile(currentUser, roche);
+    };
+  }
+
+  // 绑定设置按钮点击事件
+  const settingsBtn = document.getElementById('search-settings-btn');
+  if (settingsBtn) {
+    settingsBtn.onclick = () => {
+      switchView('settings');
+    };
+  }
+
+  // 绑定标签页切换
+  document.querySelectorAll('.search-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.search-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      // 这里可以根据不同标签页加载不同内容
+      const tabType = tab.dataset.searchTab;
+      console.log('[搜索] 切换到标签:', tabType);
+    });
+  });
+
   const recommendedEl = document.getElementById('recommended-users');
   // 只显示其他 Persona（不是当前用户）
   const users = Object.values(twitterData.users).filter(u => u.id !== currentUser && u.isPersona);
@@ -4762,43 +5096,57 @@ function renderNotifications(roche) {
 let currentChatUser = null;
 
 function renderMessages(roche) {
+  // 更新顶部栏头像
+  const avatarImg = document.getElementById('messages-avatar-img');
+  const currentUserData = twitterData.users[currentUser];
+  if (avatarImg && currentUserData) {
+    avatarImg.src = currentUserData.avatar;
+  }
+
+  // 绑定头像按钮点击事件
+  const avatarBtn = document.getElementById('messages-avatar-btn');
+  if (avatarBtn) {
+    avatarBtn.onclick = () => {
+      showProfile(currentUser, roche);
+    };
+  }
+
+  // 绑定筛选按钮点击事件
+  const filterBtn = document.getElementById('messages-filter-btn');
+  if (filterBtn) {
+    filterBtn.onclick = () => {
+      showToast('筛选功能开发中...', 'info');
+    };
+  }
+
+  // 绑定写私信按钮
+  const writeBtn = document.getElementById('messages-write-btn');
+  if (writeBtn) {
+    writeBtn.onclick = () => {
+      showToast('新建私信功能开发中...', 'info');
+    };
+  }
+
   const messagesEl = document.getElementById('messages-list');
+  const welcomeEl = document.getElementById('messages-welcome');
 
   // 生成一些示例对话
   if (Object.keys(twitterData.conversations).length === 0) {
-    const users = Object.values(twitterData.users).filter(u => u.id !== currentUser && u.isPersona);
-
-    users.slice(0, 3).forEach(user => {
-      twitterData.conversations[user.id] = {
-        userId: user.id,
-        messages: [
-          {
-            id: Date.now(),
-            from: user.id,
-            content: '你好！很高兴认识你。',
-            timestamp: Date.now() - Math.floor(Math.random() * 86400000)
-          }
-        ],
-        unread: Math.random() > 0.5
-      };
-    });
+    // 显示欢迎界面
+    if (welcomeEl) welcomeEl.style.display = 'block';
+    if (messagesEl) messagesEl.style.display = 'none';
+    return;
   }
+
+  // 隐藏欢迎界面，显示对话列表
+  if (welcomeEl) welcomeEl.style.display = 'none';
+  if (messagesEl) messagesEl.style.display = 'block';
 
   const conversations = Object.values(twitterData.conversations).sort((a, b) => {
     const aLast = a.messages[a.messages.length - 1]?.timestamp || 0;
     const bLast = b.messages[b.messages.length - 1]?.timestamp || 0;
     return bLast - aLast;
   });
-
-  if (conversations.length === 0) {
-    messagesEl.innerHTML = `
-      <div class="empty-state">
-        <div class="empty-state-icon">✉️</div>
-        <div>还没有私信</div>
-      </div>
-    `;
-    return;
-  }
 
   messagesEl.innerHTML = conversations.map(conv => {
     const user = twitterData.users[conv.userId];
