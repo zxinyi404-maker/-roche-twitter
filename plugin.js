@@ -2060,6 +2060,33 @@ function renderUI(container, roche) {
         background: #272c30;
       }
 
+      .messages-fab {
+        position: fixed;
+        right: 20px;
+        bottom: calc(80px + env(safe-area-inset-bottom));
+        width: 56px;
+        height: 56px;
+        background: #1d9bf0;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        cursor: pointer;
+        transition: all 0.2s;
+        z-index: 100;
+      }
+
+      .messages-fab:hover {
+        background: #1a8cd8;
+        transform: scale(1.05);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+      }
+
+      .messages-fab:active {
+        transform: scale(0.95);
+      }
+
       .messages-list {
         width: 100%;
       }
@@ -2880,6 +2907,16 @@ function renderUI(container, roche) {
           <div class="messages-list" id="messages-list" style="display: none;">
             <!-- 动态加载对话列表 -->
           </div>
+        </div>
+
+        <!-- 浮动新建私信按钮 -->
+        <div class="messages-fab" id="messages-fab">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="white">
+            <path d="M1.998 5.5c0-1.381 1.119-2.5 2.5-2.5h15c1.381 0 2.5 1.119 2.5 2.5v13c0 1.381-1.119 2.5-2.5 2.5h-15c-1.381 0-2.5-1.119-2.5-2.5v-13zm2.5-.5c-.276 0-.5.224-.5.5v.511l8.5 5.312 8.5-5.312v-.511c0-.276-.224-.5-.5-.5h-15zm-.5 2.49v10.51c0 .276.224.5.5.5h15c.276 0 .5-.224.5-.5v-10.51l-7.928 4.954c-.32.2-.73.2-1.05 0l-7.928-4.955z"></path>
+          </svg>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="white" style="position: absolute; right: 8px; bottom: 8px; background: #1d9bf0; border-radius: 50%; padding: 2px;">
+            <path d="M13 7h-2v4H7v2h4v4h2v-4h4v-2h-4V7zm-1-5C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"></path>
+          </svg>
         </div>
       </div>
 
@@ -5123,6 +5160,14 @@ function renderMessages(roche) {
   const writeBtn = document.getElementById('messages-write-btn');
   if (writeBtn) {
     writeBtn.onclick = () => {
+      showNewMessageDialog(roche);
+    };
+  }
+
+  // 绑定浮动按钮
+  const fabBtn = document.getElementById('messages-fab');
+  if (fabBtn) {
+    fabBtn.onclick = () => {
       showNewMessageDialog(roche);
     };
   }
