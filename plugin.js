@@ -4936,7 +4936,7 @@ function renderSearch(roche) {
   const avatarBtn = document.getElementById('search-avatar-btn');
   if (avatarBtn) {
     avatarBtn.onclick = () => {
-      showProfile(currentUser, roche);
+      showSidebar(roche);
     };
   }
 
@@ -5008,7 +5008,7 @@ function renderNotifications(roche) {
   const avatarBtn = document.getElementById('notifications-avatar-btn');
   if (avatarBtn) {
     avatarBtn.onclick = () => {
-      showProfile(currentUser, roche);
+      showSidebar(roche);
     };
   }
 
@@ -5144,7 +5144,7 @@ function renderMessages(roche) {
   const avatarBtn = document.getElementById('messages-avatar-btn');
   if (avatarBtn) {
     avatarBtn.onclick = () => {
-      showProfile(currentUser, roche);
+      showSidebar(roche);
     };
   }
 
@@ -5630,6 +5630,196 @@ async function sendMessage(roche, content) {
   openChat(currentChatUser, roche);
 
   showToast('消息已发送', 'success');
+}
+
+/**
+ * 显示侧边栏菜单（点击头像）
+ */
+function showSidebar(roche) {
+  const currentUserData = twitterData.users[currentUser];
+  if (!currentUserData) return;
+
+  // 创建遮罩层
+  const overlay = document.createElement('div');
+  overlay.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 10000;
+    animation: fadeIn 0.2s;
+  `;
+
+  // 创建侧边栏
+  const sidebar = document.createElement('div');
+  sidebar.style.cssText = `
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 280px;
+    max-width: 80%;
+    background: white;
+    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
+    display: flex;
+    flex-direction: column;
+    animation: slideInLeft 0.3s;
+    overflow-y: auto;
+  `;
+
+  // 获取所有可切换的用户
+  const allUsers = Object.values(twitterData.users).filter(u => u.isPersona);
+
+  sidebar.innerHTML = `
+    <div style="padding: 16px; border-bottom: 1px solid #eff3f4;">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+        <div style="font-size: 20px; font-weight: 700; color: #0f1419;">账号信息</div>
+        <div class="sidebar-close-btn" style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 50%; cursor: pointer; transition: background 0.2s;">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="#0f1419"><path d="M10.59 12L4.54 5.96l1.42-1.42L12 10.59l6.04-6.05 1.42 1.42L13.41 12l6.05 6.04-1.42 1.42L12 13.41l-6.04 6.05-1.42-1.42L10.59 12z"></path></svg>
+        </div>
+      </div>
+
+      <!-- 当前用户信息 -->
+      <div style="margin-bottom: 12px;">
+        <img src="${currentUserData.avatar}" style="width: 40px; height: 40px; border-radius: 50%; margin-bottom: 4px;" alt="">
+        <div style="font-size: 15px; font-weight: 700; color: #0f1419;">${currentUserData.name}</div>
+        <div style="font-size: 15px; color: #536471;">${currentUserData.username}</div>
+      </div>
+
+      <!-- 关注信息 -->
+      <div style="display: flex; gap: 16px; font-size: 14px;">
+        <div>
+          <span style="font-weight: 700; color: #0f1419;">${twitterData.follows[currentUser]?.length || 0}</span>
+          <span style="color: #536471;"> 正在关注</span>
+        </div>
+        <div>
+          <span style="font-weight: 700; color: #0f1419;">${Object.values(twitterData.follows).filter(list => list.includes(currentUser)).length}</span>
+          <span style="color: #536471;"> 关注者</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 菜单选项 -->
+    <div style="flex: 1;">
+      <div class="sidebar-menu-item" data-action="profile">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="#0f1419" style="margin-right: 16px;"><path d="M5.651 19h12.698c-.337-1.8-1.023-3.21-1.945-4.19C15.318 13.65 13.838 13 12 13s-3.317.65-4.404 1.81c-.922.98-1.608 2.39-1.945 4.19zm.486-5.56C7.627 11.85 9.648 11 12 11s4.373.85 5.863 2.44c1.477 1.58 2.366 3.8 2.632 6.46l.11 1.1H3.395l.11-1.1c.266-2.66 1.155-4.88 2.632-6.46zM12 4c-1.105 0-2 .9-2 2s.895 2 2 2 2-.9 2-2-.895-2-2-2zM8 6c0-2.21 1.791-4 4-4s4 1.79 4 4-1.791 4-4 4-4-1.79-4-4z"></path></svg>
+        <span>个人资料</span>
+      </div>
+
+      <div class="sidebar-menu-item" data-action="bookmarks">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="#0f1419" style="margin-right: 16px;"><path d="M4 4.5C4 3.12 5.119 2 6.5 2h11C18.881 2 20 3.12 20 4.5v18.44l-8-5.71-8 5.71V4.5zM6.5 4c-.276 0-.5.224-.5.5v14.56l6-4.29 6 4.29V4.5c0-.276-.224-.5-.5-.5h-11z"></path></svg>
+        <span>书签</span>
+      </div>
+
+      <div class="sidebar-menu-item" data-action="lists">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="#0f1419" style="margin-right: 16px;"><path d="M3 4.5C3 3.12 4.12 2 5.5 2h13C19.88 2 21 3.12 21 4.5v15c0 1.38-1.12 2.5-2.5 2.5h-13C4.12 22 3 20.88 3 19.5v-15zM5.5 4c-.28 0-.5.22-.5.5v15c0 .28.22.5.5.5h13c.28 0 .5-.22.5-.5v-15c0-.28-.22-.5-.5-.5h-13zM16 10H8V8h8v2zm-8 2h8v2H8v-2z"></path></svg>
+        <span>列表</span>
+      </div>
+
+      <div style="height: 1px; background: #eff3f4; margin: 8px 0;"></div>
+
+      <div class="sidebar-menu-item" data-action="settings">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="#0f1419" style="margin-right: 16px;"><path d="M10.54 1.75h2.92l1.57 2.36c.11.17.32.25.53.21l2.53-.59 2.17 2.17-.58 2.54c-.05.2.04.41.21.53l2.36 1.57v2.92l-2.36 1.57c-.17.12-.26.33-.21.53l.58 2.54-2.17 2.17-2.53-.59c-.21-.04-.42.04-.53.21l-1.57 2.36h-2.92l-1.58-2.36c-.11-.17-.32-.25-.52-.21l-2.54.59-2.17-2.17.58-2.54c.05-.2-.03-.41-.21-.53l-2.35-1.57v-2.92L4.1 8.97c.18-.12.26-.33.21-.53L3.73 5.9 5.9 3.73l2.54.59c.2.04.41-.04.52-.21l1.58-2.36zm1.07 2l-.98 1.47C10.05 6.08 9 6.5 7.99 6.27l-1.46-.34-.6.6.33 1.46c.24 1.01-.18 2.07-1.05 2.64l-1.46.98v.78l1.46.98c.87.57 1.29 1.63 1.05 2.64l-.33 1.46.6.6 1.46-.34c1.01-.23 2.06.19 2.64 1.05l.98 1.47h.78l.97-1.47c.58-.86 1.63-1.28 2.65-1.05l1.45.34.61-.6-.34-1.46c-.23-1.01.18-2.07 1.05-2.64l1.47-.98v-.78l-1.47-.98c-.87-.57-1.28-1.63-1.05-2.64l.34-1.46-.61-.6-1.45.34c-1.02.23-2.07-.19-2.65-1.05l-.97-1.47h-.78zM12 10.5c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5c.82 0 1.5-.67 1.5-1.5s-.68-1.5-1.5-1.5zM8.5 12c0-1.93 1.56-3.5 3.5-3.5 1.93 0 3.5 1.57 3.5 3.5s-1.57 3.5-3.5 3.5c-1.94 0-3.5-1.57-3.5-3.5z"></path></svg>
+        <span>设置和隐私</span>
+      </div>
+
+      ${allUsers.length > 1 ? `
+        <div style="height: 1px; background: #eff3f4; margin: 8px 0;"></div>
+        <div style="padding: 12px 16px; color: #536471; font-size: 13px; font-weight: 700;">切换账号</div>
+        ${allUsers.filter(u => u.id !== currentUser).map(user => `
+          <div class="sidebar-menu-item sidebar-user-item" data-user-id="${user.id}">
+            <img src="${user.avatar}" style="width: 32px; height: 32px; border-radius: 50%; margin-right: 12px;" alt="">
+            <div style="flex: 1;">
+              <div style="font-size: 15px; font-weight: 700; color: #0f1419;">${user.name}</div>
+              <div style="font-size: 13px; color: #536471;">${user.username}</div>
+            </div>
+          </div>
+        `).join('')}
+      ` : ''}
+    </div>
+
+    <style>
+      @keyframes slideInLeft {
+        from { transform: translateX(-100%); }
+        to { transform: translateX(0); }
+      }
+
+      .sidebar-close-btn:hover {
+        background: rgba(0, 0, 0, 0.05);
+      }
+
+      .sidebar-menu-item {
+        display: flex;
+        align-items: center;
+        padding: 16px;
+        cursor: pointer;
+        transition: background 0.2s;
+        font-size: 15px;
+        font-weight: 500;
+        color: #0f1419;
+      }
+
+      .sidebar-menu-item:hover {
+        background: rgba(0, 0, 0, 0.03);
+      }
+    </style>
+  `;
+
+  overlay.appendChild(sidebar);
+  document.body.appendChild(overlay);
+
+  // 绑定关闭按钮
+  sidebar.querySelector('.sidebar-close-btn').addEventListener('click', () => {
+    document.body.removeChild(overlay);
+  });
+
+  // 绑定菜单项点击
+  sidebar.querySelectorAll('.sidebar-menu-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const action = item.dataset.action;
+      const userId = item.dataset.userId;
+
+      document.body.removeChild(overlay);
+
+      if (action === 'profile') {
+        showProfile(currentUser, roche);
+      } else if (action === 'bookmarks') {
+        showToast('书签功能开发中...', 'info');
+      } else if (action === 'lists') {
+        showToast('列表功能开发中...', 'info');
+      } else if (action === 'settings') {
+        switchView('settings');
+      } else if (userId) {
+        // 切换账号
+        currentUser = userId;
+        saveData(roche);
+        showToast(`已切换到 ${twitterData.users[userId].name}`, 'success');
+        // 刷新当前页面
+        const currentView = document.querySelector('.page-view:not([style*="display: none"])');
+        if (currentView) {
+          const viewId = currentView.id;
+          if (viewId === 'timeline-view') {
+            renderTimeline(roche);
+          } else if (viewId === 'search-view') {
+            renderSearch(roche);
+          } else if (viewId === 'notifications-view') {
+            renderNotifications(roche);
+          } else if (viewId === 'messages-view') {
+            renderMessages(roche);
+          }
+        }
+      }
+    });
+  });
+
+  // 点击遮罩层关闭
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) {
+      document.body.removeChild(overlay);
+    }
+  });
 }
 
 /**
