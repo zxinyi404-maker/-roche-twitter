@@ -67,7 +67,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '1.4.2',
+    version: '1.4.3',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -2324,26 +2324,14 @@ function renderUI(container, roche) {
         </div>
       </div>
       <div class="profile-content">
-        <h2 class="section-title">账号管理</h2>
-        <div class="settings-section">
-          <div class="setting-item" id="setting-switch-account">
-            <div class="setting-label">切换账号</div>
-            <div class="setting-arrow">›</div>
-          </div>
-          <div class="setting-item" id="setting-add-account">
-            <div class="setting-label">添加已有账号</div>
-            <div class="setting-arrow">›</div>
-          </div>
-        </div>
-
-        <h2 class="section-title" style="margin-top: 20px;">账号设置</h2>
+        <h2 class="section-title">账号设置</h2>
         <div class="settings-section">
           <div class="setting-item" id="setting-edit-profile">
             <div class="setting-label">编辑个人资料</div>
             <div class="setting-arrow">›</div>
           </div>
           <div class="setting-item" id="setting-privacy">
-            <div class="setting-label">隐私和安全</div>
+            <div class="setting-label">设置和隐私</div>
             <div class="setting-arrow">›</div>
           </div>
           <div class="setting-item" id="setting-notifications">
@@ -2352,9 +2340,7 @@ function renderUI(container, roche) {
           </div>
         </div>
 
-        <h2 class="section-title" style="margin-top: 20px;">
-          ${icons.memory} 记忆设置
-        </h2>
+        <h2 class="section-title" style="margin-top: 20px;">记忆设置</h2>
         <div class="settings-section">
           <div class="setting-item setting-toggle">
             <div class="setting-info">
@@ -2390,7 +2376,7 @@ function renderUI(container, roche) {
         <div class="settings-section">
           <div class="setting-item">
             <div class="setting-label">版本</div>
-            <div class="setting-value">v1.4.2</div>
+            <div class="setting-value">v1.4.3</div>
           </div>
           <div class="setting-item" id="setting-about">
             <div class="setting-label">关于 Twitter 插件</div>
@@ -2440,6 +2426,57 @@ function renderUI(container, roche) {
         </div>
         <div class="profile-tweets" id="profile-tweets-list">
           <!-- 动态加载用户推文 -->
+        </div>
+      </div>
+    </div>
+
+    <!-- 设置和隐私页 -->
+    <div class="page-view" id="privacy-settings-view">
+      <div class="profile-header">
+        <div class="profile-back-btn" id="privacy-settings-back-btn">${icons.back}</div>
+        <div class="profile-header-info">
+          <div class="profile-header-name">设置和隐私</div>
+        </div>
+      </div>
+      <div class="profile-content">
+        <h2 class="section-title">你的账号</h2>
+        <div class="settings-section">
+          <div class="setting-item" id="setting-account-info">
+            <div class="setting-label">账号信息</div>
+            <div class="setting-arrow">›</div>
+          </div>
+          <div class="setting-item" id="setting-switch-account">
+            <div class="setting-label">切换账号</div>
+            <div class="setting-arrow">›</div>
+          </div>
+          <div class="setting-item" id="setting-deactivate-account">
+            <div class="setting-label">停用你的账号</div>
+            <div class="setting-arrow">›</div>
+          </div>
+        </div>
+
+        <h2 class="section-title" style="margin-top: 20px;">数据共享和个性化</h2>
+        <div class="settings-section">
+          <div class="setting-item" id="setting-ad-preferences">
+            <div class="setting-label">广告偏好设置</div>
+            <div class="setting-arrow">›</div>
+          </div>
+          <div class="setting-item" id="setting-data-sharing">
+            <div class="setting-label">数据共享</div>
+            <div class="setting-arrow">›</div>
+          </div>
+        </div>
+
+        <h2 class="section-title" style="margin-top: 20px;">安全</h2>
+        <div class="settings-section">
+          <div class="setting-item" id="setting-security">
+            <div class="setting-label">安全性</div>
+            <div class="setting-arrow">›</div>
+          </div>
+          <div class="setting-item" id="setting-password">
+            <div class="setting-label">密码</div>
+            <div class="setting-arrow">›</div>
+          </div>
         </div>
       </div>
     </div>
@@ -2536,7 +2573,7 @@ function bindEvents(roche) {
 
   // 下拉菜单 - 退出
   document.getElementById('dropdown-exit').addEventListener('click', () => {
-    exitApp();
+    exitApp(container, roche);
   });
 
   // 顶部头像点击 - 打开侧边栏
@@ -3066,6 +3103,7 @@ function switchView(view) {
   const messagesView = document.getElementById('messages-view');
   const profileView = document.getElementById('profile-view');
   const settingsView = document.getElementById('settings-view');
+  const privacySettingsView = document.getElementById('privacy-settings-view');
   const switchAccountView = document.getElementById('switch-account-view');
   const topBar = document.querySelector('.mobile-top-bar');
 
@@ -3078,6 +3116,7 @@ function switchView(view) {
   messagesView.classList.remove('active');
   profileView.classList.remove('active');
   settingsView.classList.remove('active');
+  if (privacySettingsView) privacySettingsView.classList.remove('active');
   if (switchAccountView) switchAccountView.classList.remove('active');
 
   if (view === 'timeline') {
@@ -3112,6 +3151,10 @@ function switchView(view) {
   } else if (view === 'settings') {
     // 显示设置页
     settingsView.classList.add('active');
+    topBar.style.display = 'flex';
+  } else if (view === 'privacySettings') {
+    // 显示设置和隐私页
+    if (privacySettingsView) privacySettingsView.classList.add('active');
     topBar.style.display = 'flex';
   } else if (view === 'switchAccount') {
     // 显示切换账号页
@@ -3266,13 +3309,25 @@ async function postReply(roche, tweetId, content) {
 /**
  * 退出应用
  */
-function exitApp() {
-  // 尝试返回上一页
+function exitApp(container, roche) {
+  // 调用插件的 unmount 方法清理
+  const appDiv = document.getElementById('twitter-app');
+  if (appDiv && container) {
+    container.replaceChildren();
+  }
+
+  // 尝试返回上一页（返回 Roche 主界面）
   if (window.history.length > 1) {
     window.history.back();
   } else {
-    // 如果没有历史记录，尝试关闭窗口
-    window.close();
+    // 如果没有历史记录，清空显示提示
+    if (container) {
+      container.innerHTML = '<div style="padding: 20px; text-align: center; color: #536471;">已退出 Twitter</div>';
+      // 短暂延迟后再次尝试返回
+      setTimeout(() => {
+        window.history.back();
+      }, 500);
+    }
   }
 }
 
@@ -3880,22 +3935,13 @@ function showSettings(roche) {
     showToast(settings.autoSummary ? '已启用自动总结' : '已禁用自动总结', 'success');
   });
 
-  // 绑定账号管理项点击
-  document.getElementById('setting-switch-account').addEventListener('click', () => {
-    showSwitchAccount(roche);
-  });
-
-  document.getElementById('setting-add-account').addEventListener('click', () => {
-    showToast('添加账号功能开发中...', 'info');
-  });
-
   // 绑定设置项点击
   document.getElementById('setting-edit-profile').addEventListener('click', () => {
     showToast('编辑个人资料功能开发中...', 'info');
   });
 
   document.getElementById('setting-privacy').addEventListener('click', () => {
-    showToast('隐私和安全功能开发中...', 'info');
+    showPrivacySettings(roche);
   });
 
   document.getElementById('setting-notifications').addEventListener('click', () => {
@@ -3910,11 +3956,61 @@ function showSettings(roche) {
   });
 
   document.getElementById('setting-about').addEventListener('click', () => {
-    showToast('Twitter 插件 v1.4.2 - 账号管理优化', 'info');
+    showToast('Twitter 插件 v1.4.3 - 退出优化 & 账号切换重构', 'info');
   });
 
   // 切换到设置视图
   switchView('settings');
+}
+
+/**
+ * 显示设置和隐私页面
+ */
+function showPrivacySettings(roche) {
+  // 绑定返回按钮
+  const backBtn = document.getElementById('privacy-settings-back-btn');
+  backBtn.replaceWith(backBtn.cloneNode(true)); // 移除旧事件
+  document.getElementById('privacy-settings-back-btn').addEventListener('click', () => {
+    switchView('settings');
+  });
+
+  // 绑定账号信息
+  document.getElementById('setting-account-info').addEventListener('click', () => {
+    showToast('账号信息功能开发中...', 'info');
+  });
+
+  // 绑定切换账号
+  document.getElementById('setting-switch-account').addEventListener('click', () => {
+    showSwitchAccount(roche);
+  });
+
+  // 绑定停用账号
+  document.getElementById('setting-deactivate-account').addEventListener('click', () => {
+    showToast('停用账号功能开发中...', 'info');
+  });
+
+  // 绑定广告偏好
+  document.getElementById('setting-ad-preferences').addEventListener('click', () => {
+    showToast('广告偏好设置功能开发中...', 'info');
+  });
+
+  // 绑定数据共享
+  document.getElementById('setting-data-sharing').addEventListener('click', () => {
+    showToast('数据共享功能开发中...', 'info');
+  });
+
+  // 绑定安全性
+  document.getElementById('setting-security').addEventListener('click', () => {
+    showToast('安全性功能开发中...', 'info');
+  });
+
+  // 绑定密码
+  document.getElementById('setting-password').addEventListener('click', () => {
+    showToast('密码功能开发中...', 'info');
+  });
+
+  // 切换到设置和隐私视图
+  switchView('privacySettings');
 }
 
 /**
@@ -3925,7 +4021,7 @@ function showSwitchAccount(roche) {
   const backBtn = document.getElementById('switch-account-back-btn');
   backBtn.replaceWith(backBtn.cloneNode(true)); // 移除旧事件
   document.getElementById('switch-account-back-btn').addEventListener('click', () => {
-    switchView('settings');
+    switchView('privacySettings');
   });
 
   // 渲染当前账号
