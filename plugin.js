@@ -67,7 +67,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '1.4.1',
+    version: '1.4.2',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -2174,10 +2174,6 @@ function renderUI(container, roche) {
           <span>帮助中心</span>
         </div>
       </div>
-      <div class="sidebar-personas">
-        <div class="sidebar-section-title">切换账号</div>
-        <div id="sidebar-personas-list"></div>
-      </div>
     </div>
 
     <!-- 顶部导航栏 -->
@@ -2328,7 +2324,19 @@ function renderUI(container, roche) {
         </div>
       </div>
       <div class="profile-content">
-        <h2 class="section-title">账号设置</h2>
+        <h2 class="section-title">账号管理</h2>
+        <div class="settings-section">
+          <div class="setting-item" id="setting-switch-account">
+            <div class="setting-label">切换账号</div>
+            <div class="setting-arrow">›</div>
+          </div>
+          <div class="setting-item" id="setting-add-account">
+            <div class="setting-label">添加已有账号</div>
+            <div class="setting-arrow">›</div>
+          </div>
+        </div>
+
+        <h2 class="section-title" style="margin-top: 20px;">账号设置</h2>
         <div class="settings-section">
           <div class="setting-item" id="setting-edit-profile">
             <div class="setting-label">编辑个人资料</div>
@@ -2382,7 +2390,7 @@ function renderUI(container, roche) {
         <div class="settings-section">
           <div class="setting-item">
             <div class="setting-label">版本</div>
-            <div class="setting-value">v1.4.1</div>
+            <div class="setting-value">v1.4.2</div>
           </div>
           <div class="setting-item" id="setting-about">
             <div class="setting-label">关于 Twitter 插件</div>
@@ -2432,6 +2440,33 @@ function renderUI(container, roche) {
         </div>
         <div class="profile-tweets" id="profile-tweets-list">
           <!-- 动态加载用户推文 -->
+        </div>
+      </div>
+    </div>
+
+    <!-- 切换账号页 -->
+    <div class="page-view" id="switch-account-view">
+      <div class="profile-header">
+        <div class="profile-back-btn" id="switch-account-back-btn">${icons.back}</div>
+        <div class="profile-header-info">
+          <div class="profile-header-name">切换账号</div>
+        </div>
+      </div>
+      <div class="profile-content">
+        <h2 class="section-title">当前账号</h2>
+        <div class="settings-section" id="current-account-section">
+          <!-- 动态加载当前账号 -->
+        </div>
+
+        <h2 class="section-title" style="margin-top: 20px;">其他账号</h2>
+        <div class="settings-section" id="other-accounts-section">
+          <!-- 动态加载其他账号 -->
+        </div>
+
+        <div style="padding: 16px;">
+          <button class="compose-btn" id="add-account-btn" style="width: 100%; padding: 12px;">
+            ${icons.plus} 添加已有账号
+          </button>
         </div>
       </div>
     </div>
@@ -2648,30 +2683,6 @@ function openSidebar(roche) {
   document.getElementById('sidebar-user-username').textContent = user.username;
   document.getElementById('sidebar-following').textContent = user.following || 0;
   document.getElementById('sidebar-followers').textContent = user.followers || 0;
-
-  // 渲染所有 Persona（可切换的账号）
-  const personasList = document.getElementById('sidebar-personas-list');
-  const personas = Object.values(twitterData.users).filter(u => u.isPersona);
-
-  personasList.innerHTML = personas.map(persona => `
-    <div class="sidebar-persona-item ${persona.id === currentUser ? 'active' : ''}" data-persona-id="${persona.id}">
-      <img class="sidebar-persona-avatar" src="${persona.avatar}" alt="">
-      <div class="sidebar-persona-info">
-        <div class="sidebar-persona-name">${persona.name}</div>
-        <div class="sidebar-persona-username">${persona.username}</div>
-      </div>
-    </div>
-  `).join('');
-
-  // 绑定面具切换事件
-  personasList.querySelectorAll('.sidebar-persona-item').forEach(item => {
-    item.addEventListener('click', async () => {
-      const personaId = item.dataset.personaId;
-      if (personaId !== currentUser) {
-        await switchPersona(personaId, roche);
-      }
-    });
-  });
 
   // 显示侧边栏
   document.getElementById('sidebar-overlay').classList.add('active');
@@ -3055,6 +3066,7 @@ function switchView(view) {
   const messagesView = document.getElementById('messages-view');
   const profileView = document.getElementById('profile-view');
   const settingsView = document.getElementById('settings-view');
+  const switchAccountView = document.getElementById('switch-account-view');
   const topBar = document.querySelector('.mobile-top-bar');
 
   // 隐藏所有视图
@@ -3066,6 +3078,7 @@ function switchView(view) {
   messagesView.classList.remove('active');
   profileView.classList.remove('active');
   settingsView.classList.remove('active');
+  if (switchAccountView) switchAccountView.classList.remove('active');
 
   if (view === 'timeline') {
     // 显示时间线
@@ -3099,6 +3112,10 @@ function switchView(view) {
   } else if (view === 'settings') {
     // 显示设置页
     settingsView.classList.add('active');
+    topBar.style.display = 'flex';
+  } else if (view === 'switchAccount') {
+    // 显示切换账号页
+    if (switchAccountView) switchAccountView.classList.add('active');
     topBar.style.display = 'flex';
   }
 }
@@ -3863,6 +3880,15 @@ function showSettings(roche) {
     showToast(settings.autoSummary ? '已启用自动总结' : '已禁用自动总结', 'success');
   });
 
+  // 绑定账号管理项点击
+  document.getElementById('setting-switch-account').addEventListener('click', () => {
+    showSwitchAccount(roche);
+  });
+
+  document.getElementById('setting-add-account').addEventListener('click', () => {
+    showToast('添加账号功能开发中...', 'info');
+  });
+
   // 绑定设置项点击
   document.getElementById('setting-edit-profile').addEventListener('click', () => {
     showToast('编辑个人资料功能开发中...', 'info');
@@ -3884,11 +3910,83 @@ function showSettings(roche) {
   });
 
   document.getElementById('setting-about').addEventListener('click', () => {
-    showToast('Twitter 插件 v1.4.0 - 集成记忆系统', 'info');
+    showToast('Twitter 插件 v1.4.2 - 账号管理优化', 'info');
   });
 
   // 切换到设置视图
   switchView('settings');
+}
+
+/**
+ * 显示切换账号页面
+ */
+function showSwitchAccount(roche) {
+  // 绑定返回按钮
+  const backBtn = document.getElementById('switch-account-back-btn');
+  backBtn.replaceWith(backBtn.cloneNode(true)); // 移除旧事件
+  document.getElementById('switch-account-back-btn').addEventListener('click', () => {
+    switchView('settings');
+  });
+
+  // 渲染当前账号
+  const currentAccountSection = document.getElementById('current-account-section');
+  const currentUserData = twitterData.users[currentUser];
+
+  if (currentUserData) {
+    currentAccountSection.innerHTML = `
+      <div class="setting-item" style="padding: 16px;">
+        <img src="${currentUserData.avatar}" style="width: 48px; height: 48px; border-radius: 50%; margin-right: 12px; vertical-align: middle;">
+        <div style="display: inline-block; vertical-align: middle;">
+          <div style="font-weight: 700; font-size: 15px; color: #0f1419;">${currentUserData.name}</div>
+          <div style="font-size: 15px; color: #536471;">${currentUserData.username}</div>
+        </div>
+        <span style="float: right; color: #1d9bf0; font-size: 18px; margin-left: auto;">✓</span>
+      </div>
+    `;
+  }
+
+  // 渲染其他账号
+  const otherAccountsSection = document.getElementById('other-accounts-section');
+  const otherPersonas = Object.values(twitterData.users).filter(u => u.isPersona && u.id !== currentUser);
+
+  if (otherPersonas.length === 0) {
+    otherAccountsSection.innerHTML = `
+      <div style="padding: 40px 20px; text-align: center; color: #536471;">
+        <div>没有其他账号</div>
+      </div>
+    `;
+  } else {
+    otherAccountsSection.innerHTML = otherPersonas.map(persona => `
+      <div class="setting-item account-switch-item" data-persona-id="${persona.id}" style="cursor: pointer;">
+        <img src="${persona.avatar}" style="width: 48px; height: 48px; border-radius: 50%; margin-right: 12px; vertical-align: middle;">
+        <div style="display: inline-block; vertical-align: middle;">
+          <div style="font-weight: 700; font-size: 15px; color: #0f1419;">${persona.name}</div>
+          <div style="font-size: 15px; color: #536471;">${persona.username}</div>
+        </div>
+        <div class="setting-arrow" style="margin-left: auto;">›</div>
+      </div>
+    `).join('');
+
+    // 绑定切换事件
+    otherAccountsSection.querySelectorAll('.account-switch-item').forEach(item => {
+      item.addEventListener('click', async () => {
+        const personaId = item.dataset.personaId;
+        await switchPersona(personaId, roche);
+        // 切换成功后返回主页
+        switchView('timeline');
+      });
+    });
+  }
+
+  // 绑定添加账号按钮
+  const addAccountBtn = document.getElementById('add-account-btn');
+  addAccountBtn.replaceWith(addAccountBtn.cloneNode(true)); // 移除旧事件
+  document.getElementById('add-account-btn').addEventListener('click', () => {
+    showToast('添加账号功能开发中...', 'info');
+  });
+
+  // 切换到切换账号视图
+  switchView('switchAccount');
 }
 
 /**
