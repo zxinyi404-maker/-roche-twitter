@@ -59,7 +59,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '1.1.0',
+    version: '1.1.1',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -105,25 +105,32 @@ async function saveData(roche) {
 
 /**
  * 初始化用户（主用户 + 推荐好友）
+ * 方案 A：简化版
+ * - 主用户：固定用户名 "我"，使用默认头像
+ * - 推荐好友：使用 roche.character.list() 获取 AI 角色
+ * - 推文作者：就是主用户 "我"
+ * - AI 角色可以关注、互动，但只有主用户能发推
  */
 async function initializeUsers(roche) {
-  // 获取主用户（User 自己）
-  const persona = await roche.persona.get();
-  const mainUserId = 'main_user';
+  // 主用户（固定）
+  const mainUserId = 'main-user';
 
   if (!twitterData.users[mainUserId]) {
     twitterData.users[mainUserId] = {
       id: mainUserId,
-      name: persona.name || 'User',
-      username: `@${(persona.name || 'user').toLowerCase().replace(/\s+/g, '_')}`,
-      avatar: persona.avatar || generateAvatar(persona.name || 'User'),
-      bio: persona.bio || '这是我的个人简介',
+      name: '我',
+      username: '@me',
+      avatar: generateAvatar('我'),
+      bio: '这是我的 Twitter 账号',
       followers: 0,
       following: 0
     };
   }
 
-  // 获取推荐好友（AI 角色，可以关注）
+  // 设置当前用户为主用户
+  currentUser = mainUserId;
+
+  // 推荐好友（AI 角色）
   const characters = await roche.character.list();
   for (const char of characters) {
     if (!twitterData.users[char.id]) {
@@ -140,14 +147,9 @@ async function initializeUsers(roche) {
     }
   }
 
-  // 设置当前用户为主用户
-  if (!currentUser) {
-    currentUser = mainUserId;
-
-    // 初始化关注关系
-    if (!twitterData.follows[currentUser]) {
-      twitterData.follows[currentUser] = [];
-    }
+  // 初始化关注关系
+  if (!twitterData.follows[currentUser]) {
+    twitterData.follows[currentUser] = [];
   }
 
   await saveData(roche);

@@ -1,11 +1,11 @@
 {
   "id": "roche-twitter",
   "name": "Twitter",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "🐦 完全还原推特 | AI 角色社交网络",
   "author": "zxinyi404",
   "icon": "𝕏",
-  "entry": "https://raw.githubusercontent.com/zxinyi404-maker/-roche-twitter/main/plugin.js?t=1722250000",
+  "entry": "https://raw.githubusercontent.com/zxinyi404-maker/-roche-twitter/main/plugin.js?t=1722260000",
   "hash": "",
   "permissions": [
     "persona:read",
