@@ -2846,7 +2846,8 @@ function handleSidebarMenu(menu, roche) {
       showProfile(currentUser, roche);
       break;
     case 'settings':
-      showPrivacySettings(roche);
+      // 侧边栏的"设置和隐私"直接进入切换账号页面
+      showSwitchAccount(roche);
       break;
     case 'premium':
     case 'communities':
@@ -4163,7 +4164,7 @@ function showSwitchAccount(roche) {
   const backBtn = document.getElementById('switch-account-back-btn');
   backBtn.replaceWith(backBtn.cloneNode(true)); // 移除旧事件
   document.getElementById('switch-account-back-btn').addEventListener('click', () => {
-    switchView('privacySettings');
+    switchView('timeline');
   });
 
   // 渲染当前账号
