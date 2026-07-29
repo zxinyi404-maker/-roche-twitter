@@ -6,7 +6,7 @@
 (function() {
   'use strict';
 
-const PLUGIN_ID = 'roche-twitter';
+const PLUGIN_ID = 'twitter-x-2026';
 const STORAGE_KEY = 'twitter_data';
 
 // 初始化数据结构
@@ -67,7 +67,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '1.5.2',
+    version: '2.0.0',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -2549,7 +2549,7 @@ function renderUI(container, roche) {
         <div class="settings-section">
           <div class="setting-item">
             <div class="setting-label">版本</div>
-            <div class="setting-value">v1.5.1</div>
+            <div class="setting-value">v2.0.0</div>
           </div>
           <div class="setting-item" id="setting-about">
             <div class="setting-label">关于 Twitter 插件</div>
@@ -4405,7 +4405,7 @@ function showSettings(roche) {
   if (about) {
     about.replaceWith(about.cloneNode(true));
     document.getElementById('setting-about').addEventListener('click', () => {
-      showToast('Twitter 插件 v1.5.2 - 真正的 Persona 切换功能', 'info');
+      showToast('Twitter 插件 v2.0.0 - AI 搜索 | 完整详情页 | 记忆集成', 'info');
     });
   }
 
