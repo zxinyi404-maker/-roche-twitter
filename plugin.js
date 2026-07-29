@@ -67,7 +67,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '1.4.0',
+    version: '1.4.1',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -239,14 +239,17 @@ function renderUI(container, roche) {
         top: 0;
         left: 0;
         right: 0;
-        height: 60px;
+        /* iOS 安全区域适配 */
+        padding-top: env(safe-area-inset-top);
+        height: calc(60px + env(safe-area-inset-top));
         background: rgba(255, 255, 255, 0.85);
         backdrop-filter: blur(12px);
         border-bottom: 1px solid #eff3f4;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 0 16px;
+        padding-left: 16px;
+        padding-right: 16px;
         z-index: 100;
         max-width: 768px;
         margin: 0 auto;
@@ -302,6 +305,9 @@ function renderUI(container, roche) {
         transition: left 0.3s ease-out;
         overflow-y: auto;
         box-shadow: 4px 0 12px rgba(0, 0, 0, 0.1);
+        /* iOS 安全区域适配 */
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
       }
 
       .sidebar-drawer.active {
@@ -553,15 +559,15 @@ function renderUI(container, roche) {
 
       /* 主内容区 */
       .mobile-main {
-        padding-top: 60px;
-        padding-bottom: 60px;
+        padding-top: calc(60px + env(safe-area-inset-top));
+        padding-bottom: calc(60px + env(safe-area-inset-bottom));
         min-height: 100vh;
       }
 
       /* 主页标签 */
       .timeline-tabs {
         position: fixed;
-        top: 60px;
+        top: calc(60px + env(safe-area-inset-top));
         left: 0;
         right: 0;
         display: flex;
@@ -762,7 +768,9 @@ function renderUI(container, roche) {
         bottom: 0;
         left: 0;
         right: 0;
-        height: 60px;
+        /* iOS 安全区域适配 */
+        padding-bottom: env(safe-area-inset-bottom);
+        height: calc(60px + env(safe-area-inset-bottom));
         background: rgba(255, 255, 255, 0.85);
         backdrop-filter: blur(12px);
         border-top: 1px solid #eff3f4;
@@ -974,13 +982,16 @@ function renderUI(container, roche) {
         top: 0;
         left: 0;
         right: 0;
-        height: 60px;
+        /* iOS 安全区域适配 */
+        padding-top: env(safe-area-inset-top);
+        height: calc(60px + env(safe-area-inset-top));
         background: rgba(255, 255, 255, 0.85);
         backdrop-filter: blur(12px);
         border-bottom: 1px solid #eff3f4;
         display: flex;
         align-items: center;
-        padding: 0 16px;
+        padding-left: 16px;
+        padding-right: 16px;
         z-index: 100;
         max-width: 768px;
         margin: 0 auto;
@@ -1013,8 +1024,8 @@ function renderUI(container, roche) {
       }
 
       .detail-main {
-        padding-top: 60px;
-        padding-bottom: 80px;
+        padding-top: calc(60px + env(safe-area-inset-top));
+        padding-bottom: calc(80px + env(safe-area-inset-bottom));
       }
 
       .detail-tweet {
@@ -1152,6 +1163,7 @@ function renderUI(container, roche) {
         display: flex;
         gap: 12px;
         padding: 16px;
+        padding-bottom: calc(16px + env(safe-area-inset-bottom));
         border-top: 1px solid #eff3f4;
         background: rgba(255, 255, 255, 0.85);
         backdrop-filter: blur(12px);
@@ -1228,8 +1240,8 @@ function renderUI(container, roche) {
       /* 页面视图 */
       .page-view {
         display: none;
-        padding-top: 60px;
-        padding-bottom: 60px;
+        padding-top: calc(60px + env(safe-area-inset-top));
+        padding-bottom: calc(60px + env(safe-area-inset-bottom));
         min-height: 100vh;
       }
 
@@ -1240,7 +1252,7 @@ function renderUI(container, roche) {
       /* 搜索页 */
       .search-header {
         position: fixed;
-        top: 60px;
+        top: calc(60px + env(safe-area-inset-top));
         left: 0;
         right: 0;
         padding: 12px 16px;
@@ -1398,7 +1410,7 @@ function renderUI(container, roche) {
       /* 通知页 */
       .notifications-header {
         position: fixed;
-        top: 60px;
+        top: calc(60px + env(safe-area-inset-top));
         left: 0;
         right: 0;
         background: rgba(255, 255, 255, 0.85);
@@ -1611,7 +1623,7 @@ function renderUI(container, roche) {
 
       .chat-header {
         position: fixed;
-        top: 60px;
+        top: calc(60px + env(safe-area-inset-top));
         left: 0;
         right: 0;
         height: 53px;
@@ -1671,8 +1683,8 @@ function renderUI(container, roche) {
         flex: 1;
         overflow-y: auto;
         padding: 16px;
-        padding-top: calc(60px + 53px + 16px);
-        padding-bottom: 80px;
+        padding-top: calc(60px + env(safe-area-inset-top) + 53px + 16px);
+        padding-bottom: calc(80px + env(safe-area-inset-bottom));
       }
 
       .chat-message {
@@ -1708,7 +1720,7 @@ function renderUI(container, roche) {
 
       .chat-input-area {
         position: fixed;
-        bottom: 60px;
+        bottom: calc(60px + env(safe-area-inset-bottom));
         left: 0;
         right: 0;
         padding: 12px 16px;
@@ -1760,7 +1772,7 @@ function renderUI(container, roche) {
       /* 个人资料页 */
       .profile-header {
         position: fixed;
-        top: 60px;
+        top: calc(60px + env(safe-area-inset-top));
         left: 0;
         right: 0;
         height: 53px;
@@ -2370,7 +2382,7 @@ function renderUI(container, roche) {
         <div class="settings-section">
           <div class="setting-item">
             <div class="setting-label">版本</div>
-            <div class="setting-value">v1.4.0</div>
+            <div class="setting-value">v1.4.1</div>
           </div>
           <div class="setting-item" id="setting-about">
             <div class="setting-label">关于 Twitter 插件</div>
