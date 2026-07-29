@@ -59,7 +59,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '1.2.0',
+    version: '1.3.0',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -104,33 +104,60 @@ async function saveData(roche) {
 }
 
 /**
- * 初始化用户（主用户 + 推荐好友）
- * 方案 A：简化版
- * - 主用户：固定用户名 "我"，使用默认头像
+ * 初始化用户（使用 Conversation 和 Persona 系统）
+ * - 主用户：从 conversation.list() 获取，使用 persona 信息
  * - 推荐好友：使用 roche.character.list() 获取 AI 角色
- * - 推文作者：就是主用户 "我"
- * - AI 角色可以关注、互动，但只有主用户能发推
+ * - 支持切换面具（切换 conversation）
  */
 async function initializeUsers(roche) {
-  // 主用户（固定）
-  const mainUserId = 'main-user';
+  // 获取所有对话作为可用的用户面具
+  const conversations = await roche.conversation.list();
 
-  if (!twitterData.users[mainUserId]) {
-    twitterData.users[mainUserId] = {
-      id: mainUserId,
-      name: '我',
-      username: '@me',
-      avatar: generateAvatar('我'),
-      bio: '这是我的 Twitter 账号',
-      followers: 0,
-      following: 0
-    };
+  // 默认使用第一个对话作为当前用户
+  if (conversations && conversations.length > 0) {
+    const firstConv = conversations[0];
+
+    // 如果还没有设置当前用户，使用第一个对话
+    if (!currentUser || !twitterData.users[currentUser]) {
+      currentUser = firstConv.id;
+    }
+
+    // 为每个 conversation 创建用户数据
+    for (const conv of conversations) {
+      if (!twitterData.users[conv.id]) {
+        try {
+          // 尝试获取 persona 信息
+          const persona = await roche.persona.get(conv.id);
+          twitterData.users[conv.id] = {
+            id: conv.id,
+            name: persona.name || conv.name || '用户',
+            username: `@${(persona.name || conv.name || 'user').toLowerCase().replace(/\s+/g, '_')}`,
+            avatar: persona.avatar || conv.avatar || generateAvatar(persona.name || conv.name || '用户'),
+            bio: persona.bio || '这是我的 Twitter 账号',
+            followers: 0,
+            following: 0,
+            conversationId: conv.id,
+            isPersona: true
+          };
+        } catch (e) {
+          // 如果 persona API 失败，使用 conversation 信息
+          twitterData.users[conv.id] = {
+            id: conv.id,
+            name: conv.name || '用户',
+            username: `@${(conv.name || 'user').toLowerCase().replace(/\s+/g, '_')}`,
+            avatar: conv.avatar || generateAvatar(conv.name || '用户'),
+            bio: '这是我的 Twitter 账号',
+            followers: 0,
+            following: 0,
+            conversationId: conv.id,
+            isPersona: true
+          };
+        }
+      }
+    }
   }
 
-  // 设置当前用户为主用户
-  currentUser = mainUserId;
-
-  // 推荐好友（AI 角色）
+  // Character 作为推荐好友
   const characters = await roche.character.list();
   for (const char of characters) {
     if (!twitterData.users[char.id]) {
@@ -142,7 +169,7 @@ async function initializeUsers(roche) {
         bio: char.description || '这个人很神秘，什么都没留下',
         followers: 0,
         following: 0,
-        isCharacter: true // 标记为 AI 角色
+        isCharacter: true
       };
     }
   }
@@ -242,6 +269,204 @@ function renderUI(container, roche) {
         opacity: 0.7;
       }
 
+      /* 左侧抽屉侧边栏 */
+      .sidebar-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.4);
+        z-index: 300;
+        display: none;
+        animation: fadeIn 0.2s ease-out;
+      }
+
+      .sidebar-overlay.active {
+        display: block;
+      }
+
+      @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+
+      @keyframes slideIn {
+        from { transform: translateX(-100%); }
+        to { transform: translateX(0); }
+      }
+
+      .sidebar-drawer {
+        position: fixed;
+        top: 0;
+        left: -280px;
+        width: 280px;
+        height: 100%;
+        background: #ffffff;
+        z-index: 301;
+        transition: left 0.3s ease-out;
+        overflow-y: auto;
+        box-shadow: 4px 0 12px rgba(0, 0, 0, 0.1);
+      }
+
+      .sidebar-drawer.active {
+        left: 0;
+      }
+
+      .sidebar-header {
+        padding: 16px;
+        border-bottom: 1px solid #eff3f4;
+      }
+
+      .sidebar-user-avatar {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        margin-bottom: 12px;
+      }
+
+      .sidebar-user-name {
+        font-size: 18px;
+        font-weight: 700;
+        color: #0f1419;
+        margin-bottom: 2px;
+      }
+
+      .sidebar-user-username {
+        font-size: 15px;
+        color: #536471;
+        margin-bottom: 12px;
+      }
+
+      .sidebar-user-stats {
+        display: flex;
+        gap: 16px;
+        font-size: 14px;
+      }
+
+      .sidebar-stat {
+        display: flex;
+        gap: 4px;
+        cursor: pointer;
+      }
+
+      .sidebar-stat:hover .sidebar-stat-number {
+        text-decoration: underline;
+      }
+
+      .sidebar-stat-number {
+        font-weight: 700;
+        color: #0f1419;
+      }
+
+      .sidebar-stat-label {
+        color: #536471;
+      }
+
+      .sidebar-menu {
+        padding: 8px 0;
+      }
+
+      .sidebar-menu-item {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 14px 16px;
+        color: #0f1419;
+        cursor: pointer;
+        transition: background 0.2s;
+        font-size: 19px;
+      }
+
+      .sidebar-menu-item:hover {
+        background: rgba(0, 0, 0, 0.03);
+      }
+
+      .sidebar-menu-item:active {
+        background: rgba(0, 0, 0, 0.08);
+      }
+
+      .sidebar-menu-icon {
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .sidebar-section-title {
+        padding: 12px 16px 8px 16px;
+        color: #536471;
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+      }
+
+      .sidebar-divider {
+        height: 1px;
+        background: #eff3f4;
+        margin: 8px 0;
+      }
+
+      .sidebar-personas {
+        border-top: 1px solid #eff3f4;
+        padding: 12px 0;
+      }
+
+      .sidebar-persona-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 16px;
+        cursor: pointer;
+        transition: background 0.2s;
+        position: relative;
+      }
+
+      .sidebar-persona-item:hover {
+        background: rgba(0, 0, 0, 0.03);
+      }
+
+      .sidebar-persona-item.active::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 4px;
+        height: 32px;
+        background: #1d9bf0;
+        border-radius: 0 2px 2px 0;
+      }
+
+      .sidebar-persona-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+      }
+
+      .sidebar-persona-info {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .sidebar-persona-name {
+        font-size: 15px;
+        font-weight: 700;
+        color: #0f1419;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .sidebar-persona-username {
+        font-size: 14px;
+        color: #536471;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
       .top-bar-title {
         font-size: 20px;
         font-weight: 700;
@@ -273,6 +498,58 @@ function renderUI(container, roche) {
         padding-top: 60px;
         padding-bottom: 60px;
         min-height: 100vh;
+      }
+
+      /* 主页标签 */
+      .timeline-tabs {
+        position: fixed;
+        top: 60px;
+        left: 0;
+        right: 0;
+        display: flex;
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid #eff3f4;
+        z-index: 99;
+        max-width: 768px;
+        margin: 0 auto;
+      }
+
+      .timeline-tab {
+        flex: 1;
+        text-align: center;
+        padding: 16px;
+        color: #536471;
+        font-weight: 500;
+        font-size: 15px;
+        cursor: pointer;
+        position: relative;
+        transition: background 0.2s;
+      }
+
+      .timeline-tab:hover {
+        background: rgba(0, 0, 0, 0.03);
+      }
+
+      .timeline-tab.active {
+        color: #0f1419;
+        font-weight: 700;
+      }
+
+      .timeline-tab.active::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 60px;
+        height: 4px;
+        background: #1d9bf0;
+        border-radius: 2px;
+      }
+
+      .timeline-content {
+        padding-top: 53px;
       }
 
       /* 推文列表 */
@@ -1590,9 +1867,79 @@ function renderUI(container, roche) {
       }
     </style>
 
+    <!-- 左侧侧边栏 -->
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+    <div class="sidebar-drawer" id="sidebar-drawer">
+      <div class="sidebar-header">
+        <img class="sidebar-user-avatar" id="sidebar-user-avatar" src="" alt="">
+        <div class="sidebar-user-name" id="sidebar-user-name"></div>
+        <div class="sidebar-user-username" id="sidebar-user-username"></div>
+        <div class="sidebar-user-stats">
+          <div class="sidebar-stat">
+            <span class="sidebar-stat-number" id="sidebar-following">0</span>
+            <span class="sidebar-stat-label">正在关注</span>
+          </div>
+          <div class="sidebar-stat">
+            <span class="sidebar-stat-number" id="sidebar-followers">0</span>
+            <span class="sidebar-stat-label">关注者</span>
+          </div>
+        </div>
+      </div>
+      <div class="sidebar-menu">
+        <div class="sidebar-menu-item" data-menu="profile">
+          <div class="sidebar-menu-icon">👤</div>
+          <span>个人资料</span>
+        </div>
+        <div class="sidebar-menu-item" data-menu="premium">
+          <div class="sidebar-menu-icon">✓</div>
+          <span>Premium</span>
+        </div>
+        <div class="sidebar-menu-item" data-menu="communities">
+          <div class="sidebar-menu-icon">👥</div>
+          <span>社群</span>
+        </div>
+        <div class="sidebar-menu-item" data-menu="bookmarks">
+          <div class="sidebar-menu-icon">🔖</div>
+          <span>书签</span>
+        </div>
+        <div class="sidebar-menu-item" data-menu="lists">
+          <div class="sidebar-menu-icon">📋</div>
+          <span>列表</span>
+        </div>
+        <div class="sidebar-menu-item" data-menu="spaces">
+          <div class="sidebar-menu-icon">💫</div>
+          <span>空间</span>
+        </div>
+        <div class="sidebar-menu-item" data-menu="creator">
+          <div class="sidebar-menu-icon">🚀</div>
+          <span>创作者工作室</span>
+        </div>
+      </div>
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-menu">
+        <div class="sidebar-section-title">设置 & 支持</div>
+        <div class="sidebar-menu-item" data-menu="settings">
+          <div class="sidebar-menu-icon">⚙️</div>
+          <span>设置和隐私</span>
+        </div>
+        <div class="sidebar-menu-item" data-menu="help">
+          <div class="sidebar-menu-icon">❓</div>
+          <span>帮助中心</span>
+        </div>
+        <div class="sidebar-menu-item" data-menu="darkmode">
+          <div class="sidebar-menu-icon">🌙</div>
+          <span>深色模式</span>
+        </div>
+      </div>
+      <div class="sidebar-personas">
+        <div class="sidebar-section-title">切换账号</div>
+        <div id="sidebar-personas-list"></div>
+      </div>
+    </div>
+
     <!-- 顶部导航栏 -->
     <div class="mobile-top-bar">
-      <img class="top-bar-avatar" id="top-bar-avatar" src="" alt="" title="我的个人资料">
+      <img class="top-bar-avatar" id="top-bar-avatar" src="" alt="" title="打开侧边栏">
       <div class="top-bar-title">𝕏</div>
       <div class="top-bar-close" id="top-bar-close" title="关闭">${icons.close}</div>
     </div>
@@ -1600,11 +1947,17 @@ function renderUI(container, roche) {
     <!-- 主内容区 -->
     <div class="mobile-main">
       <!-- 时间线视图 -->
-      <div class="tweets-list" id="tweets-list">
-        <div class="empty-state">
-          <div class="empty-state-icon">🐦</div>
-          <div>还没有推文</div>
-          <div style="margin-top: 8px; font-size: 14px;">发布你的第一条推文吧！</div>
+      <div class="timeline-tabs" id="timeline-tabs">
+        <div class="timeline-tab active" data-tab="recommended">为你推荐</div>
+        <div class="timeline-tab" data-tab="following">正在关注</div>
+      </div>
+      <div class="timeline-content">
+        <div class="tweets-list" id="tweets-list">
+          <div class="empty-state">
+            <div class="empty-state-icon">🐦</div>
+            <div>还没有推文</div>
+            <div style="margin-top: 8px; font-size: 14px;">发布你的第一条推文吧！</div>
+          </div>
         </div>
       </div>
 
@@ -1796,9 +2149,32 @@ function bindEvents(roche) {
     exitApp();
   });
 
-  // 顶部头像点击 - 显示个人资料
+  // 顶部头像点击 - 打开侧边栏
   document.getElementById('top-bar-avatar').addEventListener('click', () => {
-    showProfile(currentUser, roche);
+    openSidebar(roche);
+  });
+
+  // 侧边栏遮罩层点击 - 关闭侧边栏
+  document.getElementById('sidebar-overlay').addEventListener('click', () => {
+    closeSidebar();
+  });
+
+  // 侧边栏菜单项点击
+  document.querySelectorAll('.sidebar-menu-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const menu = item.dataset.menu;
+      handleSidebarMenu(menu, roche);
+    });
+  });
+
+  // 主页标签切换
+  document.querySelectorAll('.timeline-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.timeline-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      const tabType = tab.dataset.tab;
+      renderTweets(roche, tabType);
+    });
   });
 
   // 详情页返回按钮
@@ -1890,6 +2266,105 @@ function updateCurrentUserDisplay() {
   const user = twitterData.users[currentUser];
   if (user) {
     document.getElementById('top-bar-avatar').src = user.avatar;
+  }
+}
+
+/**
+ * 打开侧边栏
+ */
+function openSidebar(roche) {
+  const user = twitterData.users[currentUser];
+  if (!user) return;
+
+  // 更新当前用户信息
+  document.getElementById('sidebar-user-avatar').src = user.avatar;
+  document.getElementById('sidebar-user-name').textContent = user.name;
+  document.getElementById('sidebar-user-username').textContent = user.username;
+  document.getElementById('sidebar-following').textContent = user.following || 0;
+  document.getElementById('sidebar-followers').textContent = user.followers || 0;
+
+  // 渲染所有 Persona（可切换的账号）
+  const personasList = document.getElementById('sidebar-personas-list');
+  const personas = Object.values(twitterData.users).filter(u => u.isPersona);
+
+  personasList.innerHTML = personas.map(persona => `
+    <div class="sidebar-persona-item ${persona.id === currentUser ? 'active' : ''}" data-persona-id="${persona.id}">
+      <img class="sidebar-persona-avatar" src="${persona.avatar}" alt="">
+      <div class="sidebar-persona-info">
+        <div class="sidebar-persona-name">${persona.name}</div>
+        <div class="sidebar-persona-username">${persona.username}</div>
+      </div>
+    </div>
+  `).join('');
+
+  // 绑定面具切换事件
+  personasList.querySelectorAll('.sidebar-persona-item').forEach(item => {
+    item.addEventListener('click', async () => {
+      const personaId = item.dataset.personaId;
+      if (personaId !== currentUser) {
+        await switchPersona(personaId, roche);
+      }
+    });
+  });
+
+  // 显示侧边栏
+  document.getElementById('sidebar-overlay').classList.add('active');
+  document.getElementById('sidebar-drawer').classList.add('active');
+}
+
+/**
+ * 关闭侧边栏
+ */
+function closeSidebar() {
+  document.getElementById('sidebar-overlay').classList.remove('active');
+  document.getElementById('sidebar-drawer').classList.remove('active');
+}
+
+/**
+ * 切换面具（切换当前用户）
+ */
+async function switchPersona(personaId, roche) {
+  const persona = twitterData.users[personaId];
+  if (!persona) return;
+
+  currentUser = personaId;
+
+  // 初始化关注关系（如果不存在）
+  if (!twitterData.follows[currentUser]) {
+    twitterData.follows[currentUser] = [];
+  }
+
+  await saveData(roche);
+
+  // 更新界面
+  updateCurrentUserDisplay();
+  closeSidebar();
+  renderTweets(roche);
+
+  showToast(`已切换到 ${persona.name}`, 'success');
+}
+
+/**
+ * 处理侧边栏菜单点击
+ */
+function handleSidebarMenu(menu, roche) {
+  closeSidebar();
+
+  switch (menu) {
+    case 'profile':
+      showProfile(currentUser, roche);
+      break;
+    case 'premium':
+    case 'communities':
+    case 'bookmarks':
+    case 'lists':
+    case 'spaces':
+    case 'creator':
+    case 'settings':
+    case 'help':
+    case 'darkmode':
+      showToast('功能开发中...', 'info');
+      break;
   }
 }
 
@@ -1987,22 +2462,38 @@ async function postTweet(roche, content) {
 
 /**
  * 渲染推文列表
+ * @param {Object} roche - Roche API 对象
+ * @param {string} filter - 过滤类型: 'recommended' (为你推荐) 或 'following' (正在关注)
  */
-function renderTweets(roche) {
+function renderTweets(roche, filter = 'recommended') {
   const listEl = document.getElementById('tweets-list');
 
-  if (twitterData.tweets.length === 0) {
+  // 根据过滤条件筛选推文
+  let filteredTweets = twitterData.tweets;
+
+  if (filter === 'following') {
+    // 只显示关注用户的推文
+    const following = twitterData.follows[currentUser] || [];
+    filteredTweets = twitterData.tweets.filter(tweet =>
+      following.includes(tweet.userId) || tweet.userId === currentUser
+    );
+  }
+
+  if (filteredTweets.length === 0) {
+    const emptyMessage = filter === 'following'
+      ? '关注一些用户来查看他们的推文'
+      : '还没有推文';
     listEl.innerHTML = `
       <div class="empty-state">
         <div class="empty-state-icon">🐦</div>
-        <div>还没有推文</div>
+        <div>${emptyMessage}</div>
         <div style="margin-top: 8px; font-size: 14px;">发布你的第一条推文吧！</div>
       </div>
     `;
     return;
   }
 
-  listEl.innerHTML = twitterData.tweets.map(tweet => {
+  listEl.innerHTML = filteredTweets.map(tweet => {
     const user = twitterData.users[tweet.userId];
     const isLiked = tweet.likes.includes(currentUser);
     const isRetweeted = tweet.retweets.includes(currentUser);
@@ -2070,7 +2561,8 @@ function renderTweets(roche) {
 function switchView(view) {
   currentView = view;
 
-  const timelineView = document.getElementById('tweets-list');
+  const timelineView = document.querySelector('.timeline-content');
+  const timelineTabs = document.getElementById('timeline-tabs');
   const detailView = document.getElementById('tweet-detail-view');
   const searchView = document.getElementById('search-view');
   const notificationsView = document.getElementById('notifications-view');
@@ -2079,7 +2571,8 @@ function switchView(view) {
   const topBar = document.querySelector('.mobile-top-bar');
 
   // 隐藏所有视图
-  timelineView.style.display = 'none';
+  if (timelineView) timelineView.style.display = 'none';
+  if (timelineTabs) timelineTabs.style.display = 'none';
   detailView.classList.remove('active');
   searchView.classList.remove('active');
   notificationsView.classList.remove('active');
@@ -2088,7 +2581,8 @@ function switchView(view) {
 
   if (view === 'timeline') {
     // 显示时间线
-    timelineView.style.display = 'block';
+    if (timelineView) timelineView.style.display = 'block';
+    if (timelineTabs) timelineTabs.style.display = 'flex';
     topBar.style.display = 'flex';
 
     // 重置底部导航
@@ -2328,25 +2822,6 @@ async function toggleFollow(userId, roche) {
   }
 
   await saveData(roche);
-}
-
-/**
- * 显示用户切换器
- */
-async function showUserSwitcher(roche) {
-  const users = Object.values(twitterData.users);
-  const options = users.map(u => ({
-    label: `${u.name} (${u.username})`,
-    value: u.id
-  }));
-
-  // 使用简单的选择对话框
-  const selected = await showSelectDialog('切换用户', options);
-  if (selected && selected !== currentUser) {
-    currentUser = selected;
-    updateCurrentUserDisplay();
-    renderTweets(roche);
-  }
 }
 
 /**
