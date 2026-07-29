@@ -67,7 +67,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '1.4.3',
+    version: '1.4.4',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -2376,7 +2376,7 @@ function renderUI(container, roche) {
         <div class="settings-section">
           <div class="setting-item">
             <div class="setting-label">版本</div>
-            <div class="setting-value">v1.4.3</div>
+            <div class="setting-value">v1.4.4</div>
           </div>
           <div class="setting-item" id="setting-about">
             <div class="setting-label">关于 Twitter 插件</div>
@@ -2574,6 +2574,11 @@ function bindEvents(roche) {
   // 下拉菜单 - 退出
   document.getElementById('dropdown-exit').addEventListener('click', () => {
     exitApp(container, roche);
+    // 关闭下拉菜单
+    const dropdown = document.getElementById('top-bar-dropdown');
+    if (dropdown.classList.contains('active')) {
+      dropdown.classList.remove('active');
+    }
   });
 
   // 顶部头像点击 - 打开侧边栏
@@ -3310,24 +3315,53 @@ async function postReply(roche, tweetId, content) {
  * 退出应用
  */
 function exitApp(container, roche) {
-  // 调用插件的 unmount 方法清理
-  const appDiv = document.getElementById('twitter-app');
-  if (appDiv && container) {
-    container.replaceChildren();
-  }
+  console.log('[Twitter] exitApp 被调用');
+  console.log('[Twitter] container:', container);
+  console.log('[Twitter] roche:', roche);
 
-  // 尝试返回上一页（返回 Roche 主界面）
-  if (window.history.length > 1) {
-    window.history.back();
-  } else {
-    // 如果没有历史记录，清空显示提示
-    if (container) {
-      container.innerHTML = '<div style="padding: 20px; text-align: center; color: #536471;">已退出 Twitter</div>';
-      // 短暂延迟后再次尝试返回
-      setTimeout(() => {
-        window.history.back();
-      }, 500);
+  try {
+    // 获取容器（如果没有传入，尝试查找）
+    const appContainer = container || document.getElementById('twitter-app')?.parentElement;
+
+    // 清空容器
+    if (appContainer) {
+      appContainer.replaceChildren();
+      console.log('[Twitter] 容器已清空');
     }
+
+    // 方式1: 如果是在 iframe 中，通知父窗口
+    if (window.parent !== window) {
+      window.parent.postMessage({ type: 'CLOSE_APP', app: 'twitter' }, '*');
+      console.log('[Twitter] 已发送关闭消息到父窗口');
+    }
+
+    // 方式2: 如果有 Roche 提供的关闭方法
+    if (roche?.ui?.close) {
+      roche.ui.close();
+      console.log('[Twitter] 已调用 roche.ui.close()');
+    }
+
+    // 方式3: 尝试调用 unmount
+    if (roche?.app?.unmount) {
+      roche.app.unmount();
+      console.log('[Twitter] 已调用 roche.app.unmount()');
+    }
+
+    // 方式4: 使用 history API
+    if (window.history.length > 1) {
+      window.history.back();
+      console.log('[Twitter] 已调用 history.back()');
+    }
+
+    // 方式5: 触发返回事件
+    window.dispatchEvent(new PopStateEvent('popstate'));
+    console.log('[Twitter] 已触发 popstate 事件');
+
+    showToast('已退出 Twitter', 'success');
+
+  } catch (error) {
+    console.error('[Twitter] 退出失败:', error);
+    showToast('退出失败: ' + error.message, 'error');
   }
 }
 
@@ -3956,7 +3990,7 @@ function showSettings(roche) {
   });
 
   document.getElementById('setting-about').addEventListener('click', () => {
-    showToast('Twitter 插件 v1.4.3 - 退出优化 & 账号切换重构', 'info');
+    showToast('Twitter 插件 v1.4.4 - 修复退出功能', 'info');
   });
 
   // 切换到设置视图
