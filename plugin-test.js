@@ -3,7 +3,7 @@
  * 验证插件结构是否正确
  */
 
-export default async function init(roche, container) {
+async function init(roche, container) {
   console.log('[Twitter Test] 插件初始化开始');
   console.log('[Twitter Test] Roche 对象:', roche);
   console.log('[Twitter Test] 容器:', container);
