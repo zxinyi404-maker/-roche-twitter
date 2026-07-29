@@ -23,11 +23,10 @@ let currentUser = null;
 /**
  * 注册插件到 Roche 系统
  */
-if (window.RochePlugin) {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '1.0.4',
+    version: '1.0.5',
     apps: [{
       id: 'twitter-home',
       name: 'Twitter',
@@ -52,7 +51,6 @@ if (window.RochePlugin) {
       }
     }]
   });
-}
 
 /**
  * 加载存储的数据

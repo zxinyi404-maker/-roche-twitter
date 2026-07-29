@@ -1,7 +1,7 @@
 {
   "id": "roche-twitter",
   "name": "Twitter",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "🐦 完全还原推特 | AI 角色社交网络",
   "author": "zxinyi404",
   "entry": "https://cdn.jsdelivr.net/gh/zxinyi404-maker/-roche-twitter@main/plugin.js",
