@@ -3322,7 +3322,6 @@ async function renderTweets(roche, filter = 'recommended') {
       : '还没有推文';
     listEl.innerHTML = `
       <div class="empty-state">
-        <div class="empty-state-icon">🐦</div>
         <div>${emptyMessage}</div>
         <div style="margin-top: 8px; font-size: 14px;">发布你的第一条推文吧！</div>
       </div>
@@ -3515,21 +3514,19 @@ function showTweetDetail(tweetId, roche) {
   const isFollowing = twitterData.follows[currentUser]?.includes(user.id);
   const isSelf = user.id === currentUser;
 
-  // 格式化时间 - Twitter 格式：时:分 上午/下午 · 月 日, 年
+  // 格式化时间 - Twitter 格式：26年7月29日, 4:00 下午
   const date = new Date(tweet.timestamp);
   const hours = date.getHours();
   const minutes = date.getMinutes();
   const ampm = hours >= 12 ? '下午' : '上午';
   const displayHours = hours % 12 || 12;
-  const months = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
-  const formattedTime = `${displayHours}:${minutes.toString().padStart(2, '0')} ${ampm}`;
-  const formattedDate = `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+  const year = date.getFullYear() % 100; // 26 而不是 2026
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  const formattedDateTime = `${year}年${month}月${day}日, ${displayHours}:${minutes.toString().padStart(2, '0')} ${ampm}`;
 
   // 模拟查看数
   const viewCount = Math.floor(Math.random() * 500) + 100;
-
-  // 模拟书签数
-  const bookmarkCount = Math.floor(Math.random() * 20) + 1;
 
   // 渲染详情内容
   const detailMain = document.getElementById('detail-main');
@@ -3549,6 +3546,10 @@ function showTweetDetail(tweetId, roche) {
             </button>
           ` : ''}
         </div>
+        <div class="detail-translate-link">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#1d9bf0"><path d="M12.87 2.27c-.5-.5-1.29-.5-1.79 0l-6.36 6.37c-.5.5-.5 1.29 0 1.79l1.41 1.41c.5.5 1.29.5 1.79 0L10 9.77V18c0 .55.45 1 1 1s1-.45 1-1V9.77l2.09 2.09c.5.5 1.29.5 1.79 0l1.41-1.41c.5-.5.5-1.29 0-1.79l-6.36-6.37z"></path></svg>
+          <span style="color: #1d9bf0; font-size: 15px;">显示翻译</span>
+        </div>
       </div>
 
       <!-- 推文内容 -->
@@ -3556,49 +3557,30 @@ function showTweetDetail(tweetId, roche) {
         ${escapeHtml(tweet.content)}
       </div>
 
-      <!-- 时间和日期 -->
+      <!-- 时间和查看数 -->
       <div class="detail-tweet-time">
-        <span style="color: #536471;">${formattedTime}</span>
+        <span style="color: #536471;">${formattedDateTime}</span>
         <span style="color: #536471; margin: 0 4px;">·</span>
-        <span style="color: #536471;">${formattedDate}</span>
-        <span style="color: #536471; margin: 0 4px;">·</span>
-        <span style="font-weight: 700; color: #0f1419;">${viewCount.toLocaleString()}</span>
-        <span style="color: #536471;"> 次查看</span>
+        <span style="font-weight: 700; color: #0f1419;">${viewCount}</span>
+        <span style="color: #536471;"> 查看</span>
       </div>
 
-      <!-- 互动数统计 -->
-      <div class="detail-tweet-stats">
-        <div class="detail-stat-item">
-          <span style="font-weight: 700; color: #0f1419;">${tweet.retweets.length}</span>
-          <span style="color: #536471; margin-left: 4px;">转推</span>
-        </div>
-        <div class="detail-stat-item">
-          <span style="font-weight: 700; color: #0f1419;">0</span>
-          <span style="color: #536471; margin-left: 4px;">引用</span>
-        </div>
-        <div class="detail-stat-item">
-          <span style="font-weight: 700; color: #0f1419;">${tweet.likes.length}</span>
-          <span style="color: #536471; margin-left: 4px;">喜欢</span>
-        </div>
-        <div class="detail-stat-item">
-          <span style="font-weight: 700; color: #0f1419;">${bookmarkCount}</span>
-          <span style="color: #536471; margin-left: 4px;">书签</span>
-        </div>
+      <!-- 只显示喜欢数 -->
+      <div class="detail-tweet-likes">
+        <span style="font-weight: 700; color: #0f1419;">${tweet.likes.length}</span>
+        <span style="color: #536471; margin-left: 4px;">喜欢</span>
       </div>
 
       <!-- 操作按钮 -->
       <div class="detail-action-bar">
         <div class="detail-action-icon" data-action="reply">
           ${icons.comment}
-          <span class="action-count">${tweet.replies.length > 0 ? tweet.replies.length : ''}</span>
         </div>
         <div class="detail-action-icon ${isRetweeted ? 'retweeted' : ''}" data-action="retweet">
           ${icons.retweet}
-          <span class="action-count">${tweet.retweets.length > 0 ? tweet.retweets.length : ''}</span>
         </div>
         <div class="detail-action-icon ${isLiked ? 'liked' : ''}" data-action="like">
           ${isLiked ? icons.likeFilled : icons.like}
-          <span class="action-count">${tweet.likes.length > 0 ? tweet.likes.length : ''}</span>
         </div>
         <div class="detail-action-icon" data-action="bookmark">
           <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M4 4.5C4 3.12 5.119 2 6.5 2h11C18.881 2 20 3.12 20 4.5v18.44l-8-5.71-8 5.71V4.5z"></path></svg>
@@ -3606,6 +3588,22 @@ function showTweetDetail(tweetId, roche) {
         <div class="detail-action-icon" data-action="share">
           ${icons.share}
         </div>
+      </div>
+
+      <!-- 回复排序 -->
+      <div class="detail-replies-header">
+        <span style="font-weight: 700; font-size: 15px;">最相关的回复</span>
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="#536471"><path d="M3.543 8.96l1.414-1.42L12 14.59l7.043-7.05 1.414 1.42L12 17.41 3.543 8.96z"></path></svg>
+      </div>
+
+      <!-- 发现更多 -->
+      <div class="detail-discover-more">
+        <div style="font-weight: 700; font-size: 20px; color: #0f1419;">发现更多</div>
+      </div>
+
+      <!-- 来源标签 -->
+      <div class="detail-source-label">
+        <span style="color: #536471; font-size: 13px;">源自于整个 X</span>
       </div>
 
       <!-- 回复列表 -->
