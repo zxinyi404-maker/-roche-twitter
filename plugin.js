@@ -27,11 +27,10 @@ if (window.RochePlugin) {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '1.0.1',
+    version: '1.0.4',
     apps: [{
       id: 'twitter-home',
       name: 'Twitter',
-      icon: '🐦',
       async mount(container, roche) {
         try {
           // 加载数据
