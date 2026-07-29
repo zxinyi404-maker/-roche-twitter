@@ -5,7 +5,7 @@
   "description": "🐦 完全还原推特 | 多面具系统 | 记忆集成 | iOS 适配 | 智能搜索",
   "author": "zxinyi404",
   "icon": "𝕏",
-  "entry": "https://raw.githubusercontent.com/zxinyi404-maker/-roche-twitter/main/plugin.js?nocache=202607292106",
+  "entry": "https://raw.githubusercontent.com/zxinyi404-maker/-roche-twitter/main/plugin.js?timestamp=1722261600000",
   "hash": "",
   "permissions": [
     "persona:read",
