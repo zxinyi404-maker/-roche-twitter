@@ -2536,6 +2536,36 @@ function renderUI(container, roche) {
         </div>
       </div>
     </div>
+
+    <!-- 关注列表页 -->
+    <div class="page-view" id="following-list-view">
+      <div class="profile-header">
+        <div class="profile-back-btn" id="following-list-back-btn">${icons.back}</div>
+        <div class="profile-header-info">
+          <div class="profile-header-name">正在关注</div>
+        </div>
+      </div>
+      <div class="profile-content">
+        <div id="following-list-content">
+          <!-- 动态加载关注列表 -->
+        </div>
+      </div>
+    </div>
+
+    <!-- 粉丝列表页 -->
+    <div class="page-view" id="followers-list-view">
+      <div class="profile-header">
+        <div class="profile-back-btn" id="followers-list-back-btn">${icons.back}</div>
+        <div class="profile-header-info">
+          <div class="profile-header-name">关注者</div>
+        </div>
+      </div>
+      <div class="profile-content">
+        <div id="followers-list-content">
+          <!-- 动态加载粉丝列表 -->
+        </div>
+      </div>
+    </div>
   `;
 
   container.replaceChildren();
@@ -2768,6 +2798,28 @@ function openSidebar(roche) {
   if (sidebarUsername) sidebarUsername.textContent = user.username;
   if (sidebarFollowing) sidebarFollowing.textContent = user.following || 0;
   if (sidebarFollowers) sidebarFollowers.textContent = user.followers || 0;
+
+  // 绑定粉丝和关注的点击事件
+  const followingStatDiv = sidebarFollowing?.closest('.sidebar-stat');
+  const followersStatDiv = sidebarFollowers?.closest('.sidebar-stat');
+
+  if (followingStatDiv) {
+    followingStatDiv.replaceWith(followingStatDiv.cloneNode(true));
+    const newFollowingStat = sidebarFollowing.closest('.sidebar-stat');
+    newFollowingStat.addEventListener('click', () => {
+      closeSidebar();
+      showFollowingList(currentUser, roche);
+    });
+  }
+
+  if (followersStatDiv) {
+    followersStatDiv.replaceWith(followersStatDiv.cloneNode(true));
+    const newFollowersStat = sidebarFollowers.closest('.sidebar-stat');
+    newFollowersStat.addEventListener('click', () => {
+      closeSidebar();
+      showFollowersList(currentUser, roche);
+    });
+  }
 
   // 显示侧边栏
   const overlay = document.getElementById('sidebar-overlay');
@@ -3184,6 +3236,8 @@ function switchView(view) {
   const settingsView = document.getElementById('settings-view');
   const privacySettingsView = document.getElementById('privacy-settings-view');
   const switchAccountView = document.getElementById('switch-account-view');
+  const followingListView = document.getElementById('following-list-view');
+  const followersListView = document.getElementById('followers-list-view');
   const topBar = document.querySelector('.mobile-top-bar');
 
   // 隐藏所有视图
@@ -3197,6 +3251,8 @@ function switchView(view) {
   if (settingsView) settingsView.classList.remove('active');
   if (privacySettingsView) privacySettingsView.classList.remove('active');
   if (switchAccountView) switchAccountView.classList.remove('active');
+  if (followingListView) followingListView.classList.remove('active');
+  if (followersListView) followersListView.classList.remove('active');
 
   if (view === 'timeline') {
     // 显示时间线
@@ -3239,6 +3295,14 @@ function switchView(view) {
   } else if (view === 'switchAccount') {
     // 显示切换账号页
     if (switchAccountView) switchAccountView.classList.add('active');
+    if (topBar) topBar.style.display = 'flex';
+  } else if (view === 'followingList') {
+    // 显示关注列表页
+    if (followingListView) followingListView.classList.add('active');
+    if (topBar) topBar.style.display = 'flex';
+  } else if (view === 'followersList') {
+    // 显示粉丝列表页
+    if (followersListView) followersListView.classList.add('active');
     if (topBar) topBar.style.display = 'flex';
   }
 }
@@ -4418,6 +4482,175 @@ async function clearAllMemories(roche) {
   } catch (error) {
     console.error('清除记忆失败:', error);
   }
+}
+
+/**
+ * 显示关注列表
+ */
+function showFollowingList(userId, roche) {
+  const user = twitterData.users[userId];
+  if (!user) return;
+
+  // 绑定返回按钮
+  const backBtn = document.getElementById('following-list-back-btn');
+  if (backBtn) {
+    backBtn.replaceWith(backBtn.cloneNode(true));
+    document.getElementById('following-list-back-btn').addEventListener('click', () => {
+      switchView('timeline');
+    });
+  }
+
+  // 获取关注列表
+  const followingIds = twitterData.follows[userId] || [];
+  const followingUsers = followingIds.map(id => twitterData.users[id]).filter(u => u);
+
+  const content = document.getElementById('following-list-content');
+  if (!content) return;
+
+  if (followingUsers.length === 0) {
+    content.innerHTML = `
+      <div style="padding: 40px 20px; text-align: center; color: #536471;">
+        <div>还没有关注任何人</div>
+      </div>
+    `;
+  } else {
+    content.innerHTML = followingUsers.map(followUser => {
+      const isFollowing = twitterData.follows[currentUser]?.includes(followUser.id);
+      const isSelf = followUser.id === currentUser;
+
+      return `
+        <div class="setting-item" style="padding: 16px; cursor: pointer;" data-user-id="${followUser.id}">
+          <img src="${followUser.avatar}" style="width: 48px; height: 48px; border-radius: 50%; margin-right: 12px; vertical-align: middle;">
+          <div style="display: inline-block; vertical-align: middle; flex: 1;">
+            <div style="font-weight: 700; font-size: 15px; color: #0f1419;">${followUser.name}</div>
+            <div style="font-size: 15px; color: #536471;">${followUser.username}</div>
+            ${followUser.bio ? `<div style="font-size: 14px; color: #0f1419; margin-top: 4px;">${followUser.bio}</div>` : ''}
+          </div>
+          ${!isSelf ? `
+            <button class="follow-user-btn ${isFollowing ? 'following' : ''}" data-follow-user-id="${followUser.id}" style="
+              padding: 6px 16px;
+              border-radius: 20px;
+              border: 1px solid ${isFollowing ? '#536471' : '#0f1419'};
+              background: ${isFollowing ? 'transparent' : '#0f1419'};
+              color: ${isFollowing ? '#0f1419' : '#ffffff'};
+              font-weight: 700;
+              font-size: 14px;
+              cursor: pointer;
+              margin-left: 12px;
+            ">
+              ${isFollowing ? '正在关注' : '关注'}
+            </button>
+          ` : ''}
+        </div>
+      `;
+    }).join('');
+
+    // 绑定关注按钮事件
+    content.querySelectorAll('.follow-user-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const targetUserId = btn.dataset.followUserId;
+        await toggleFollow(targetUserId, roche);
+        showFollowingList(userId, roche); // 刷新列表
+      });
+    });
+
+    // 绑定用户卡片点击事件
+    content.querySelectorAll('[data-user-id]').forEach(card => {
+      card.addEventListener('click', (e) => {
+        if (e.target.closest('.follow-user-btn')) return;
+        const targetUserId = card.dataset.userId;
+        showProfile(targetUserId, roche);
+      });
+    });
+  }
+
+  switchView('followingList');
+}
+
+/**
+ * 显示粉丝列表
+ */
+function showFollowersList(userId, roche) {
+  const user = twitterData.users[userId];
+  if (!user) return;
+
+  // 绑定返回按钮
+  const backBtn = document.getElementById('followers-list-back-btn');
+  if (backBtn) {
+    backBtn.replaceWith(backBtn.cloneNode(true));
+    document.getElementById('followers-list-back-btn').addEventListener('click', () => {
+      switchView('timeline');
+    });
+  }
+
+  // 获取粉丝列表（谁关注了这个用户）
+  const followerIds = Object.keys(twitterData.follows)
+    .filter(followerId => twitterData.follows[followerId]?.includes(userId));
+  const followerUsers = followerIds.map(id => twitterData.users[id]).filter(u => u);
+
+  const content = document.getElementById('followers-list-content');
+  if (!content) return;
+
+  if (followerUsers.length === 0) {
+    content.innerHTML = `
+      <div style="padding: 40px 20px; text-align: center; color: #536471;">
+        <div>还没有粉丝</div>
+      </div>
+    `;
+  } else {
+    content.innerHTML = followerUsers.map(follower => {
+      const isFollowing = twitterData.follows[currentUser]?.includes(follower.id);
+      const isSelf = follower.id === currentUser;
+
+      return `
+        <div class="setting-item" style="padding: 16px; cursor: pointer;" data-user-id="${follower.id}">
+          <img src="${follower.avatar}" style="width: 48px; height: 48px; border-radius: 50%; margin-right: 12px; vertical-align: middle;">
+          <div style="display: inline-block; vertical-align: middle; flex: 1;">
+            <div style="font-weight: 700; font-size: 15px; color: #0f1419;">${follower.name}</div>
+            <div style="font-size: 15px; color: #536471;">${follower.username}</div>
+            ${follower.bio ? `<div style="font-size: 14px; color: #0f1419; margin-top: 4px;">${follower.bio}</div>` : ''}
+          </div>
+          ${!isSelf ? `
+            <button class="follow-user-btn ${isFollowing ? 'following' : ''}" data-follow-user-id="${follower.id}" style="
+              padding: 6px 16px;
+              border-radius: 20px;
+              border: 1px solid ${isFollowing ? '#536471' : '#0f1419'};
+              background: ${isFollowing ? 'transparent' : '#0f1419'};
+              color: ${isFollowing ? '#0f1419' : '#ffffff'};
+              font-weight: 700;
+              font-size: 14px;
+              cursor: pointer;
+              margin-left: 12px;
+            ">
+              ${isFollowing ? '正在关注' : '关注'}
+            </button>
+          ` : ''}
+        </div>
+      `;
+    }).join('');
+
+    // 绑定关注按钮事件
+    content.querySelectorAll('.follow-user-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const targetUserId = btn.dataset.followUserId;
+        await toggleFollow(targetUserId, roche);
+        showFollowersList(userId, roche); // 刷新列表
+      });
+    });
+
+    // 绑定用户卡片点击事件
+    content.querySelectorAll('[data-user-id]').forEach(card => {
+      card.addEventListener('click', (e) => {
+        if (e.target.closest('.follow-user-btn')) return;
+        const targetUserId = card.dataset.userId;
+        showProfile(targetUserId, roche);
+      });
+    });
+  }
+
+  switchView('followersList');
 }
 
 })(); // 立即执行函数结束
