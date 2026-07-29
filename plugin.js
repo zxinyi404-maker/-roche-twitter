@@ -23,39 +23,39 @@ let currentUser = null;
 if (window.RochePlugin) {
   window.RochePlugin.register({
     id: PLUGIN_ID,
-    name: 'Roche Twitter',
-    description: '完整推特克隆 - 发推文、点赞、转发、关注',
-    version: '1.0.0',
-    icon: '🐦',
-    author: 'Roche',
-    main: main
+    name: 'Twitter',
+    version: '1.0.1',
+    apps: [{
+      id: 'twitter-home',
+      name: 'Twitter',
+      icon: '🐦',
+      async mount(container, roche) {
+        try {
+          // 加载数据
+          await loadData(roche);
+
+          // 初始化用户
+          await initializeUsers(roche);
+
+          // 渲染界面
+          renderUI(container, roche);
+
+        } catch (error) {
+          console.error('插件初始化失败:', error);
+          roche.ui.message('插件加载失败: ' + error.message, 'error');
+        }
+      },
+      async unmount(container) {
+        container.replaceChildren();
+      }
+    }]
   });
-}
-
-/**
- * 插件入口
- */
-async function main() {
-  try {
-    // 加载数据
-    await loadData();
-
-    // 初始化用户
-    await initializeUsers();
-
-    // 渲染界面
-    renderUI();
-
-  } catch (error) {
-    console.error('插件初始化失败:', error);
-    roche.ui.message('插件加载失败: ' + error.message, 'error');
-  }
 }
 
 /**
  * 加载存储的数据
  */
-async function loadData() {
+async function loadData(roche) {
   const stored = await roche.storage.get(STORAGE_KEY);
   if (stored) {
     twitterData = JSON.parse(stored);
@@ -65,14 +65,14 @@ async function loadData() {
 /**
  * 保存数据
  */
-async function saveData() {
+async function saveData(roche) {
   await roche.storage.set(STORAGE_KEY, JSON.stringify(twitterData));
 }
 
 /**
  * 初始化用户（从 AI 角色列表）
  */
-async function initializeUsers() {
+async function initializeUsers(roche) {
   const characters = await roche.character.list();
 
   // 为每个角色创建用户信息
@@ -100,7 +100,7 @@ async function initializeUsers() {
     }
   }
 
-  await saveData();
+  await saveData(roche);
 }
 
 /**
@@ -121,10 +121,10 @@ function generateAvatar(name) {
 /**
  * 渲染主界面
  */
-function renderUI() {
-  const container = document.createElement('div');
-  container.id = 'twitter-app';
-  container.innerHTML = `
+function renderUI(container, roche) {
+  const appDiv = document.createElement('div');
+  appDiv.id = 'twitter-app';
+  appDiv.innerHTML = `
     <style>
       #twitter-app {
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -596,26 +596,26 @@ function renderUI() {
     </div>
   `;
 
-  document.body.innerHTML = '';
-  document.body.appendChild(container);
+  container.replaceChildren();
+  container.appendChild(appDiv);
 
   // 绑定事件
-  bindEvents();
+  bindEvents(roche);
 
   // 更新当前用户显示
   updateCurrentUserDisplay();
 
   // 渲染推文列表
-  renderTweets();
+  renderTweets(roche);
 
   // 渲染推荐用户
-  renderRecommendations();
+  renderRecommendations(roche);
 }
 
 /**
  * 绑定事件处理
  */
-function bindEvents() {
+function bindEvents(roche) {
   // 发推文按钮
   const textarea = document.getElementById('tweet-textarea');
   const postBtn = document.getElementById('post-tweet-btn');
@@ -627,10 +627,10 @@ function bindEvents() {
     postBtn.disabled = length === 0;
   });
 
-  postBtn.addEventListener('click', postTweet);
+  postBtn.addEventListener('click', () => postTweet(roche));
 
   // 用户切换
-  document.getElementById('user-switcher').addEventListener('click', showUserSwitcher);
+  document.getElementById('user-switcher').addEventListener('click', () => showUserSwitcher(roche));
 }
 
 /**
@@ -649,7 +649,7 @@ function updateCurrentUserDisplay() {
 /**
  * 发布推文
  */
-async function postTweet() {
+async function postTweet(roche) {
   const textarea = document.getElementById('tweet-textarea');
   const content = textarea.value.trim();
 
@@ -666,13 +666,13 @@ async function postTweet() {
   };
 
   twitterData.tweets.unshift(tweet);
-  await saveData();
+  await saveData(roche);
 
   textarea.value = '';
   document.getElementById('char-count').textContent = '0 / 280';
   document.getElementById('post-tweet-btn').disabled = true;
 
-  renderTweets();
+  renderTweets(roche);
 
   roche.ui.message('推文已发布！', 'success');
 }
@@ -680,7 +680,7 @@ async function postTweet() {
 /**
  * 渲染推文列表
  */
-function renderTweets() {
+function renderTweets(roche) {
   const listEl = document.getElementById('tweets-list');
 
   if (twitterData.tweets.length === 0) {
@@ -740,7 +740,7 @@ function renderTweets() {
       e.stopPropagation();
       const action = el.dataset.action;
       const tweetId = parseInt(el.closest('.tweet-item').dataset.tweetId);
-      handleTweetAction(action, tweetId);
+      handleTweetAction(action, tweetId, roche);
     });
   });
 }
@@ -748,7 +748,7 @@ function renderTweets() {
 /**
  * 处理推文操作
  */
-async function handleTweetAction(action, tweetId) {
+async function handleTweetAction(action, tweetId, roche) {
   const tweet = twitterData.tweets.find(t => t.id === tweetId);
   if (!tweet) return;
 
@@ -780,14 +780,14 @@ async function handleTweetAction(action, tweetId) {
       return;
   }
 
-  await saveData();
-  renderTweets();
+  await saveData(roche);
+  renderTweets(roche);
 }
 
 /**
  * 渲染推荐用户
  */
-function renderRecommendations() {
+function renderRecommendations(roche) {
   const listEl = document.getElementById('recommendations-list');
   const userFollows = twitterData.follows[currentUser] || [];
 
@@ -825,8 +825,8 @@ function renderRecommendations() {
     btn.addEventListener('click', async (e) => {
       e.stopPropagation();
       const userId = btn.dataset.userId;
-      await toggleFollow(userId);
-      renderRecommendations();
+      await toggleFollow(userId, roche);
+      renderRecommendations(roche);
       updateStats();
     });
   });
@@ -835,7 +835,7 @@ function renderRecommendations() {
 /**
  * 切换关注状态
  */
-async function toggleFollow(userId) {
+async function toggleFollow(userId, roche) {
   if (!twitterData.follows[currentUser]) {
     twitterData.follows[currentUser] = [];
   }
@@ -853,7 +853,7 @@ async function toggleFollow(userId) {
     twitterData.users[currentUser].following++;
   }
 
-  await saveData();
+  await saveData(roche);
 }
 
 /**
@@ -866,7 +866,7 @@ function updateStats() {
 /**
  * 显示用户切换器
  */
-async function showUserSwitcher() {
+async function showUserSwitcher(roche) {
   const users = Object.values(twitterData.users);
   const options = users.map(u => ({
     label: `${u.name} (${u.username})`,
@@ -878,8 +878,8 @@ async function showUserSwitcher() {
   if (selected && selected !== currentUser) {
     currentUser = selected;
     updateCurrentUserDisplay();
-    renderTweets();
-    renderRecommendations();
+    renderTweets(roche);
+    renderRecommendations(roche);
   }
 }
 
@@ -967,6 +967,3 @@ function escapeHtml(text) {
   div.textContent = text;
   return div.innerHTML;
 }
-
-// 启动插件
-main();
