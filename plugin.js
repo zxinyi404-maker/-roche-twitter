@@ -1101,6 +1101,140 @@ function renderUI(container, roche) {
         color: #0f1419;
       }
 
+      /* 新的详情页样式 */
+      .detail-user-section {
+        margin-bottom: 16px;
+      }
+
+      .detail-user-header {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+
+      .detail-user-info {
+        flex: 1;
+      }
+
+      .detail-follow-btn {
+        padding: 6px 16px;
+        border-radius: 20px;
+        border: 1px solid #536471;
+        background: transparent;
+        color: #0f1419;
+        font-weight: 700;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .detail-follow-btn:hover {
+        background: rgba(0, 0, 0, 0.05);
+      }
+
+      .detail-follow-btn.following {
+        background: #0f1419;
+        color: #ffffff;
+        border-color: #0f1419;
+      }
+
+      .detail-follow-btn.following:hover {
+        background: #272c30;
+        border-color: #272c30;
+      }
+
+      .detail-translate-link {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        cursor: pointer;
+        padding: 4px 0;
+      }
+
+      .detail-tweet-content {
+        font-size: 23px;
+        line-height: 28px;
+        color: #0f1419;
+        margin: 16px 0;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+      }
+
+      .detail-tweet-meta {
+        color: #536471;
+        font-size: 15px;
+        padding: 16px 0;
+        border-bottom: 1px solid #eff3f4;
+      }
+
+      .detail-tweet-likes {
+        padding: 12px 0;
+        border-bottom: 1px solid #eff3f4;
+        font-size: 15px;
+      }
+
+      .detail-action-bar {
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        padding: 12px 0;
+        border-bottom: 1px solid #eff3f4;
+      }
+
+      .detail-action-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #536471;
+        cursor: pointer;
+        padding: 8px;
+        border-radius: 50%;
+        transition: all 0.2s;
+        width: 36px;
+        height: 36px;
+      }
+
+      .detail-action-icon:hover {
+        background: rgba(29, 155, 240, 0.1);
+        color: #1d9bf0;
+      }
+
+      .detail-action-icon.liked {
+        color: #f91880;
+      }
+
+      .detail-action-icon.liked:hover {
+        background: rgba(249, 24, 128, 0.1);
+      }
+
+      .detail-action-icon.retweeted {
+        color: #00ba7c;
+      }
+
+      .detail-action-icon.retweeted:hover {
+        background: rgba(0, 186, 124, 0.1);
+      }
+
+      .detail-replies-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 0;
+        border-bottom: 1px solid #eff3f4;
+        cursor: pointer;
+      }
+
+      .detail-discover-more {
+        padding: 20px 0;
+        border-bottom: 1px solid #eff3f4;
+      }
+
+      .detail-source-label {
+        padding: 12px 0;
+      }
+
+      /* 旧样式保留（兼容） */
       .detail-tweet-time {
         color: #536471;
         font-size: 15px;
@@ -3369,52 +3503,122 @@ function showTweetDetail(tweetId, roche) {
   const currentUserData = twitterData.users[currentUser];
   const isLiked = tweet.likes.includes(currentUser);
   const isRetweeted = tweet.retweets.includes(currentUser);
+  const isFollowing = twitterData.follows[currentUser]?.includes(user.id);
+  const isSelf = user.id === currentUser;
 
   // 格式化时间
   const date = new Date(tweet.timestamp);
-  const formattedTime = date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
-  const formattedDate = date.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' });
+  const hours = date.getHours();
+  const minutes = date.getMinutes();
+  const ampm = hours >= 12 ? '下午' : '上午';
+  const displayHours = hours % 12 || 12;
+  const formattedTime = `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日, ${displayHours}:${minutes.toString().padStart(2, '0')} ${ampm}`;
+
+  // 模拟查看数
+  const viewCount = Math.floor(Math.random() * 500) + 100;
 
   // 渲染详情内容
   const detailMain = document.getElementById('detail-main');
   detailMain.innerHTML = `
     <div class="detail-tweet">
-      <div class="detail-tweet-header">
-        <img class="detail-tweet-avatar" src="${user.avatar}" alt="">
-        <div class="detail-tweet-author">
-          <div class="detail-tweet-name">${user.name}</div>
-          <div class="detail-tweet-username">${user.username}</div>
+      <!-- 用户信息区 -->
+      <div class="detail-user-section">
+        <div class="detail-user-header">
+          <img class="detail-tweet-avatar" src="${user.avatar}" alt="">
+          <div class="detail-user-info">
+            <div class="detail-tweet-name">${user.name}</div>
+            <div class="detail-tweet-username">${user.username}</div>
+          </div>
+          ${!isSelf ? `
+            <button class="detail-follow-btn ${isFollowing ? 'following' : ''}" id="detail-follow-btn">
+              ${isFollowing ? '正在关注' : '关注'}
+            </button>
+          ` : ''}
+        </div>
+        <div class="detail-translate-link">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#1d9bf0"><path d="M12.87 2.27c-.5-.5-1.29-.5-1.79 0l-6.36 6.37c-.5.5-.5 1.29 0 1.79l1.41 1.41c.5.5 1.29.5 1.79 0L10 9.77V18c0 .55.45 1 1 1s1-.45 1-1V9.77l2.09 2.09c.5.5 1.29.5 1.79 0l1.41-1.41c.5-.5.5-1.29 0-1.79l-6.36-6.37z"></path></svg>
+          <span style="color: #1d9bf0; font-size: 15px;">显示翻译</span>
         </div>
       </div>
-      <div class="detail-tweet-text">${escapeHtml(tweet.content)}</div>
-      <div class="detail-tweet-time">${formattedTime} · ${formattedDate}</div>
-      <div class="detail-tweet-stats">
-        <div class="detail-stat-item">
-          <span class="detail-stat-number">${tweet.retweets.length}</span>
-          <span class="detail-stat-label">转发</span>
+
+      <!-- 推文内容 -->
+      <div class="detail-tweet-content">
+        ${escapeHtml(tweet.content)}
+      </div>
+
+      <!-- 时间和查看数 -->
+      <div class="detail-tweet-meta">
+        <span>${formattedTime}</span>
+        <span style="margin: 0 4px;">·</span>
+        <span style="font-weight: 700;">${viewCount}</span>
+        <span> 查看</span>
+      </div>
+
+      <!-- 点赞数统计 -->
+      <div class="detail-tweet-likes">
+        <span style="font-weight: 700; color: #0f1419;">${tweet.likes.length}</span>
+        <span style="color: #536471; margin-left: 4px;">喜欢</span>
+      </div>
+
+      <!-- 操作按钮 -->
+      <div class="detail-action-bar">
+        <div class="detail-action-icon" data-action="reply">
+          ${icons.comment}
         </div>
-        <div class="detail-stat-item">
-          <span class="detail-stat-number">${tweet.likes.length}</span>
-          <span class="detail-stat-label">喜欢</span>
+        <div class="detail-action-icon ${isRetweeted ? 'retweeted' : ''}" data-action="retweet">
+          ${icons.retweet}
+        </div>
+        <div class="detail-action-icon ${isLiked ? 'liked' : ''}" data-action="like">
+          ${isLiked ? icons.likeFilled : icons.like}
+        </div>
+        <div class="detail-action-icon" data-action="bookmark">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M4 4.5C4 3.12 5.119 2 6.5 2h11C18.881 2 20 3.12 20 4.5v18.44l-8-5.71-8 5.71V4.5z"></path></svg>
+        </div>
+        <div class="detail-action-icon" data-action="share">
+          ${icons.share}
         </div>
       </div>
-      <div class="detail-tweet-actions">
-        <div class="detail-action" data-action="reply">${icons.comment}</div>
-        <div class="detail-action ${isRetweeted ? 'retweeted' : ''}" data-action="retweet">${icons.retweet}</div>
-        <div class="detail-action ${isLiked ? 'liked' : ''}" data-action="like">${isLiked ? icons.likeFilled : icons.like}</div>
-        <div class="detail-action" data-action="share">${icons.share}</div>
+
+      <!-- 回复排序 -->
+      <div class="detail-replies-header">
+        <span style="font-weight: 700; font-size: 15px;">最相关的回复</span>
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="#536471"><path d="M3.543 8.96l1.414-1.42L12 14.59l7.043-7.05 1.414 1.42L12 17.41 3.543 8.96z"></path></svg>
       </div>
-    </div>
-    <div class="detail-replies" id="detail-replies">
-      ${tweet.replies.length === 0 ? '<div style="padding: 40px 20px; text-align: center; color: #536471;">暂无回复</div>' : ''}
+
+      <!-- 发现更多 -->
+      <div class="detail-discover-more">
+        <div style="font-weight: 700; font-size: 20px; color: #0f1419;">发现更多</div>
+      </div>
+
+      <!-- 来源标签 -->
+      <div class="detail-source-label">
+        <span style="color: #536471; font-size: 13px;">源自于整个 X</span>
+      </div>
+
+      <!-- 回复列表 -->
+      <div class="detail-replies" id="detail-replies">
+        ${tweet.replies.length === 0 ? '<div style="padding: 40px 20px; text-align: center; color: #536471;">暂无回复</div>' : ''}
+      </div>
     </div>
   `;
 
   // 更新回复输入框头像
   document.getElementById('detail-reply-avatar').src = currentUserData.avatar;
 
+  // 绑定关注按钮
+  if (!isSelf) {
+    const followBtn = document.getElementById('detail-follow-btn');
+    if (followBtn) {
+      followBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        await toggleFollow(user.id, roche);
+        showTweetDetail(tweetId, roche); // 刷新详情页
+      });
+    }
+  }
+
   // 绑定详情页操作按钮
-  detailMain.querySelectorAll('.detail-action').forEach(el => {
+  detailMain.querySelectorAll('.detail-action-icon').forEach(el => {
     el.addEventListener('click', (e) => {
       const action = el.dataset.action;
       handleDetailAction(action, tweetId, roche);
@@ -3437,8 +3641,10 @@ async function handleDetailAction(action, tweetId, roche) {
       const likeIndex = tweet.likes.indexOf(currentUser);
       if (likeIndex > -1) {
         tweet.likes.splice(likeIndex, 1);
+        showToast('已取消喜欢', 'info');
       } else {
         tweet.likes.push(currentUser);
+        showToast('已喜欢', 'success');
       }
       await saveData(roche);
       showTweetDetail(tweetId, roche);
@@ -3448,8 +3654,22 @@ async function handleDetailAction(action, tweetId, roche) {
       const retweetIndex = tweet.retweets.indexOf(currentUser);
       if (retweetIndex > -1) {
         tweet.retweets.splice(retweetIndex, 1);
+        showToast('已取消转发', 'info');
       } else {
         tweet.retweets.push(currentUser);
+        showToast('已转发', 'success');
+
+        // 转发时保存到记忆
+        try {
+          const user = twitterData.users[tweet.userId];
+          await roche.memory.addEpisodic({
+            content: `转发了 ${user.name} 的推文：${tweet.content}`,
+            conversationId: currentUser,
+            tags: ['twitter', 'retweet']
+          });
+        } catch (error) {
+          console.error('[详情页] 保存记忆失败:', error);
+        }
       }
       await saveData(roche);
       showTweetDetail(tweetId, roche);
@@ -3458,6 +3678,10 @@ async function handleDetailAction(action, tweetId, roche) {
     case 'reply':
       // 聚焦到回复输入框
       document.getElementById('detail-reply-textarea').focus();
+      break;
+
+    case 'bookmark':
+      showToast('书签功能开发中...', 'info');
       break;
 
     case 'share':
