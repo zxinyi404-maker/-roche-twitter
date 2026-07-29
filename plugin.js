@@ -67,7 +67,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '1.4.8',
+    version: '1.5.0',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -115,65 +115,95 @@ async function saveData(roche) {
 }
 
 /**
- * 初始化用户（只使用 Conversation 和 Persona 系统）
- * - 所有用户：从 conversation.list() 获取，使用 persona 信息
- * - 推荐好友：显示其他 Persona（不是 character）
- * - 支持切换面具（切换 conversation）
+ * 初始化用户系统
+ * 使用正确的 Roche Persona API
  */
 async function initializeUsers(roche) {
-  // 获取所有对话作为可用的用户
-  const conversations = await roche.conversation.list();
+  console.log('[Twitter] 初始化用户系统');
 
-  // 默认使用第一个对话作为当前用户
-  if (conversations && conversations.length > 0) {
-    const firstConv = conversations[0];
+  try {
+    // 1. 获取当前活跃用户
+    const activeUser = await roche.persona.getActiveUserPersona();
+    console.log('[Twitter] 活跃用户:', activeUser);
 
-    // 如果还没有设置当前用户，使用第一个对话
-    if (!currentUser || !twitterData.users[currentUser]) {
-      currentUser = firstConv.id;
+    if (activeUser) {
+      currentUser = activeUser.id;
+
+      twitterData.users[activeUser.id] = {
+        id: activeUser.id,
+        name: activeUser.name,
+        username: `@${activeUser.handle || activeUser.name}`,
+        avatar: activeUser.avatar || generateAvatar(activeUser.name),
+        bio: activeUser.bio || '这是我的 Twitter 账号',
+        followers: 0,
+        following: 0,
+        conversationId: activeUser.conversationId,
+        isPersona: true
+      };
     }
 
-    // 为每个 conversation 创建用户数据
-    for (const conv of conversations) {
-      if (!twitterData.users[conv.id]) {
-        try {
-          // 尝试获取 persona 信息
-          const persona = await roche.persona.get(conv.id);
-          twitterData.users[conv.id] = {
-            id: conv.id,
-            name: persona.name || conv.name || '用户',
-            username: `@${(persona.name || conv.name || 'user').toLowerCase().replace(/\s+/g, '_')}`,
-            avatar: persona.avatar || conv.avatar || generateAvatar(persona.name || conv.name || '用户'),
-            bio: persona.bio || '这是我的 Twitter 账号',
+    // 2. 获取所有用户 Persona（面具）
+    const allPersonas = await roche.persona.getUserPersonas();
+    console.log('[Twitter] 所有 Persona:', allPersonas);
+
+    if (allPersonas && allPersonas.length > 0) {
+      for (const persona of allPersonas) {
+        if (!twitterData.users[persona.id]) {
+          twitterData.users[persona.id] = {
+            id: persona.id,
+            name: persona.name,
+            username: `@${persona.handle || persona.name}`,
+            avatar: persona.avatar || generateAvatar(persona.name),
+            bio: persona.bio || '',
             followers: 0,
             following: 0,
-            conversationId: conv.id,
-            isPersona: true
-          };
-        } catch (e) {
-          // 如果 persona API 失败，使用 conversation 信息
-          twitterData.users[conv.id] = {
-            id: conv.id,
-            name: conv.name || '用户',
-            username: `@${(conv.name || 'user').toLowerCase().replace(/\s+/g, '_')}`,
-            avatar: conv.avatar || generateAvatar(conv.name || '用户'),
-            bio: '这是我的 Twitter 账号',
-            followers: 0,
-            following: 0,
-            conversationId: conv.id,
+            conversationId: persona.conversationId,
             isPersona: true
           };
         }
       }
     }
-  }
 
-  // 初始化关注关系
-  if (!twitterData.follows[currentUser]) {
-    twitterData.follows[currentUser] = [];
-  }
+    // 3. 如果没有用户，创建默认用户
+    if (!currentUser) {
+      const defaultId = 'default-user';
+      currentUser = defaultId;
+      twitterData.users[defaultId] = {
+        id: defaultId,
+        name: '我',
+        username: '@me',
+        avatar: generateAvatar('我'),
+        bio: '这是我的 Twitter 账号',
+        followers: 0,
+        following: 0,
+        isPersona: true
+      };
+    }
 
-  await saveData(roche);
+    // 4. 初始化关注关系
+    if (!twitterData.follows[currentUser]) {
+      twitterData.follows[currentUser] = [];
+    }
+
+    await saveData(roche);
+    console.log('[Twitter] 用户初始化完成，当前用户:', currentUser);
+
+  } catch (error) {
+    console.error('[Twitter] 用户初始化失败:', error);
+    // 创建默认用户作为后备
+    const defaultId = 'default-user';
+    currentUser = defaultId;
+    twitterData.users[defaultId] = {
+      id: defaultId,
+      name: '我',
+      username: '@me',
+      avatar: generateAvatar('我'),
+      bio: '这是我的 Twitter 账号',
+      followers: 0,
+      following: 0,
+      isPersona: true
+    };
+  }
 }
 
 /**
@@ -2376,7 +2406,7 @@ function renderUI(container, roche) {
         <div class="settings-section">
           <div class="setting-item">
             <div class="setting-label">版本</div>
-            <div class="setting-value">v1.4.8</div>
+            <div class="setting-value">v1.5.0</div>
           </div>
           <div class="setting-item" id="setting-about">
             <div class="setting-label">关于 Twitter 插件</div>
