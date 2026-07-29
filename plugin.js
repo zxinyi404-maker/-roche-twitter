@@ -67,7 +67,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '1.4.7',
+    version: '1.4.8',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -2376,7 +2376,7 @@ function renderUI(container, roche) {
         <div class="settings-section">
           <div class="setting-item">
             <div class="setting-label">版本</div>
-            <div class="setting-value">v1.4.7</div>
+            <div class="setting-value">v1.4.8</div>
           </div>
           <div class="setting-item" id="setting-about">
             <div class="setting-label">关于 Twitter 插件</div>
@@ -3342,95 +3342,21 @@ async function postReply(roche, tweetId, content) {
  * 退出应用
  */
 function exitApp(container, roche) {
-  console.log('[Twitter] 开始退出流程');
+  console.log('[Twitter] 退出应用');
 
   try {
-    // 1. 先显示退出提示
-    showToast('正在退出...', 'success');
-
-    // 2. 清空容器
-    if (container) {
-      container.innerHTML = '';
-      console.log('[Twitter] 容器已清空');
+    // 使用 Roche 官方退出 API
+    if (roche && roche.ui && roche.ui.closeApp) {
+      console.log('[Twitter] 调用 roche.ui.closeApp()');
+      roche.ui.closeApp();
+    } else {
+      console.error('[Twitter] roche.ui.closeApp 不可用');
+      // 后备方案
+      showToast('退出失败，请手动返回', 'error');
     }
-
-    // 3. 移除 Twitter DOM
-    const app = document.querySelector('#twitter-app');
-    if (app) {
-      app.remove();
-      console.log('[Twitter] Twitter DOM 已移除');
-    }
-
-    // 4. 尝试多种返回方式
-
-    // 方式 A: 直接关闭当前插件窗口（最推荐）
-    if (window.close) {
-      console.log('[Twitter] 尝试 window.close()');
-      window.close();
-    }
-
-    // 方式 B: 通知父窗口关闭
-    if (window.parent && window.parent !== window) {
-      console.log('[Twitter] 通知父窗口关闭');
-      window.parent.postMessage({
-        type: 'CLOSE_PLUGIN',
-        plugin: 'twitter'
-      }, '*');
-    }
-
-    // 方式 C: 触发浏览器返回
-    setTimeout(() => {
-      console.log('[Twitter] 执行 history.back()');
-      window.history.back();
-    }, 100);
-
-    // 方式 D: 尝试触发 popstate
-    setTimeout(() => {
-      console.log('[Twitter] 触发 popstate 事件');
-      const event = new PopStateEvent('popstate', { state: null });
-      window.dispatchEvent(event);
-    }, 200);
-
-    // 方式 E: 如果什么都不行，至少显示返回提示
-    setTimeout(() => {
-      if (container) {
-        container.innerHTML = `
-          <div style="
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            text-align: center;
-            padding: 20px;
-            background: #ffffff;
-          ">
-            <div style="font-size: 48px; margin-bottom: 20px;">✓</div>
-            <div style="font-size: 18px; color: #0f1419; margin-bottom: 10px; font-weight: 600;">已退出 Twitter</div>
-            <div style="font-size: 14px; color: #536471; margin-bottom: 30px;">点击下方按钮返回主页</div>
-
-            <button onclick="window.history.go(-2); setTimeout(() => window.location.reload(), 100);" style="
-              background: #1d9bf0;
-              color: white;
-              border: none;
-              border-radius: 24px;
-              padding: 12px 32px;
-              font-size: 15px;
-              font-weight: 600;
-              cursor: pointer;
-              box-shadow: 0 2px 8px rgba(29, 155, 240, 0.3);
-            ">返回 Roche 主页</button>
-
-            <div style="margin-top: 20px; font-size: 12px; color: #8899a6;">
-              或使用浏览器返回按钮
-            </div>
-          </div>
-        `;
-      }
-    }, 500);
-
   } catch (error) {
     console.error('[Twitter] 退出失败:', error);
+    showToast('退出失败: ' + error.message, 'error');
   }
 }
 
