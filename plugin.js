@@ -26,7 +26,7 @@ let currentUser = null;
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '1.0.6',
+    version: '1.0.7',
     apps: [{
       id: 'twitter-home',
       name: 'Twitter',
@@ -119,7 +119,7 @@ function generateAvatar(name) {
 }
 
 /**
- * 渲染主界面
+ * 渲染主界面 - 移动端布局
  */
 function renderUI(container, roche) {
   const appDiv = document.createElement('div');
@@ -131,176 +131,78 @@ function renderUI(container, roche) {
         background: #000;
         color: #fff;
         min-height: 100vh;
-        display: flex;
+        position: relative;
+        max-width: 768px;
+        margin: 0 auto;
       }
 
-      /* 左侧导航 */
-      .twitter-sidebar {
-        width: 275px;
-        padding: 20px;
-        border-right: 1px solid #2f3336;
-        position: sticky;
+      /* 顶部导航栏 */
+      .mobile-top-bar {
+        position: fixed;
         top: 0;
-        height: 100vh;
-        overflow-y: auto;
-      }
-
-      .twitter-logo {
-        font-size: 30px;
-        margin-bottom: 20px;
-        padding: 10px;
-      }
-
-      .nav-item {
+        left: 0;
+        right: 0;
+        height: 60px;
+        background: #000;
+        border-bottom: 1px solid #2f3336;
         display: flex;
         align-items: center;
-        padding: 12px 20px;
-        font-size: 20px;
-        font-weight: 700;
-        border-radius: 30px;
-        cursor: pointer;
-        transition: background 0.2s;
-        margin-bottom: 8px;
-      }
-
-      .nav-item:hover {
-        background: #16181c;
-      }
-
-      .nav-item.active {
-        font-weight: 900;
-      }
-
-      .nav-icon {
-        font-size: 26px;
-        margin-right: 20px;
-        width: 26px;
-        text-align: center;
-      }
-
-      .tweet-btn {
-        width: 100%;
-        background: #1d9bf0;
-        color: #fff;
-        border: none;
-        border-radius: 30px;
-        padding: 15px;
-        font-size: 17px;
-        font-weight: 700;
-        cursor: pointer;
-        margin-top: 20px;
-        transition: background 0.2s;
-      }
-
-      .tweet-btn:hover {
-        background: #1a8cd8;
-      }
-
-      /* 中间时间线 */
-      .twitter-main {
-        flex: 1;
-        max-width: 600px;
-        border-right: 1px solid #2f3336;
-      }
-
-      .main-header {
-        padding: 20px;
-        border-bottom: 1px solid #2f3336;
-        backdrop-filter: blur(12px);
-        background: rgba(0, 0, 0, 0.65);
-        position: sticky;
-        top: 0;
-        z-index: 10;
-      }
-
-      .main-header h2 {
-        font-size: 20px;
-        font-weight: 800;
-        margin: 0;
-      }
-
-      /* 发推文框 */
-      .compose-tweet {
-        padding: 20px;
-        border-bottom: 1px solid #2f3336;
-        display: flex;
-        gap: 12px;
-      }
-
-      .compose-avatar {
-        width: 48px;
-        height: 48px;
-        border-radius: 50%;
-        flex-shrink: 0;
-      }
-
-      .compose-form {
-        flex: 1;
-      }
-
-      .compose-textarea {
-        width: 100%;
-        background: transparent;
-        border: none;
-        color: #fff;
-        font-size: 20px;
-        resize: none;
-        outline: none;
-        min-height: 100px;
-        font-family: inherit;
-      }
-
-      .compose-textarea::placeholder {
-        color: #71767b;
-      }
-
-      .compose-actions {
-        display: flex;
         justify-content: space-between;
-        align-items: center;
-        margin-top: 12px;
-        padding-top: 12px;
-        border-top: 1px solid #2f3336;
+        padding: 0 16px;
+        z-index: 100;
+        max-width: 768px;
+        margin: 0 auto;
       }
 
-      .char-count {
-        color: #71767b;
-        font-size: 14px;
-      }
-
-      .compose-btn {
-        background: #1d9bf0;
-        color: #fff;
-        border: none;
-        border-radius: 20px;
-        padding: 8px 16px;
-        font-weight: 700;
+      .top-bar-avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
         cursor: pointer;
-        transition: background 0.2s;
+        transition: opacity 0.2s;
       }
 
-      .compose-btn:hover:not(:disabled) {
-        background: #1a8cd8;
+      .top-bar-avatar:active {
+        opacity: 0.7;
       }
 
-      .compose-btn:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
+      .top-bar-title {
+        font-size: 19px;
+        font-weight: 700;
+        letter-spacing: -0.5px;
+      }
+
+      .top-bar-settings {
+        font-size: 22px;
+        cursor: pointer;
+        padding: 8px;
+        transition: opacity 0.2s;
+      }
+
+      .top-bar-settings:active {
+        opacity: 0.7;
+      }
+
+      /* 主内容区 */
+      .mobile-main {
+        padding-top: 60px;
+        padding-bottom: 60px;
+        min-height: 100vh;
       }
 
       /* 推文列表 */
       .tweets-list {
-        overflow-y: auto;
+        width: 100%;
       }
 
       .tweet-item {
-        padding: 16px 20px;
+        padding: 12px 16px;
         border-bottom: 1px solid #2f3336;
         transition: background 0.2s;
         cursor: pointer;
       }
 
-      .tweet-item:hover {
+      .tweet-item:active {
         background: rgba(255, 255, 255, 0.03);
       }
 
@@ -325,24 +227,23 @@ function renderUI(container, roche) {
         display: flex;
         align-items: center;
         gap: 4px;
-        margin-bottom: 4px;
+        margin-bottom: 2px;
       }
 
       .tweet-author-name {
         font-weight: 700;
+        font-size: 15px;
         color: #fff;
-      }
-
-      .tweet-author-name:hover {
-        text-decoration: underline;
       }
 
       .tweet-author-username {
         color: #71767b;
+        font-size: 15px;
       }
 
       .tweet-time {
         color: #71767b;
+        font-size: 15px;
       }
 
       .tweet-text {
@@ -351,37 +252,37 @@ function renderUI(container, roche) {
         margin: 4px 0 12px 0;
         white-space: pre-wrap;
         word-wrap: break-word;
+        color: #fff;
       }
 
       .tweet-actions {
         display: flex;
-        justify-content: space-between;
-        max-width: 425px;
-        margin-top: 12px;
+        justify-content: space-around;
+        margin-top: 8px;
+        padding-top: 4px;
       }
 
       .tweet-action {
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 4px;
         color: #71767b;
         font-size: 13px;
         cursor: pointer;
-        padding: 8px;
+        padding: 8px 12px;
         border-radius: 20px;
         transition: all 0.2s;
       }
 
-      .tweet-action:hover {
+      .tweet-action:active {
         background: rgba(29, 155, 240, 0.1);
-        color: #1d9bf0;
       }
 
       .tweet-action.liked {
         color: #f91880;
       }
 
-      .tweet-action.liked:hover {
+      .tweet-action.liked:active {
         background: rgba(249, 24, 128, 0.1);
       }
 
@@ -389,93 +290,85 @@ function renderUI(container, roche) {
         color: #00ba7c;
       }
 
-      .tweet-action.retweeted:hover {
+      .tweet-action.retweeted:active {
         background: rgba(0, 186, 124, 0.1);
       }
 
-      /* 右侧推荐 */
-      .twitter-widgets {
-        width: 350px;
-        padding: 20px;
+      .tweet-action span:first-child {
+        font-size: 18px;
       }
 
-      .widget-card {
-        background: #16181c;
-        border-radius: 16px;
-        overflow: hidden;
-        margin-bottom: 20px;
-      }
-
-      .widget-header {
-        padding: 12px 16px;
-        font-size: 20px;
-        font-weight: 800;
-      }
-
-      .user-recommendation {
-        padding: 12px 16px;
+      /* 底部导航栏 */
+      .mobile-bottom-nav {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 60px;
+        background: #000;
+        border-top: 1px solid #2f3336;
         display: flex;
         align-items: center;
-        gap: 12px;
-        transition: background 0.2s;
+        justify-content: space-around;
+        z-index: 100;
+        max-width: 768px;
+        margin: 0 auto;
       }
 
-      .user-recommendation:hover {
-        background: rgba(255, 255, 255, 0.03);
-      }
-
-      .rec-avatar {
-        width: 48px;
-        height: 48px;
-        border-radius: 50%;
-      }
-
-      .rec-info {
+      .bottom-nav-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
         flex: 1;
-        min-width: 0;
-      }
-
-      .rec-name {
-        font-weight: 700;
-        color: #fff;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-
-      .rec-username {
+        height: 100%;
         color: #71767b;
-        font-size: 14px;
-      }
-
-      .follow-btn {
-        background: #fff;
-        color: #0f1419;
-        border: none;
-        border-radius: 20px;
-        padding: 6px 16px;
-        font-weight: 700;
-        font-size: 14px;
         cursor: pointer;
-        transition: background 0.2s;
+        transition: all 0.2s;
+        font-size: 26px;
       }
 
-      .follow-btn:hover {
-        background: #d7dbdc;
-      }
-
-      .follow-btn.following {
-        background: transparent;
+      .bottom-nav-item.active {
         color: #fff;
-        border: 1px solid #536471;
       }
 
-      .follow-btn.following:hover {
-        background: rgba(244, 33, 46, 0.1);
-        border-color: rgba(244, 33, 46, 0.4);
-        color: #f4212e;
+      .bottom-nav-item:active {
+        background: rgba(255, 255, 255, 0.05);
       }
 
+      /* 悬浮发推按钮 */
+      .floating-compose-btn {
+        position: fixed;
+        bottom: 80px;
+        right: 20px;
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: #1d9bf0;
+        color: #fff;
+        border: none;
+        font-size: 24px;
+        cursor: pointer;
+        box-shadow: 0 4px 12px rgba(29, 155, 240, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+        z-index: 99;
+      }
+
+      .floating-compose-btn:active {
+        transform: scale(0.95);
+        background: #1a8cd8;
+      }
+
+      @media (min-width: 768px) {
+        .floating-compose-btn {
+          right: calc(50% - 384px + 20px);
+        }
+      }
+
+      /* 空状态 */
       .empty-state {
         padding: 60px 20px;
         text-align: center;
@@ -487,98 +380,147 @@ function renderUI(container, roche) {
         margin-bottom: 20px;
       }
 
-      /* 用户切换器 */
-      .user-switcher {
-        margin-top: auto;
-        padding: 12px;
-        border-radius: 30px;
-        cursor: pointer;
-        transition: background 0.2s;
+      /* 发推文弹窗 */
+      .compose-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 200;
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        padding: 20px;
+        overflow-y: auto;
+      }
+
+      .compose-modal-content {
+        background: #000;
+        border-radius: 16px;
+        width: 100%;
+        max-width: 600px;
+        margin-top: 40px;
+        border: 1px solid #2f3336;
+      }
+
+      .compose-modal-header {
         display: flex;
         align-items: center;
+        padding: 12px 16px;
+        border-bottom: 1px solid #2f3336;
+      }
+
+      .compose-modal-close {
+        font-size: 24px;
+        cursor: pointer;
+        padding: 8px;
+        color: #fff;
+      }
+
+      .compose-modal-title {
+        flex: 1;
+        text-align: center;
+        font-weight: 700;
+        margin-right: 40px;
+      }
+
+      .compose-modal-body {
+        padding: 16px;
+        display: flex;
         gap: 12px;
       }
 
-      .user-switcher:hover {
-        background: #16181c;
-      }
-
-      .user-switcher-avatar {
-        width: 40px;
-        height: 40px;
+      .compose-avatar {
+        width: 48px;
+        height: 48px;
         border-radius: 50%;
+        flex-shrink: 0;
       }
 
-      .user-switcher-info {
+      .compose-form {
         flex: 1;
       }
 
-      .user-switcher-name {
-        font-weight: 700;
-        font-size: 15px;
+      .compose-textarea {
+        width: 100%;
+        background: transparent;
+        border: none;
+        color: #fff;
+        font-size: 18px;
+        resize: none;
+        outline: none;
+        min-height: 120px;
+        font-family: inherit;
       }
 
-      .user-switcher-username {
+      .compose-textarea::placeholder {
+        color: #71767b;
+      }
+
+      .compose-modal-footer {
+        padding: 12px 16px;
+        border-top: 1px solid #2f3336;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .char-count {
         color: #71767b;
         font-size: 14px;
       }
+
+      .compose-btn {
+        background: #1d9bf0;
+        color: #fff;
+        border: none;
+        border-radius: 20px;
+        padding: 8px 20px;
+        font-weight: 700;
+        font-size: 15px;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+
+      .compose-btn:active:not(:disabled) {
+        background: #1a8cd8;
+      }
+
+      .compose-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      /* 响应式 */
+      @media (max-width: 768px) {
+        #twitter-app {
+          max-width: 100%;
+        }
+
+        .mobile-top-bar,
+        .mobile-bottom-nav {
+          max-width: 100%;
+        }
+      }
+
+      @media (max-width: 320px) {
+        .tweet-action span:last-child {
+          display: none;
+        }
+      }
     </style>
 
-    <div class="twitter-sidebar">
-      <div class="twitter-logo">𝕏</div>
-      <nav>
-        <div class="nav-item active" data-nav="home">
-          <span class="nav-icon">🏠</span>
-          <span>主页</span>
-        </div>
-        <div class="nav-item" data-nav="explore">
-          <span class="nav-icon">🔍</span>
-          <span>探索</span>
-        </div>
-        <div class="nav-item" data-nav="notifications">
-          <span class="nav-icon">🔔</span>
-          <span>通知</span>
-        </div>
-        <div class="nav-item" data-nav="messages">
-          <span class="nav-icon">✉️</span>
-          <span>私信</span>
-        </div>
-        <div class="nav-item" data-nav="profile">
-          <span class="nav-icon">👤</span>
-          <span>个人资料</span>
-        </div>
-      </nav>
-      <button class="tweet-btn" id="compose-btn">发推文</button>
-      <div class="user-switcher" id="user-switcher">
-        <img class="user-switcher-avatar" id="current-user-avatar" src="" alt="">
-        <div class="user-switcher-info">
-          <div class="user-switcher-name" id="current-user-name"></div>
-          <div class="user-switcher-username" id="current-user-username"></div>
-        </div>
-      </div>
+    <!-- 顶部导航栏 -->
+    <div class="mobile-top-bar">
+      <img class="top-bar-avatar" id="top-bar-avatar" src="" alt="" title="切换账号">
+      <div class="top-bar-title">𝕏</div>
+      <div class="top-bar-settings" title="设置">⚙️</div>
     </div>
 
-    <div class="twitter-main">
-      <div class="main-header">
-        <h2>主页</h2>
-      </div>
-
-      <div class="compose-tweet">
-        <img class="compose-avatar" id="compose-avatar" src="" alt="">
-        <div class="compose-form">
-          <textarea
-            class="compose-textarea"
-            id="tweet-textarea"
-            placeholder="有什么新鲜事？"
-            maxlength="280"
-          ></textarea>
-          <div class="compose-actions">
-            <span class="char-count" id="char-count">0 / 280</span>
-            <button class="compose-btn" id="post-tweet-btn" disabled>发推文</button>
-          </div>
-        </div>
-      </div>
-
+    <!-- 主内容区 -->
+    <div class="mobile-main">
       <div class="tweets-list" id="tweets-list">
         <div class="empty-state">
           <div class="empty-state-icon">🐦</div>
@@ -588,12 +530,17 @@ function renderUI(container, roche) {
       </div>
     </div>
 
-    <div class="twitter-widgets">
-      <div class="widget-card">
-        <div class="widget-header">推荐关注</div>
-        <div id="recommendations-list"></div>
-      </div>
+    <!-- 底部导航栏 -->
+    <div class="mobile-bottom-nav">
+      <div class="bottom-nav-item active" data-nav="home" title="主页">🏠</div>
+      <div class="bottom-nav-item" data-nav="search" title="搜索">🔍</div>
+      <div class="bottom-nav-item" data-nav="notifications" title="通知">🔔</div>
+      <div class="bottom-nav-item" data-nav="messages" title="私信">✉️</div>
+      <div class="bottom-nav-item" data-nav="profile" title="个人资料">👤</div>
     </div>
+
+    <!-- 悬浮发推按钮 -->
+    <button class="floating-compose-btn" id="floating-compose-btn" title="发推文">✏️</button>
   `;
 
   container.replaceChildren();
@@ -607,30 +554,36 @@ function renderUI(container, roche) {
 
   // 渲染推文列表
   renderTweets(roche);
-
-  // 渲染推荐用户
-  renderRecommendations(roche);
 }
 
 /**
- * 绑定事件处理
+ * 绑定事件处理 - 移动端
  */
 function bindEvents(roche) {
-  // 发推文按钮
-  const textarea = document.getElementById('tweet-textarea');
-  const postBtn = document.getElementById('post-tweet-btn');
-  const charCount = document.getElementById('char-count');
-
-  textarea.addEventListener('input', () => {
-    const length = textarea.value.length;
-    charCount.textContent = `${length} / 280`;
-    postBtn.disabled = length === 0;
+  // 悬浮发推按钮
+  document.getElementById('floating-compose-btn').addEventListener('click', () => {
+    showComposeModal(roche);
   });
 
-  postBtn.addEventListener('click', () => postTweet(roche));
+  // 顶部头像点击 - 切换用户
+  document.getElementById('top-bar-avatar').addEventListener('click', () => {
+    showUserSwitcher(roche);
+  });
 
-  // 用户切换
-  document.getElementById('user-switcher').addEventListener('click', () => showUserSwitcher(roche));
+  // 底部导航切换
+  document.querySelectorAll('.bottom-nav-item').forEach(item => {
+    item.addEventListener('click', () => {
+      // 移除所有 active 状态
+      document.querySelectorAll('.bottom-nav-item').forEach(i => i.classList.remove('active'));
+      // 添加当前 active 状态
+      item.classList.add('active');
+
+      const nav = item.dataset.nav;
+      if (nav !== 'home') {
+        roche.ui.message(`${item.title}功能开发中...`, 'info');
+      }
+    });
+  });
 }
 
 /**
@@ -639,26 +592,88 @@ function bindEvents(roche) {
 function updateCurrentUserDisplay() {
   const user = twitterData.users[currentUser];
   if (user) {
-    document.getElementById('current-user-avatar').src = user.avatar;
-    document.getElementById('current-user-name').textContent = user.name;
-    document.getElementById('current-user-username').textContent = user.username;
-    document.getElementById('compose-avatar').src = user.avatar;
+    document.getElementById('top-bar-avatar').src = user.avatar;
   }
+}
+
+/**
+ * 显示发推文弹窗
+ */
+function showComposeModal(roche) {
+  const user = twitterData.users[currentUser];
+  if (!user) return;
+
+  const modal = document.createElement('div');
+  modal.className = 'compose-modal';
+  modal.innerHTML = `
+    <div class="compose-modal-content">
+      <div class="compose-modal-header">
+        <div class="compose-modal-close" id="close-modal">✕</div>
+        <div class="compose-modal-title">发推文</div>
+      </div>
+      <div class="compose-modal-body">
+        <img class="compose-avatar" src="${user.avatar}" alt="">
+        <div class="compose-form">
+          <textarea
+            class="compose-textarea"
+            id="modal-tweet-textarea"
+            placeholder="有什么新鲜事？"
+            maxlength="280"
+            autofocus
+          ></textarea>
+        </div>
+      </div>
+      <div class="compose-modal-footer">
+        <span class="char-count" id="modal-char-count">0 / 280</span>
+        <button class="compose-btn" id="modal-post-btn" disabled>发推文</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  // 绑定事件
+  const textarea = document.getElementById('modal-tweet-textarea');
+  const postBtn = document.getElementById('modal-post-btn');
+  const charCount = document.getElementById('modal-char-count');
+
+  textarea.addEventListener('input', () => {
+    const length = textarea.value.length;
+    charCount.textContent = `${length} / 280`;
+    postBtn.disabled = length === 0;
+  });
+
+  postBtn.addEventListener('click', async () => {
+    await postTweet(roche, textarea.value);
+    document.body.removeChild(modal);
+  });
+
+  // 关闭弹窗
+  const closeModal = () => {
+    if (document.body.contains(modal)) {
+      document.body.removeChild(modal);
+    }
+  };
+
+  document.getElementById('close-modal').addEventListener('click', closeModal);
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeModal();
+  });
+
+  // 自动聚焦
+  setTimeout(() => textarea.focus(), 100);
 }
 
 /**
  * 发布推文
  */
-async function postTweet(roche) {
-  const textarea = document.getElementById('tweet-textarea');
-  const content = textarea.value.trim();
-
-  if (!content) return;
+async function postTweet(roche, content) {
+  if (!content || !content.trim()) return;
 
   const tweet = {
     id: twitterData.nextTweetId++,
     userId: currentUser,
-    content: content,
+    content: content.trim(),
     timestamp: Date.now(),
     likes: [],
     retweets: [],
@@ -667,10 +682,6 @@ async function postTweet(roche) {
 
   twitterData.tweets.unshift(tweet);
   await saveData(roche);
-
-  textarea.value = '';
-  document.getElementById('char-count').textContent = '0 / 280';
-  document.getElementById('post-tweet-btn').disabled = true;
 
   renderTweets(roche);
 
@@ -785,54 +796,6 @@ async function handleTweetAction(action, tweetId, roche) {
 }
 
 /**
- * 渲染推荐用户
- */
-function renderRecommendations(roche) {
-  const listEl = document.getElementById('recommendations-list');
-  const userFollows = twitterData.follows[currentUser] || [];
-
-  // 获取未关注的用户
-  const recommendations = Object.values(twitterData.users)
-    .filter(u => u.id !== currentUser && !userFollows.includes(u.id))
-    .slice(0, 5);
-
-  if (recommendations.length === 0) {
-    listEl.innerHTML = '<div style="padding: 20px; text-align: center; color: #71767b;">没有更多推荐</div>';
-    return;
-  }
-
-  listEl.innerHTML = recommendations.map(user => {
-    const isFollowing = userFollows.includes(user.id);
-    return `
-      <div class="user-recommendation">
-        <img class="rec-avatar" src="${user.avatar}" alt="">
-        <div class="rec-info">
-          <div class="rec-name">${user.name}</div>
-          <div class="rec-username">${user.username}</div>
-        </div>
-        <button
-          class="follow-btn ${isFollowing ? 'following' : ''}"
-          data-user-id="${user.id}"
-        >
-          ${isFollowing ? '正在关注' : '关注'}
-        </button>
-      </div>
-    `;
-  }).join('');
-
-  // 绑定关注按钮
-  listEl.querySelectorAll('.follow-btn').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      const userId = btn.dataset.userId;
-      await toggleFollow(userId, roche);
-      renderRecommendations(roche);
-      updateStats();
-    });
-  });
-}
-
-/**
  * 切换关注状态
  */
 async function toggleFollow(userId, roche) {
@@ -857,13 +820,6 @@ async function toggleFollow(userId, roche) {
 }
 
 /**
- * 更新统计数据
- */
-function updateStats() {
-  // 这里可以添加统计显示逻辑
-}
-
-/**
  * 显示用户切换器
  */
 async function showUserSwitcher(roche) {
@@ -879,7 +835,6 @@ async function showUserSwitcher(roche) {
     currentUser = selected;
     updateCurrentUserDisplay();
     renderTweets(roche);
-    renderRecommendations(roche);
   }
 }
 
