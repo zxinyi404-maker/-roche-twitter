@@ -2,7 +2,7 @@
   "id": "roche-twitter",
   "name": "Twitter",
   "version": "1.4.0",
-  "description": "🐦 完全还原推特 | 多面具系统 | 记忆集成 | 新闻预留接口",
+  "description": "🐦 完全还原推特 | 多面具系统 | 记忆集成",
   "author": "zxinyi404",
   "icon": "𝕏",
   "entry": "https://raw.githubusercontent.com/zxinyi404-maker/-roche-twitter/main/plugin.js?v=1.4.0",
@@ -10,10 +10,10 @@
   "permissions": [
     "persona:read",
     "conversation:read",
+    "memory:read",
+    "memory:write",
     "ai:chat",
     "storage",
-    "ui",
-    "memory:read",
-    "memory:write"
+    "ui"
   ]
 }
