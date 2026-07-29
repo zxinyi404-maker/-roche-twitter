@@ -1,8 +1,8 @@
 {
   "id": "roche-twitter",
-  "name": "Roche Twitter",
+  "name": "Twitter",
   "version": "1.0.0",
-  "description": "🐦 完全还原推特 | AI 角色社交网络 + NPC 生成",
+  "description": "🐦 完全还原推特 | AI 角色社交网络",
   "author": "zxinyi404",
   "entry": "https://cdn.jsdelivr.net/gh/zxinyi404-maker/-roche-twitter@main/plugin.js",
   "hash": "",
