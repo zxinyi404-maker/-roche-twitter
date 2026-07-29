@@ -67,7 +67,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '1.5.0',
+    version: '1.5.1',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -2406,7 +2406,7 @@ function renderUI(container, roche) {
         <div class="settings-section">
           <div class="setting-item">
             <div class="setting-label">版本</div>
-            <div class="setting-value">v1.5.0</div>
+            <div class="setting-value">v1.5.1</div>
           </div>
           <div class="setting-item" id="setting-about">
             <div class="setting-label">关于 Twitter 插件</div>
@@ -2829,13 +2829,15 @@ function handleSidebarMenu(menu, roche) {
     case 'profile':
       showProfile(currentUser, roche);
       break;
+    case 'settings':
+      showPrivacySettings(roche);
+      break;
     case 'premium':
     case 'communities':
     case 'bookmarks':
     case 'lists':
     case 'spaces':
     case 'creator':
-    case 'settings':
     case 'help':
       showToast('功能开发中...', 'info');
       break;
@@ -4021,7 +4023,7 @@ function showSettings(roche) {
   });
 
   document.getElementById('setting-about').addEventListener('click', () => {
-    showToast('Twitter 插件 v1.4.6 - 修复空值检查和退出功能', 'info');
+    showToast('Twitter 插件 v1.5.1 - 完善设置和隐私页面功能', 'info');
   });
 
   // 切换到设置视图
