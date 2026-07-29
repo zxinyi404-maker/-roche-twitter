@@ -1,11 +1,11 @@
 {
-  "id": "twitter-test-2026",
-  "name": "𝕏 Twitter (测试版)",
-  "version": "2.0.0-test",
+  "id": "twitter-test-v2",
+  "name": "𝕏 Twitter (测试版 v2)",
+  "version": "2.0.1-test",
   "description": "🧪 测试插件结构是否正确",
   "author": "zxinyi404",
   "icon": "🧪",
-  "entry": "https://raw.githubusercontent.com/zxinyi404-maker/-roche-twitter/main/plugin-test.js?t=1722262000",
+  "entry": "https://raw.githubusercontent.com/zxinyi404-maker/-roche-twitter/main/plugin-v2.js?nocache=true",
   "hash": "",
   "permissions": [
     "persona:read",
