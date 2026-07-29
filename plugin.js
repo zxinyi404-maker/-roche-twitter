@@ -3246,7 +3246,7 @@ function bindEvents(container, roche) {
 
   // 顶部头像点击 - 打开侧边栏
   document.getElementById('top-bar-avatar').addEventListener('click', () => {
-    openSidebar(roche);
+    showSidebar(roche);
   });
 
   // 侧边栏遮罩层点击 - 关闭侧边栏
