@@ -30,7 +30,8 @@ let currentTweetId = null;
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '1.0.8',
+    version: '1.0.9',
+    icon: '𝕏',
     apps: [{
       id: 'twitter-home',
       name: 'Twitter',
@@ -74,12 +75,27 @@ async function saveData(roche) {
 }
 
 /**
- * 初始化用户（从 AI 角色列表）
+ * 初始化用户（主用户 + 推荐好友）
  */
 async function initializeUsers(roche) {
-  const characters = await roche.character.list();
+  // 获取主用户（User 自己）
+  const persona = await roche.persona.get();
+  const mainUserId = 'main_user';
 
-  // 为每个角色创建用户信息
+  if (!twitterData.users[mainUserId]) {
+    twitterData.users[mainUserId] = {
+      id: mainUserId,
+      name: persona.name || 'User',
+      username: `@${(persona.name || 'user').toLowerCase().replace(/\s+/g, '_')}`,
+      avatar: persona.avatar || generateAvatar(persona.name || 'User'),
+      bio: persona.bio || '这是我的个人简介',
+      followers: 0,
+      following: 0
+    };
+  }
+
+  // 获取推荐好友（AI 角色，可以关注）
+  const characters = await roche.character.list();
   for (const char of characters) {
     if (!twitterData.users[char.id]) {
       twitterData.users[char.id] = {
@@ -89,14 +105,15 @@ async function initializeUsers(roche) {
         avatar: char.avatar || generateAvatar(char.name),
         bio: char.description || '这个人很神秘，什么都没留下',
         followers: 0,
-        following: 0
+        following: 0,
+        isCharacter: true // 标记为 AI 角色
       };
     }
   }
 
-  // 设置当前用户为第一个角色
-  if (characters.length > 0 && !currentUser) {
-    currentUser = characters[0].id;
+  // 设置当前用户为主用户
+  if (!currentUser) {
+    currentUser = mainUserId;
 
     // 初始化关注关系
     if (!twitterData.follows[currentUser]) {
@@ -111,7 +128,7 @@ async function initializeUsers(roche) {
  * 生成头像占位符
  */
 function generateAvatar(name) {
-  const colors = ['#1DA1F2', '#14171A', '#657786', '#AAB8C2', '#E1E8ED'];
+  const colors = ['#1d9bf0', '#794bc4', '#f91880', '#00ba7c', '#ff7a00'];
   const initial = name.charAt(0).toUpperCase();
   const color = colors[name.charCodeAt(0) % colors.length];
   return `data:image/svg+xml,${encodeURIComponent(`
@@ -123,6 +140,24 @@ function generateAvatar(name) {
 }
 
 /**
+ * SVG 图标集合
+ */
+const icons = {
+  home: `<svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor"><path d="M12 1.696L.622 8.807l1.06 1.696L3 9.679V19.5C3 20.881 4.119 22 5.5 22h13c1.381 0 2.5-1.119 2.5-2.5V9.679l1.318.824 1.06-1.696L12 1.696zM12 16.5c-1.933 0-3.5-1.567-3.5-3.5s1.567-3.5 3.5-3.5 3.5 1.567 3.5 3.5-1.567 3.5-3.5 3.5z"/></svg>`,
+  search: `<svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor"><path d="M10.25 3.75c-3.59 0-6.5 2.91-6.5 6.5s2.91 6.5 6.5 6.5c1.795 0 3.419-.726 4.596-1.904 1.178-1.177 1.904-2.801 1.904-4.596 0-3.59-2.91-6.5-6.5-6.5zm-8.5 6.5c0-4.694 3.806-8.5 8.5-8.5s8.5 3.806 8.5 8.5c0 1.986-.682 3.815-1.824 5.262l4.781 4.781-1.414 1.414-4.781-4.781c-1.447 1.142-3.276 1.824-5.262 1.824-4.694 0-8.5-3.806-8.5-8.5z"/></svg>`,
+  compose: `<svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M23 3c-6.62-.1-10.38 2.421-13.05 6.03C7.29 12.61 6 17.331 6 22h2c0-1.007.07-2.012.19-3H12c4.1 0 7.48-3.082 7.94-7.054C22.79 10.147 23.17 6.359 23 3zm-7 8h-1.5v2H16c.63-.016 1.2-.08 1.72-.188C16.95 15.24 14.68 17 12 17H8.55c.57-2.512 1.57-4.851 3-6.78 2.16-2.912 5.29-4.911 9.45-5.187C20.95 8.079 19.9 11 16 11zM4 9V6H1V4h3V1h2v3h3v2H6v3H4z"/></svg>`,
+  notifications: `<svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor"><path d="M19.993 9.042C19.48 5.017 16.054 2 11.996 2s-7.49 3.021-7.999 7.051L2.866 18H7.1c.463 2.282 2.481 4 4.9 4s4.437-1.718 4.9-4h4.236l-1.143-8.958zM12 20c-1.306 0-2.417-.835-2.829-2h5.658c-.412 1.165-1.523 2-2.829 2zm-6.866-4l.847-6.698C6.364 6.272 8.941 4 11.996 4s5.627 2.268 6.013 5.295L18.864 16H5.134z"/></svg>`,
+  messages: `<svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor"><path d="M1.998 5.5c0-1.381 1.119-2.5 2.5-2.5h15c1.381 0 2.5 1.119 2.5 2.5v13c0 1.381-1.119 2.5-2.5 2.5h-15c-1.381 0-2.5-1.119-2.5-2.5v-13zm2.5-.5c-.276 0-.5.224-.5.5v2.764l8 3.638 8-3.636V5.5c0-.276-.224-.5-.5-.5h-15zm15.5 5.463l-8 3.636-8-3.638V18.5c0 .276.224.5.5.5h15c.276 0 .5-.224.5-.5v-8.037z"/></svg>`,
+  comment: `<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M1.751 10c0-4.42 3.584-8 8.005-8h4.366c4.49 0 8.129 3.64 8.129 8.13 0 2.96-1.607 5.68-4.196 7.11l-8.054 4.46v-3.69h-.067c-4.49.1-8.183-3.51-8.183-8.01zm8.005-6c-3.317 0-6.005 2.69-6.005 6 0 3.37 2.77 6.08 6.138 6.01l.351-.01h1.761v2.3l5.087-2.81c1.951-1.08 3.163-3.13 3.163-5.36 0-3.39-2.744-6.13-6.129-6.13H9.756z"/></svg>`,
+  retweet: `<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M4.5 3.88l4.432 4.14-1.364 1.46L5.5 7.55V16c0 1.1.896 2 2 2H13v2H7.5c-2.209 0-4-1.79-4-4V7.55L1.432 9.48.068 8.02 4.5 3.88zM16.5 6H11V4h5.5c2.209 0 4 1.79 4 4v8.45l2.068-1.93 1.364 1.46-4.432 4.14-4.432-4.14 1.364-1.46 2.068 1.93V8c0-1.1-.896-2-2-2z"/></svg>`,
+  like: `<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M16.697 5.5c-1.222-.06-2.679.51-3.89 2.16l-.805 1.09-.806-1.09C9.984 6.01 8.526 5.44 7.304 5.5c-1.243.07-2.349.78-2.91 1.91-.552 1.12-.633 2.78.479 4.82 1.074 1.97 3.257 4.27 7.129 6.61 3.87-2.34 6.052-4.64 7.126-6.61 1.111-2.04 1.03-3.7.477-4.82-.561-1.13-1.666-1.84-2.908-1.91zm4.187 7.69c-1.351 2.48-4.001 5.12-8.379 7.67l-.503.3-.504-.3c-4.379-2.55-7.029-5.19-8.382-7.67-1.36-2.5-1.41-4.86-.514-6.67.887-1.79 2.647-2.91 4.601-3.01 1.651-.09 3.368.56 4.798 2.01 1.429-1.45 3.146-2.1 4.796-2.01 1.954.1 3.714 1.22 4.601 3.01.896 1.81.846 4.17-.514 6.67z"/></svg>`,
+  likeFilled: `<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M20.884 13.19c-1.351 2.48-4.001 5.12-8.379 7.67l-.503.3-.504-.3c-4.379-2.55-7.029-5.19-8.382-7.67-1.36-2.5-1.41-4.86-.514-6.67.887-1.79 2.647-2.91 4.601-3.01 1.651-.09 3.368.56 4.798 2.01 1.429-1.45 3.146-2.1 4.796-2.01 1.954.1 3.714 1.22 4.601 3.01.896 1.81.846 4.17-.514 6.67z"/></svg>`,
+  share: `<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 2.59l5.7 5.7-1.41 1.42L13 6.41V16h-2V6.41l-3.3 3.3-1.41-1.42L12 2.59zM21 15l-.02 3.51c0 1.38-1.12 2.49-2.5 2.49H5.5C4.11 21 3 19.88 3 18.5V15h2v3.5c0 .28.22.5.5.5h12.98c.28 0 .5-.22.5-.5L19 15h2z"/></svg>`,
+  close: `<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M10.59 12L4.54 5.96l1.42-1.42L12 10.59l6.04-6.05 1.42 1.42L13.41 12l6.05 6.04-1.42 1.42L12 13.41l-6.04 6.05-1.42-1.42L10.59 12z"/></svg>`,
+  back: `<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M7.414 13l5.043 5.04-1.414 1.42L3.586 12l7.457-7.46 1.414 1.42L7.414 11H21v2H7.414z"/></svg>`
+};
+
+/**
  * 渲染主界面 - 移动端布局
  */
 function renderUI(container, roche) {
@@ -132,8 +167,8 @@ function renderUI(container, roche) {
     <style>
       #twitter-app {
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        background: #000;
-        color: #fff;
+        background: #ffffff;
+        color: #0f1419;
         min-height: 100vh;
         position: relative;
         max-width: 768px;
@@ -147,8 +182,9 @@ function renderUI(container, roche) {
         left: 0;
         right: 0;
         height: 60px;
-        background: #000;
-        border-bottom: 1px solid #2f3336;
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid #eff3f4;
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -171,20 +207,29 @@ function renderUI(container, roche) {
       }
 
       .top-bar-title {
-        font-size: 19px;
+        font-size: 20px;
         font-weight: 700;
         letter-spacing: -0.5px;
+        color: #0f1419;
       }
 
-      .top-bar-settings {
-        font-size: 22px;
+      .top-bar-close {
+        color: #0f1419;
         cursor: pointer;
         padding: 8px;
-        transition: opacity 0.2s;
+        transition: background 0.2s;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
 
-      .top-bar-settings:active {
-        opacity: 0.7;
+      .top-bar-close:hover {
+        background: rgba(0, 0, 0, 0.03);
+      }
+
+      .top-bar-close:active {
+        background: rgba(0, 0, 0, 0.08);
       }
 
       /* 主内容区 */
@@ -201,13 +246,17 @@ function renderUI(container, roche) {
 
       .tweet-item {
         padding: 12px 16px;
-        border-bottom: 1px solid #2f3336;
+        border-bottom: 1px solid #eff3f4;
         transition: background 0.2s;
         cursor: pointer;
       }
 
+      .tweet-item:hover {
+        background: rgba(0, 0, 0, 0.03);
+      }
+
       .tweet-item:active {
-        background: rgba(255, 255, 255, 0.03);
+        background: rgba(0, 0, 0, 0.06);
       }
 
       .tweet-header {
@@ -237,16 +286,16 @@ function renderUI(container, roche) {
       .tweet-author-name {
         font-weight: 700;
         font-size: 15px;
-        color: #fff;
+        color: #0f1419;
       }
 
       .tweet-author-username {
-        color: #71767b;
+        color: #536471;
         font-size: 15px;
       }
 
       .tweet-time {
-        color: #71767b;
+        color: #536471;
         font-size: 15px;
       }
 
@@ -256,7 +305,7 @@ function renderUI(container, roche) {
         margin: 4px 0 12px 0;
         white-space: pre-wrap;
         word-wrap: break-word;
-        color: #fff;
+        color: #0f1419;
       }
 
       .tweet-actions {
@@ -270,7 +319,7 @@ function renderUI(container, roche) {
         display: flex;
         align-items: center;
         gap: 4px;
-        color: #71767b;
+        color: #536471;
         font-size: 13px;
         cursor: pointer;
         padding: 8px 12px;
@@ -278,28 +327,45 @@ function renderUI(container, roche) {
         transition: all 0.2s;
       }
 
-      .tweet-action:active {
+      .tweet-action:hover {
         background: rgba(29, 155, 240, 0.1);
+        color: #1d9bf0;
+      }
+
+      .tweet-action:active {
+        background: rgba(29, 155, 240, 0.2);
       }
 
       .tweet-action.liked {
         color: #f91880;
       }
 
-      .tweet-action.liked:active {
+      .tweet-action.liked:hover {
         background: rgba(249, 24, 128, 0.1);
+        color: #f91880;
+      }
+
+      .tweet-action.liked:active {
+        background: rgba(249, 24, 128, 0.2);
       }
 
       .tweet-action.retweeted {
         color: #00ba7c;
       }
 
-      .tweet-action.retweeted:active {
+      .tweet-action.retweeted:hover {
         background: rgba(0, 186, 124, 0.1);
+        color: #00ba7c;
       }
 
-      .tweet-action span:first-child {
-        font-size: 18px;
+      .tweet-action.retweeted:active {
+        background: rgba(0, 186, 124, 0.2);
+      }
+
+      .tweet-action .action-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
 
       /* 底部导航栏 */
@@ -309,8 +375,9 @@ function renderUI(container, roche) {
         left: 0;
         right: 0;
         height: 60px;
-        background: #000;
-        border-top: 1px solid #2f3336;
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(12px);
+        border-top: 1px solid #eff3f4;
         display: flex;
         align-items: center;
         justify-content: space-around;
@@ -326,57 +393,48 @@ function renderUI(container, roche) {
         justify-content: center;
         flex: 1;
         height: 100%;
-        color: #71767b;
+        color: #0f1419;
         cursor: pointer;
         transition: all 0.2s;
-        font-size: 26px;
       }
 
       .bottom-nav-item.active {
-        color: #fff;
+        color: #0f1419;
+      }
+
+      .bottom-nav-item:hover {
+        background: rgba(0, 0, 0, 0.03);
       }
 
       .bottom-nav-item:active {
-        background: rgba(255, 255, 255, 0.05);
+        background: rgba(0, 0, 0, 0.08);
       }
 
-      /* 悬浮发推按钮 */
-      .floating-compose-btn {
-        position: fixed;
-        bottom: 80px;
-        right: 20px;
+      .bottom-nav-item.compose-btn {
+        background: #1d9bf0;
+        color: #ffffff;
+        border-radius: 50%;
         width: 56px;
         height: 56px;
-        border-radius: 50%;
-        background: #1d9bf0;
-        color: #fff;
-        border: none;
-        font-size: 24px;
-        cursor: pointer;
-        box-shadow: 0 4px 12px rgba(29, 155, 240, 0.5);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.2s;
-        z-index: 99;
+        margin: 0 8px;
+        flex: 0 0 56px;
       }
 
-      .floating-compose-btn:active {
-        transform: scale(0.95);
+      .bottom-nav-item.compose-btn:hover {
         background: #1a8cd8;
       }
 
-      @media (min-width: 768px) {
-        .floating-compose-btn {
-          right: calc(50% - 384px + 20px);
-        }
+      .bottom-nav-item.compose-btn:active {
+        background: #1780c2;
       }
+
+      /* 悬浮发推按钮 - 已移除，改用底部导航中间按钮 */
 
       /* 空状态 */
       .empty-state {
         padding: 60px 20px;
         text-align: center;
-        color: #71767b;
+        color: #536471;
       }
 
       .empty-state-icon {
@@ -391,7 +449,7 @@ function renderUI(container, roche) {
         left: 0;
         right: 0;
         bottom: 0;
-        background: rgba(0, 0, 0, 0.7);
+        background: rgba(0, 0, 0, 0.4);
         z-index: 200;
         display: flex;
         align-items: flex-start;
@@ -401,32 +459,45 @@ function renderUI(container, roche) {
       }
 
       .compose-modal-content {
-        background: #000;
+        background: #ffffff;
         border-radius: 16px;
         width: 100%;
         max-width: 600px;
         margin-top: 40px;
-        border: 1px solid #2f3336;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
       }
 
       .compose-modal-header {
         display: flex;
         align-items: center;
         padding: 12px 16px;
-        border-bottom: 1px solid #2f3336;
+        border-bottom: 1px solid #eff3f4;
       }
 
       .compose-modal-close {
-        font-size: 24px;
         cursor: pointer;
         padding: 8px;
-        color: #fff;
+        color: #0f1419;
+        border-radius: 50%;
+        transition: background 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .compose-modal-close:hover {
+        background: rgba(0, 0, 0, 0.03);
+      }
+
+      .compose-modal-close:active {
+        background: rgba(0, 0, 0, 0.08);
       }
 
       .compose-modal-title {
         flex: 1;
         text-align: center;
         font-weight: 700;
+        color: #0f1419;
         margin-right: 40px;
       }
 
@@ -451,7 +522,7 @@ function renderUI(container, roche) {
         width: 100%;
         background: transparent;
         border: none;
-        color: #fff;
+        color: #0f1419;
         font-size: 18px;
         resize: none;
         outline: none;
@@ -460,19 +531,19 @@ function renderUI(container, roche) {
       }
 
       .compose-textarea::placeholder {
-        color: #71767b;
+        color: #536471;
       }
 
       .compose-modal-footer {
         padding: 12px 16px;
-        border-top: 1px solid #2f3336;
+        border-top: 1px solid #eff3f4;
         display: flex;
         justify-content: space-between;
         align-items: center;
       }
 
       .char-count {
-        color: #71767b;
+        color: #536471;
         font-size: 14px;
       }
 
@@ -488,8 +559,12 @@ function renderUI(container, roche) {
         transition: background 0.2s;
       }
 
-      .compose-btn:active:not(:disabled) {
+      .compose-btn:hover:not(:disabled) {
         background: #1a8cd8;
+      }
+
+      .compose-btn:active:not(:disabled) {
+        background: #1780c2;
       }
 
       .compose-btn:disabled {
@@ -512,8 +587,9 @@ function renderUI(container, roche) {
         left: 0;
         right: 0;
         height: 60px;
-        background: #000;
-        border-bottom: 1px solid #2f3336;
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid #eff3f4;
         display: flex;
         align-items: center;
         padding: 0 16px;
@@ -523,21 +599,29 @@ function renderUI(container, roche) {
       }
 
       .detail-back-btn {
-        font-size: 20px;
         cursor: pointer;
         padding: 8px;
-        transition: opacity 0.2s;
-        color: #fff;
+        transition: background 0.2s;
+        color: #0f1419;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .detail-back-btn:hover {
+        background: rgba(0, 0, 0, 0.03);
       }
 
       .detail-back-btn:active {
-        opacity: 0.7;
+        background: rgba(0, 0, 0, 0.08);
       }
 
       .detail-title {
         margin-left: 24px;
         font-size: 19px;
         font-weight: 700;
+        color: #0f1419;
       }
 
       .detail-main {
@@ -547,7 +631,7 @@ function renderUI(container, roche) {
 
       .detail-tweet {
         padding: 16px;
-        border-bottom: 1px solid #2f3336;
+        border-bottom: 1px solid #eff3f4;
       }
 
       .detail-tweet-header {
@@ -571,11 +655,11 @@ function renderUI(container, roche) {
       .detail-tweet-name {
         font-weight: 700;
         font-size: 16px;
-        color: #fff;
+        color: #0f1419;
       }
 
       .detail-tweet-username {
-        color: #71767b;
+        color: #536471;
         font-size: 15px;
       }
 
@@ -585,22 +669,22 @@ function renderUI(container, roche) {
         margin: 16px 0;
         white-space: pre-wrap;
         word-wrap: break-word;
-        color: #fff;
+        color: #0f1419;
       }
 
       .detail-tweet-time {
-        color: #71767b;
+        color: #536471;
         font-size: 15px;
         padding: 16px 0;
-        border-top: 1px solid #2f3336;
+        border-top: 1px solid #eff3f4;
       }
 
       .detail-tweet-stats {
         display: flex;
         gap: 20px;
         padding: 16px 0;
-        border-top: 1px solid #2f3336;
-        border-bottom: 1px solid #2f3336;
+        border-top: 1px solid #eff3f4;
+        border-bottom: 1px solid #eff3f4;
       }
 
       .detail-stat-item {
@@ -611,11 +695,11 @@ function renderUI(container, roche) {
 
       .detail-stat-number {
         font-weight: 700;
-        color: #fff;
+        color: #0f1419;
       }
 
       .detail-stat-label {
-        color: #71767b;
+        color: #536471;
       }
 
       .detail-tweet-actions {
@@ -628,8 +712,7 @@ function renderUI(container, roche) {
         display: flex;
         align-items: center;
         justify-content: center;
-        color: #71767b;
-        font-size: 20px;
+        color: #536471;
         cursor: pointer;
         padding: 12px;
         border-radius: 50%;
@@ -638,16 +721,39 @@ function renderUI(container, roche) {
         height: 40px;
       }
 
-      .detail-action:active {
+      .detail-action:hover {
         background: rgba(29, 155, 240, 0.1);
+        color: #1d9bf0;
+      }
+
+      .detail-action:active {
+        background: rgba(29, 155, 240, 0.2);
       }
 
       .detail-action.liked {
         color: #f91880;
       }
 
+      .detail-action.liked:hover {
+        background: rgba(249, 24, 128, 0.1);
+        color: #f91880;
+      }
+
+      .detail-action.liked:active {
+        background: rgba(249, 24, 128, 0.2);
+      }
+
       .detail-action.retweeted {
         color: #00ba7c;
+      }
+
+      .detail-action.retweeted:hover {
+        background: rgba(0, 186, 124, 0.1);
+        color: #00ba7c;
+      }
+
+      .detail-action.retweeted:active {
+        background: rgba(0, 186, 124, 0.2);
       }
 
       .detail-replies {
@@ -658,8 +764,9 @@ function renderUI(container, roche) {
         display: flex;
         gap: 12px;
         padding: 16px;
-        border-top: 1px solid #2f3336;
-        background: #000;
+        border-top: 1px solid #eff3f4;
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(12px);
         position: fixed;
         bottom: 0;
         left: 0;
@@ -684,10 +791,10 @@ function renderUI(container, roche) {
 
       .detail-reply-textarea {
         flex: 1;
-        background: #16181c;
-        border: 1px solid #2f3336;
+        background: #ffffff;
+        border: 1px solid #eff3f4;
         border-radius: 20px;
-        color: #fff;
+        color: #0f1419;
         font-size: 15px;
         padding: 8px 16px;
         resize: none;
@@ -698,7 +805,11 @@ function renderUI(container, roche) {
       }
 
       .detail-reply-textarea::placeholder {
-        color: #71767b;
+        color: #536471;
+      }
+
+      .detail-reply-textarea:focus {
+        border-color: #1d9bf0;
       }
 
       .detail-reply-btn {
@@ -713,8 +824,12 @@ function renderUI(container, roche) {
         transition: background 0.2s;
       }
 
-      .detail-reply-btn:active:not(:disabled) {
+      .detail-reply-btn:hover:not(:disabled) {
         background: #1a8cd8;
+      }
+
+      .detail-reply-btn:active:not(:disabled) {
+        background: #1780c2;
       }
 
       .detail-reply-btn:disabled {
@@ -741,13 +856,45 @@ function renderUI(container, roche) {
           display: none;
         }
       }
+
+      /* 选择对话框样式 */
+      .select-dialog {
+        background: rgba(0, 0, 0, 0.4);
+      }
+
+      .select-dialog-content {
+        background: #ffffff;
+        color: #0f1419;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+      }
+
+      .select-dialog-content h3 {
+        color: #0f1419;
+      }
+
+      .select-dialog-item {
+        color: #0f1419;
+      }
+
+      .select-dialog-item:hover {
+        background: rgba(0, 0, 0, 0.03);
+      }
+
+      .select-dialog-cancel {
+        background: #eff3f4;
+        color: #0f1419;
+      }
+
+      .select-dialog-cancel:hover {
+        background: #e7e9ea;
+      }
     </style>
 
     <!-- 顶部导航栏 -->
     <div class="mobile-top-bar">
-      <img class="top-bar-avatar" id="top-bar-avatar" src="" alt="" title="切换账号">
+      <img class="top-bar-avatar" id="top-bar-avatar" src="" alt="" title="我的个人资料">
       <div class="top-bar-title">𝕏</div>
-      <div class="top-bar-settings" title="设置">⚙️</div>
+      <div class="top-bar-close" id="top-bar-close" title="关闭">${icons.close}</div>
     </div>
 
     <!-- 主内容区 -->
@@ -765,7 +912,7 @@ function renderUI(container, roche) {
       <div class="tweet-detail-view" id="tweet-detail-view">
         <!-- 详情页头部 -->
         <div class="detail-header">
-          <div class="detail-back-btn" id="detail-back-btn">←</div>
+          <div class="detail-back-btn" id="detail-back-btn">${icons.back}</div>
           <div class="detail-title">帖子</div>
         </div>
 
@@ -787,15 +934,12 @@ function renderUI(container, roche) {
 
     <!-- 底部导航栏 -->
     <div class="mobile-bottom-nav">
-      <div class="bottom-nav-item active" data-nav="home" title="主页">🏠</div>
-      <div class="bottom-nav-item" data-nav="search" title="搜索">🔍</div>
-      <div class="bottom-nav-item" data-nav="gork" title="退出">✏️</div>
-      <div class="bottom-nav-item" data-nav="notifications" title="通知">🔔</div>
-      <div class="bottom-nav-item" data-nav="messages" title="私信">✉️</div>
+      <div class="bottom-nav-item active" data-nav="home" title="主页">${icons.home}</div>
+      <div class="bottom-nav-item" data-nav="search" title="搜索">${icons.search}</div>
+      <div class="bottom-nav-item compose-btn" data-nav="compose" title="发推文">${icons.compose}</div>
+      <div class="bottom-nav-item" data-nav="notifications" title="通知">${icons.notifications}</div>
+      <div class="bottom-nav-item" data-nav="messages" title="私信">${icons.messages}</div>
     </div>
-
-    <!-- 悬浮发推按钮 -->
-    <button class="floating-compose-btn" id="floating-compose-btn" title="发推文">✏️</button>
   `;
 
   container.replaceChildren();
@@ -815,14 +959,14 @@ function renderUI(container, roche) {
  * 绑定事件处理 - 移动端
  */
 function bindEvents(roche) {
-  // 悬浮发推按钮
-  document.getElementById('floating-compose-btn').addEventListener('click', () => {
-    showComposeModal(roche);
+  // 顶部关闭按钮
+  document.getElementById('top-bar-close').addEventListener('click', () => {
+    exitApp();
   });
 
-  // 顶部头像点击 - 切换用户
+  // 顶部头像点击 - 显示个人资料
   document.getElementById('top-bar-avatar').addEventListener('click', () => {
-    showUserSwitcher(roche);
+    roche.ui.message('个人资料功能开发中...', 'info');
   });
 
   // 详情页返回按钮
@@ -853,16 +997,18 @@ function bindEvents(roche) {
     item.addEventListener('click', () => {
       const nav = item.dataset.nav;
 
-      if (nav === 'gork') {
-        // 退出功能
-        exitApp();
+      if (nav === 'compose') {
+        // 发推功能
+        showComposeModal(roche);
         return;
       }
 
       // 移除所有 active 状态
       document.querySelectorAll('.bottom-nav-item').forEach(i => i.classList.remove('active'));
-      // 添加当前 active 状态
-      item.classList.add('active');
+      // 添加当前 active 状态（发推按钮除外）
+      if (nav !== 'compose') {
+        item.classList.add('active');
+      }
 
       if (nav === 'home') {
         switchView('timeline');
@@ -895,7 +1041,7 @@ function showComposeModal(roche) {
   modal.innerHTML = `
     <div class="compose-modal-content">
       <div class="compose-modal-header">
-        <div class="compose-modal-close" id="close-modal">✕</div>
+        <div class="compose-modal-close" id="close-modal">${icons.close}</div>
         <div class="compose-modal-title">发推文</div>
       </div>
       <div class="compose-modal-body">
@@ -1011,19 +1157,19 @@ function renderTweets(roche) {
             <div class="tweet-text">${escapeHtml(tweet.content)}</div>
             <div class="tweet-actions">
               <div class="tweet-action" data-action="reply">
-                <span>💬</span>
+                <span class="action-icon">${icons.comment}</span>
                 <span>${tweet.replies.length || ''}</span>
               </div>
               <div class="tweet-action ${isRetweeted ? 'retweeted' : ''}" data-action="retweet">
-                <span>🔁</span>
+                <span class="action-icon">${icons.retweet}</span>
                 <span>${tweet.retweets.length || ''}</span>
               </div>
               <div class="tweet-action ${isLiked ? 'liked' : ''}" data-action="like">
-                <span>${isLiked ? '❤️' : '🤍'}</span>
+                <span class="action-icon">${isLiked ? icons.likeFilled : icons.like}</span>
                 <span>${tweet.likes.length || ''}</span>
               </div>
               <div class="tweet-action" data-action="share">
-                <span>📤</span>
+                <span class="action-icon">${icons.share}</span>
               </div>
             </div>
           </div>
@@ -1063,14 +1209,12 @@ function switchView(view) {
   const timelineView = document.getElementById('tweets-list');
   const detailView = document.getElementById('tweet-detail-view');
   const topBar = document.querySelector('.mobile-top-bar');
-  const floatingBtn = document.getElementById('floating-compose-btn');
 
   if (view === 'timeline') {
     // 显示时间线
     timelineView.style.display = 'block';
     detailView.classList.remove('active');
     topBar.style.display = 'flex';
-    floatingBtn.style.display = 'flex';
 
     // 重置底部导航
     document.querySelectorAll('.bottom-nav-item').forEach(i => i.classList.remove('active'));
@@ -1080,7 +1224,6 @@ function switchView(view) {
     timelineView.style.display = 'none';
     detailView.classList.add('active');
     topBar.style.display = 'none';
-    floatingBtn.style.display = 'none';
   }
 }
 
@@ -1126,14 +1269,14 @@ function showTweetDetail(tweetId, roche) {
         </div>
       </div>
       <div class="detail-tweet-actions">
-        <div class="detail-action" data-action="reply">💬</div>
-        <div class="detail-action ${isRetweeted ? 'retweeted' : ''}" data-action="retweet">🔁</div>
-        <div class="detail-action ${isLiked ? 'liked' : ''}" data-action="like">${isLiked ? '❤️' : '🤍'}</div>
-        <div class="detail-action" data-action="share">📤</div>
+        <div class="detail-action" data-action="reply">${icons.comment}</div>
+        <div class="detail-action ${isRetweeted ? 'retweeted' : ''}" data-action="retweet">${icons.retweet}</div>
+        <div class="detail-action ${isLiked ? 'liked' : ''}" data-action="like">${isLiked ? icons.likeFilled : icons.like}</div>
+        <div class="detail-action" data-action="share">${icons.share}</div>
       </div>
     </div>
     <div class="detail-replies" id="detail-replies">
-      ${tweet.replies.length === 0 ? '<div style="padding: 40px 20px; text-align: center; color: #71767b;">暂无回复</div>' : ''}
+      ${tweet.replies.length === 0 ? '<div style="padding: 40px 20px; text-align: center; color: #536471;">暂无回复</div>' : ''}
     </div>
   `;
 
@@ -1322,13 +1465,14 @@ async function showUserSwitcher(roche) {
 function showSelectDialog(title, options) {
   return new Promise((resolve) => {
     const dialog = document.createElement('div');
+    dialog.className = 'select-dialog';
     dialog.style.cssText = `
       position: fixed;
       top: 0;
       left: 0;
       right: 0;
       bottom: 0;
-      background: rgba(0, 0, 0, 0.7);
+      background: rgba(0, 0, 0, 0.4);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -1336,27 +1480,31 @@ function showSelectDialog(title, options) {
     `;
 
     const content = document.createElement('div');
+    content.className = 'select-dialog-content';
     content.style.cssText = `
-      background: #16181c;
+      background: #ffffff;
       border-radius: 16px;
       padding: 20px;
       max-width: 400px;
       width: 90%;
       max-height: 80vh;
       overflow-y: auto;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
     `;
 
     content.innerHTML = `
-      <h3 style="margin: 0 0 20px 0; font-size: 20px;">${title}</h3>
+      <h3 style="margin: 0 0 20px 0; font-size: 20px; color: #0f1419;">${title}</h3>
       ${options.map(opt => `
-        <div style="padding: 12px; cursor: pointer; border-radius: 8px; transition: background 0.2s;"
-             onmouseover="this.style.background='rgba(255,255,255,0.1)'"
+        <div class="select-dialog-item" style="padding: 12px; cursor: pointer; border-radius: 8px; transition: background 0.2s; color: #0f1419;"
+             onmouseover="this.style.background='rgba(0,0,0,0.03)'"
              onmouseout="this.style.background='transparent'"
              data-value="${opt.value}">
           ${opt.label}
         </div>
       `).join('')}
-      <button style="margin-top: 20px; width: 100%; padding: 12px; background: #536471; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 700;"
+      <button class="select-dialog-cancel" style="margin-top: 20px; width: 100%; padding: 12px; background: #eff3f4; color: #0f1419; border: none; border-radius: 20px; cursor: pointer; font-weight: 700; transition: background 0.2s;"
+              onmouseover="this.style.background='#e7e9ea'"
+              onmouseout="this.style.background='#eff3f4'"
               id="cancel-btn">取消</button>
     `;
 
