@@ -67,7 +67,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '1.4.6',
+    version: '1.4.7',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -2376,7 +2376,7 @@ function renderUI(container, roche) {
         <div class="settings-section">
           <div class="setting-item">
             <div class="setting-label">版本</div>
-            <div class="setting-value">v1.4.6</div>
+            <div class="setting-value">v1.4.7</div>
           </div>
           <div class="setting-item" id="setting-about">
             <div class="setting-label">关于 Twitter 插件</div>
@@ -3403,10 +3403,27 @@ function exitApp(container, roche) {
             height: 100vh;
             text-align: center;
             padding: 20px;
+            background: #ffffff;
           ">
             <div style="font-size: 48px; margin-bottom: 20px;">✓</div>
-            <div style="font-size: 18px; color: #0f1419; margin-bottom: 10px;">已退出 Twitter</div>
-            <div style="font-size: 14px; color: #536471;">如果未自动返回，请手动返回主页</div>
+            <div style="font-size: 18px; color: #0f1419; margin-bottom: 10px; font-weight: 600;">已退出 Twitter</div>
+            <div style="font-size: 14px; color: #536471; margin-bottom: 30px;">点击下方按钮返回主页</div>
+
+            <button onclick="window.history.go(-2); setTimeout(() => window.location.reload(), 100);" style="
+              background: #1d9bf0;
+              color: white;
+              border: none;
+              border-radius: 24px;
+              padding: 12px 32px;
+              font-size: 15px;
+              font-weight: 600;
+              cursor: pointer;
+              box-shadow: 0 2px 8px rgba(29, 155, 240, 0.3);
+            ">返回 Roche 主页</button>
+
+            <div style="margin-top: 20px; font-size: 12px; color: #8899a6;">
+              或使用浏览器返回按钮
+            </div>
           </div>
         `;
       }
