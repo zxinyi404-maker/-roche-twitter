@@ -3738,25 +3738,147 @@ async function postReply(roche, tweetId, content) {
 }
 
 /**
+ * 显示确认对话框
+ */
+function showConfirmDialog(message, onConfirm, onCancel) {
+  // 创建遮罩层
+  const overlay = document.createElement('div');
+  overlay.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    animation: fadeIn 0.2s;
+  `;
+
+  // 创建对话框
+  const dialog = document.createElement('div');
+  dialog.style.cssText = `
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    max-width: 320px;
+    width: 90%;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    animation: slideUp 0.3s;
+  `;
+
+  dialog.innerHTML = `
+    <div style="font-size: 20px; font-weight: 700; color: #0f1419; margin-bottom: 8px;">
+      确认退出？
+    </div>
+    <div style="font-size: 15px; color: #536471; margin-bottom: 24px;">
+      ${message}
+    </div>
+    <div style="display: flex; gap: 12px;">
+      <button id="dialog-cancel" style="
+        flex: 1;
+        padding: 12px;
+        border: 1px solid #cfd9de;
+        background: white;
+        color: #0f1419;
+        border-radius: 24px;
+        font-weight: 700;
+        font-size: 15px;
+        cursor: pointer;
+        transition: all 0.2s;
+      ">
+        取消
+      </button>
+      <button id="dialog-confirm" style="
+        flex: 1;
+        padding: 12px;
+        border: none;
+        background: #0f1419;
+        color: white;
+        border-radius: 24px;
+        font-weight: 700;
+        font-size: 15px;
+        cursor: pointer;
+        transition: all 0.2s;
+      ">
+        退出
+      </button>
+    </div>
+  `;
+
+  overlay.appendChild(dialog);
+  document.body.appendChild(overlay);
+
+  // 按钮事件
+  const cancelBtn = dialog.querySelector('#dialog-cancel');
+  const confirmBtn = dialog.querySelector('#dialog-confirm');
+
+  cancelBtn.addEventListener('mouseenter', () => {
+    cancelBtn.style.background = '#f7f9f9';
+  });
+  cancelBtn.addEventListener('mouseleave', () => {
+    cancelBtn.style.background = 'white';
+  });
+
+  confirmBtn.addEventListener('mouseenter', () => {
+    confirmBtn.style.background = '#272c26';
+  });
+  confirmBtn.addEventListener('mouseleave', () => {
+    confirmBtn.style.background = '#0f1419';
+  });
+
+  cancelBtn.addEventListener('click', () => {
+    document.body.removeChild(overlay);
+    if (onCancel) onCancel();
+  });
+
+  confirmBtn.addEventListener('click', () => {
+    document.body.removeChild(overlay);
+    if (onConfirm) onConfirm();
+  });
+
+  // 点击遮罩层关闭
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) {
+      document.body.removeChild(overlay);
+      if (onCancel) onCancel();
+    }
+  });
+}
+
+/**
  * 退出应用
  */
 function exitApp(container, roche) {
   console.log('[Twitter] 退出应用');
 
-  try {
-    // 使用 Roche 官方退出 API
-    if (roche && roche.ui && roche.ui.closeApp) {
-      console.log('[Twitter] 调用 roche.ui.closeApp()');
-      roche.ui.closeApp();
-    } else {
-      console.error('[Twitter] roche.ui.closeApp 不可用');
-      // 后备方案
-      showToast('退出失败，请手动返回', 'error');
+  // 显示确认对话框
+  showConfirmDialog(
+    '你确定要退出 Twitter 吗？',
+    () => {
+      // 确认退出
+      try {
+        // 使用 Roche 官方退出 API
+        if (roche && roche.ui && roche.ui.closeApp) {
+          console.log('[Twitter] 调用 roche.ui.closeApp()');
+          roche.ui.closeApp();
+        } else {
+          console.error('[Twitter] roche.ui.closeApp 不可用');
+          // 后备方案
+          showToast('退出失败，请手动返回', 'error');
+        }
+      } catch (error) {
+        console.error('[Twitter] 退出失败:', error);
+        showToast('退出失败: ' + error.message, 'error');
+      }
+    },
+    () => {
+      // 取消退出
+      console.log('[Twitter] 用户取消退出');
     }
-  } catch (error) {
-    console.error('[Twitter] 退出失败:', error);
-    showToast('退出失败: ' + error.message, 'error');
-  }
+  );
 }
 
 /**
