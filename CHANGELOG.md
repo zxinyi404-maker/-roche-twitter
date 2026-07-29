@@ -1,5 +1,77 @@
 # Twitter 插件更新日志
 
+## v1.5.2 (2026-07-29)
+
+### 🎯 核心功能升级
+
+**真正的 Persona 切换**
+- ✅ 集成 Roche API `setActiveUserPersona()` 
+- ✅ 切换账号时同步更新系统级 Persona
+- ✅ 不仅切换插件内用户，还切换整个 Roche 的活跃人设
+
+**账号管理优化**
+- ✅ "刷新账号列表"功能（替代"添加已有账号"）
+- ✅ 自动检测并导入 Roche 系统中的所有 Persona
+- ✅ 错误处理优化：切换失败时显示详细错误信息
+
+### 具体变更
+
+#### 1. `switchPersona()` 函数重写
+```javascript
+// 新增功能：
+- 调用 roche.persona.setActiveUserPersona(personaId)
+- 真正切换系统级 Persona（不仅是插件内部）
+- 完整的错误捕获和用户提示
+- 只有有 conversationId 的 Persona 才调用 API
+```
+
+#### 2. "刷新账号列表" 功能
+```javascript
+// 点击按钮后：
+- 调用 roche.persona.getUserPersonas()
+- 自动发现新增的 Persona
+- 更新 twitterData.users
+- 重新渲染切换账号页面
+```
+
+#### 3. 权限更新
+新增 `persona:write` 权限到 manifest.json：
+- 允许插件修改活跃 Persona
+- 必需用于 `setActiveUserPersona()` API
+
+### 技术实现
+
+**API 集成：**
+- `roche.persona.setActiveUserPersona(personaId)` - 切换活跃 Persona
+- `roche.persona.getUserPersonas()` - 重新获取所有 Persona
+- 错误处理：try-catch 包裹所有异步操作
+
+**文件修改：**
+- `plugin.js` - switchPersona() 函数重写
+- `plugin.js` - 添加账号按钮改为刷新功能
+- `manifest.json` - 版本 1.5.1 → 1.5.2
+- `manifest.json` - 新增 persona:write 权限
+
+### 用户体验提升
+
+✨ **真正的多人设系统**
+- 切换账号后，整个 Roche 的人设都会改变
+- 不仅影响 Twitter 插件，还影响所有对话
+- 真正实现"角色扮演"切换
+
+✨ **更智能的账号管理**
+- 不需要手动"添加"账号
+- 自动检测 Roche 中的所有 Persona
+- 一键刷新即可同步
+
+### 向后兼容
+
+✅ 完全兼容 v1.5.1 的所有功能
+✅ 不影响现有数据结构
+✅ 平滑升级，无需清除数据
+
+---
+
 ## v1.4.2 (2026-07-29)
 
 ### 功能优化

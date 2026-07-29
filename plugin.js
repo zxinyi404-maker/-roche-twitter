@@ -67,7 +67,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '1.5.1',
+    version: '1.5.2',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -2532,7 +2532,7 @@ function renderUI(container, roche) {
 
         <div style="padding: 16px;">
           <button class="compose-btn" id="add-account-btn" style="width: 100%; padding: 12px;">
-            ${icons.plus} 添加已有账号
+            ${icons.plus} 刷新账号列表
           </button>
         </div>
       </div>
@@ -2800,23 +2800,39 @@ function closeSidebar() {
  */
 async function switchPersona(personaId, roche) {
   const persona = twitterData.users[personaId];
-  if (!persona) return;
-
-  currentUser = personaId;
-
-  // 初始化关注关系（如果不存在）
-  if (!twitterData.follows[currentUser]) {
-    twitterData.follows[currentUser] = [];
+  if (!persona) {
+    showToast('找不到该账号', 'error');
+    return;
   }
 
-  await saveData(roche);
+  try {
+    // 调用 Roche API 切换 Persona（如果有 conversationId）
+    if (persona.conversationId) {
+      console.log('[Twitter] 正在切换 Persona...', personaId);
+      await roche.persona.setActiveUserPersona(personaId);
+      console.log('[Twitter] Persona 切换成功');
+    }
 
-  // 更新界面
-  updateCurrentUserDisplay();
-  closeSidebar();
-  renderTweets(roche);
+    // 更新本地当前用户
+    currentUser = personaId;
 
-  showToast(`已切换到 ${persona.name}`, 'success');
+    // 初始化关注关系（如果不存在）
+    if (!twitterData.follows[currentUser]) {
+      twitterData.follows[currentUser] = [];
+    }
+
+    await saveData(roche);
+
+    // 更新界面
+    updateCurrentUserDisplay();
+    closeSidebar();
+    renderTweets(roche);
+
+    showToast(`已切换到 ${persona.name}`, 'success');
+  } catch (error) {
+    console.error('[Twitter] 切换 Persona 失败:', error);
+    showToast('切换账号失败: ' + error.message, 'error');
+  }
 }
 
 /**
@@ -4144,8 +4160,42 @@ function showSwitchAccount(roche) {
   // 绑定添加账号按钮
   const addAccountBtn = document.getElementById('add-account-btn');
   addAccountBtn.replaceWith(addAccountBtn.cloneNode(true)); // 移除旧事件
-  document.getElementById('add-account-btn').addEventListener('click', () => {
-    showToast('添加账号功能开发中...', 'info');
+  document.getElementById('add-account-btn').addEventListener('click', async () => {
+    try {
+      showToast('正在刷新账号列表...', 'info');
+
+      // 重新获取所有 Persona
+      const allPersonas = await roche.persona.getUserPersonas();
+      console.log('[Twitter] 刷新后的 Persona:', allPersonas);
+
+      if (allPersonas && allPersonas.length > 0) {
+        for (const persona of allPersonas) {
+          if (!twitterData.users[persona.id]) {
+            twitterData.users[persona.id] = {
+              id: persona.id,
+              name: persona.name,
+              username: `@${persona.handle || persona.name}`,
+              avatar: persona.avatar || generateAvatar(persona.name),
+              bio: persona.bio || '',
+              followers: 0,
+              following: 0,
+              conversationId: persona.conversationId,
+              isPersona: true
+            };
+          }
+        }
+        await saveData(roche);
+
+        // 重新渲染切换账号页面
+        showSwitchAccount(roche);
+        showToast('账号列表已刷新', 'success');
+      } else {
+        showToast('没有找到新账号', 'info');
+      }
+    } catch (error) {
+      console.error('[Twitter] 刷新账号列表失败:', error);
+      showToast('刷新失败: ' + error.message, 'error');
+    }
   });
 
   // 切换到切换账号视图
