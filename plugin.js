@@ -59,7 +59,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '1.3.1',
+    version: '1.3.2',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -665,6 +665,23 @@ function renderUI(container, roche) {
         white-space: pre-wrap;
         word-wrap: break-word;
         color: #0f1419;
+      }
+
+      .tweet-news-badge {
+        display: inline-block;
+        background: #1d9bf0;
+        color: white;
+        font-size: 11px;
+        padding: 2px 6px;
+        border-radius: 4px;
+        margin-left: 4px;
+        font-weight: 700;
+      }
+
+      .tweet-source {
+        color: #536471;
+        font-size: 13px;
+        margin-left: 4px;
       }
 
       .tweet-actions {
@@ -1367,8 +1384,59 @@ function renderUI(container, roche) {
       }
 
       /* 通知页 */
+      .notifications-header {
+        position: fixed;
+        top: 60px;
+        left: 0;
+        right: 0;
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid #eff3f4;
+        z-index: 99;
+        max-width: 768px;
+        margin: 0 auto;
+      }
+
+      .notifications-tabs {
+        display: flex;
+      }
+
+      .notifications-tab {
+        flex: 1;
+        text-align: center;
+        padding: 16px;
+        color: #536471;
+        font-weight: 500;
+        font-size: 15px;
+        cursor: pointer;
+        position: relative;
+        transition: background 0.2s;
+      }
+
+      .notifications-tab:hover {
+        background: rgba(0, 0, 0, 0.03);
+      }
+
+      .notifications-tab.active {
+        color: #0f1419;
+        font-weight: 700;
+      }
+
+      .notifications-tab.active::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 60px;
+        height: 4px;
+        background: #1d9bf0;
+        border-radius: 2px;
+      }
+
       .notifications-content {
         width: 100%;
+        padding-top: 53px;
       }
 
       .notification-item {
@@ -1378,19 +1446,38 @@ function renderUI(container, roche) {
         gap: 12px;
         cursor: pointer;
         transition: background 0.2s;
+        position: relative;
       }
 
       .notification-item:hover {
         background: rgba(0, 0, 0, 0.03);
       }
 
-      .notification-icon {
-        width: 32px;
-        height: 32px;
+      .notification-avatar-wrapper {
+        width: 40px;
+        height: 40px;
+        position: relative;
+        flex-shrink: 0;
+      }
+
+      .notification-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+      }
+
+      .notification-type-icon {
+        position: absolute;
+        bottom: -2px;
+        right: -2px;
+        width: 20px;
+        height: 20px;
+        background: #ffffff;
+        border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        flex-shrink: 0;
+        border: 2px solid #ffffff;
       }
 
       .notification-content {
@@ -1398,22 +1485,11 @@ function renderUI(container, roche) {
         min-width: 0;
       }
 
-      .notification-avatars {
-        display: flex;
-        gap: 4px;
-        margin-bottom: 8px;
-      }
-
-      .notification-avatar {
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-      }
-
       .notification-text {
         font-size: 15px;
         color: #0f1419;
         margin-bottom: 4px;
+        line-height: 20px;
       }
 
       .notification-text strong {
@@ -1432,6 +1508,7 @@ function renderUI(container, roche) {
         border-radius: 8px;
         font-size: 14px;
         color: #536471;
+        line-height: 18px;
       }
 
       /* 私信页 */
@@ -2073,6 +2150,12 @@ function renderUI(container, roche) {
 
     <!-- 通知页 -->
     <div class="page-view" id="notifications-view">
+      <div class="notifications-header">
+        <div class="notifications-tabs">
+          <div class="notifications-tab active" data-notif-tab="all">全部</div>
+          <div class="notifications-tab" data-notif-tab="mentions">提及</div>
+        </div>
+      </div>
       <div class="notifications-content" id="notifications-list">
         <!-- 动态加载通知 -->
       </div>
@@ -2171,6 +2254,9 @@ function renderUI(container, roche) {
 function initializeNotifications() {
   if (!twitterData.notifications) {
     twitterData.notifications = [];
+  }
+  if (!twitterData.notificationFilter) {
+    twitterData.notificationFilter = 'all'; // 'all' 或 'mentions'
   }
 }
 
@@ -2299,6 +2385,17 @@ function bindEvents(roche) {
   // 个人资料页返回按钮
   document.getElementById('profile-back-btn').addEventListener('click', () => {
     switchView('timeline');
+  });
+
+  // 通知页标签切换
+  document.querySelectorAll('.notifications-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.notifications-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      const tabType = tab.dataset.notifTab;
+      twitterData.notificationFilter = tabType;
+      renderNotifications(roche);
+    });
   });
 
   // 聊天页返回按钮
@@ -2499,6 +2596,77 @@ function showComposeModal(roche) {
 }
 
 /**
+ * 获取新闻推文（预留 MCP 接口）
+ * TODO: 接入真实新闻 API
+ * 可选方案：
+ * 1. roche.mcp.fetchNews() - 如果 Roche 提供 MCP
+ * 2. WebFetch + RSS 源
+ * 3. NewsAPI.org
+ * 4. 自定义新闻爬虫
+ */
+async function fetchNewsTweets(roche) {
+  // 预留：之后接入 MCP 或 NewsAPI
+  // const news = await roche.mcp?.fetchNews?.();
+
+  // 模拟新闻数据（占位）
+  const mockNews = [
+    {
+      id: 'news_1',
+      userId: 'news_bot',
+      content: '【科技】OpenAI 发布最新 GPT-5 模型，性能提升 40%，支持多模态理解和生成。#AI #科技新闻',
+      timestamp: Date.now() - 3600000,
+      source: '科技日报',
+      category: 'tech',
+      isNews: true,
+      likes: [],
+      retweets: [],
+      replies: []
+    },
+    {
+      id: 'news_2',
+      userId: 'news_bot',
+      content: '【财经】全球股市今日普遍上涨，科技股领涨，纳斯达克指数上涨 2.3%。#财经 #股市',
+      timestamp: Date.now() - 7200000,
+      source: '财经周刊',
+      category: 'finance',
+      isNews: true,
+      likes: [],
+      retweets: [],
+      replies: []
+    },
+    {
+      id: 'news_3',
+      userId: 'news_bot',
+      content: '【体育】NBA 总决赛第三场，湖人队主场以 108-102 战胜凯尔特人队，大比分 2-1 领先。#NBA #体育',
+      timestamp: Date.now() - 10800000,
+      source: '体育周报',
+      category: 'sports',
+      isNews: true,
+      likes: [],
+      retweets: [],
+      replies: []
+    }
+  ];
+
+  // 创建新闻机器人用户（如果不存在）
+  if (!twitterData.users['news_bot']) {
+    twitterData.users['news_bot'] = {
+      id: 'news_bot',
+      name: '新闻机器人',
+      username: '@news_bot',
+      avatar: generateAvatar('新闻'),
+      bio: '为你推送最新资讯',
+      followers: 0,
+      following: 0,
+      isPersona: false,
+      isBot: true
+    };
+  }
+
+  return mockNews;
+}
+
+/**
  * 发布推文
  */
 async function postTweet(roche, content) {
@@ -2527,7 +2695,7 @@ async function postTweet(roche, content) {
  * @param {Object} roche - Roche API 对象
  * @param {string} filter - 过滤类型: 'recommended' (为你推荐) 或 'following' (正在关注)
  */
-function renderTweets(roche, filter = 'recommended') {
+async function renderTweets(roche, filter = 'recommended') {
   const listEl = document.getElementById('tweets-list');
 
   // 根据过滤条件筛选推文
@@ -2539,6 +2707,32 @@ function renderTweets(roche, filter = 'recommended') {
     filteredTweets = twitterData.tweets.filter(tweet =>
       following.includes(tweet.userId) || tweet.userId === currentUser
     );
+  } else if (filter === 'recommended') {
+    // "为你推荐" 标签：混合显示用户推文和新闻推文
+    const newsTweets = await fetchNewsTweets(roche);
+
+    // 将新闻推文与普通推文混合（新闻推文插入到列表中）
+    filteredTweets = [...twitterData.tweets];
+
+    // 每隔几条推文插入一条新闻
+    const mergedTweets = [];
+    let newsIndex = 0;
+    filteredTweets.forEach((tweet, index) => {
+      mergedTweets.push(tweet);
+      // 每 3 条推文插入一条新闻
+      if ((index + 1) % 3 === 0 && newsIndex < newsTweets.length) {
+        mergedTweets.push(newsTweets[newsIndex]);
+        newsIndex++;
+      }
+    });
+
+    // 如果还有剩余新闻，添加到开头
+    while (newsIndex < newsTweets.length) {
+      mergedTweets.unshift(newsTweets[newsIndex]);
+      newsIndex++;
+    }
+
+    filteredTweets = mergedTweets;
   }
 
   if (filteredTweets.length === 0) {
@@ -2561,15 +2755,20 @@ function renderTweets(roche, filter = 'recommended') {
     const isRetweeted = tweet.retweets.includes(currentUser);
     const timeAgo = getTimeAgo(tweet.timestamp);
 
+    // 新闻推文特殊样式
+    const newsLabel = tweet.isNews ? `<span style="display: inline-block; background: #1d9bf0; color: white; font-size: 11px; padding: 2px 6px; border-radius: 4px; margin-left: 4px; font-weight: 700;">新闻</span>` : '';
+    const sourceLabel = tweet.source ? `<span style="color: #536471; font-size: 13px; margin-left: 4px;">· 来源: ${tweet.source}</span>` : '';
+
     return `
-      <div class="tweet-item" data-tweet-id="${tweet.id}">
+      <div class="tweet-item" data-tweet-id="${tweet.id}" ${tweet.isNews ? 'data-is-news="true"' : ''}>
         <div class="tweet-header">
           <img class="tweet-avatar" src="${user.avatar}" alt="">
           <div class="tweet-content">
             <div class="tweet-author">
-              <span class="tweet-author-name">${user.name}</span>
+              <span class="tweet-author-name">${user.name}${newsLabel}</span>
               <span class="tweet-author-username">${user.username}</span>
               <span class="tweet-time">· ${timeAgo}</span>
+              ${sourceLabel}
             </div>
             <div class="tweet-text">${escapeHtml(tweet.content)}</div>
             <div class="tweet-actions">
@@ -2601,8 +2800,16 @@ function renderTweets(roche, filter = 'recommended') {
       // 如果点击的是操作按钮，不进入详情页
       if (e.target.closest('.tweet-action')) return;
 
-      const tweetId = parseInt(el.dataset.tweetId);
-      showTweetDetail(tweetId, roche);
+      const tweetId = el.dataset.tweetId;
+      const isNews = el.dataset.isNews === 'true';
+
+      // 新闻推文暂不支持详情页（因为 ID 是字符串）
+      if (isNews) {
+        showToast('新闻推文详情功能开发中...', 'info');
+        return;
+      }
+
+      showTweetDetail(parseInt(tweetId), roche);
     });
   });
 
@@ -2611,8 +2818,16 @@ function renderTweets(roche, filter = 'recommended') {
     el.addEventListener('click', (e) => {
       e.stopPropagation();
       const action = el.dataset.action;
-      const tweetId = parseInt(el.closest('.tweet-item').dataset.tweetId);
-      handleTweetAction(action, tweetId, roche);
+      const tweetItem = el.closest('.tweet-item');
+      const tweetId = tweetItem.dataset.tweetId;
+      const isNews = tweetItem.dataset.isNews === 'true';
+
+      if (isNews) {
+        // 新闻推文的操作（简化版）
+        handleNewsTweetAction(action, tweetId, roche);
+      } else {
+        handleTweetAction(action, parseInt(tweetId), roche);
+      }
     });
   });
 }
@@ -2824,6 +3039,20 @@ function exitApp() {
 }
 
 /**
+ * 处理新闻推文操作
+ */
+async function handleNewsTweetAction(action, tweetId, roche) {
+  // 新闻推文的操作简化处理（暂不保存到主数据）
+  if (action === 'like' || action === 'retweet') {
+    showToast('已' + (action === 'like' ? '点赞' : '转发'), 'success');
+  } else if (action === 'reply') {
+    showToast('回复功能开发中...', 'info');
+  } else if (action === 'share') {
+    showToast('分享功能开发中...', 'info');
+  }
+}
+
+/**
  * 处理推文操作
  */
 async function handleTweetAction(action, tweetId, roche) {
@@ -3016,11 +3245,12 @@ function renderSearch(roche) {
  */
 function renderNotifications(roche) {
   const notificationsEl = document.getElementById('notifications-list');
+  const filter = twitterData.notificationFilter || 'all';
 
   // 生成一些示例通知
   if (twitterData.notifications.length === 0) {
     // 为每条推文生成一些随机通知
-    const users = Object.values(twitterData.users).filter(u => u.id !== currentUser && u.isCharacter);
+    const users = Object.values(twitterData.users).filter(u => u.id !== currentUser && u.isPersona);
 
     twitterData.tweets.forEach(tweet => {
       if (tweet.userId === currentUser && users.length > 0) {
@@ -3061,52 +3291,60 @@ function renderNotifications(roche) {
     });
   }
 
-  if (twitterData.notifications.length === 0) {
+  // 过滤通知
+  let filteredNotifications = twitterData.notifications;
+  if (filter === 'mentions') {
+    // 只显示提及（@）的通知 - 暂时显示所有回复类型
+    filteredNotifications = twitterData.notifications.filter(n => n.type === 'reply' || n.type === 'mention');
+  }
+
+  if (filteredNotifications.length === 0) {
+    const emptyMessage = filter === 'mentions' ? '还没有提及你的通知' : '还没有通知';
     notificationsEl.innerHTML = `
       <div class="empty-state">
         <div class="empty-state-icon">🔔</div>
-        <div>还没有通知</div>
+        <div>${emptyMessage}</div>
       </div>
     `;
     return;
   }
 
   // 按时间排序
-  twitterData.notifications.sort((a, b) => b.timestamp - a.timestamp);
+  filteredNotifications.sort((a, b) => b.timestamp - a.timestamp);
 
-  notificationsEl.innerHTML = twitterData.notifications.map(notif => {
+  notificationsEl.innerHTML = filteredNotifications.map(notif => {
     const user = twitterData.users[notif.userId];
     if (!user) return '';
 
-    let icon = '';
+    let typeIcon = '';
     let text = '';
     let preview = '';
 
     if (notif.type === 'like') {
-      icon = `<span style="color: #f91880;">${icons.likeFilled}</span>`;
+      typeIcon = `<span style="color: #f91880;">${icons.likeFilled}</span>`;
       text = `<strong>${user.name}</strong> 赞了你的推文`;
       const tweet = twitterData.tweets.find(t => t.id === notif.tweetId);
       if (tweet) preview = `<div class="notification-preview">${escapeHtml(tweet.content.substring(0, 100))}</div>`;
     } else if (notif.type === 'retweet') {
-      icon = `<span style="color: #00ba7c;">${icons.retweet}</span>`;
+      typeIcon = `<span style="color: #00ba7c;">${icons.retweet}</span>`;
       text = `<strong>${user.name}</strong> 转发了你的推文`;
       const tweet = twitterData.tweets.find(t => t.id === notif.tweetId);
       if (tweet) preview = `<div class="notification-preview">${escapeHtml(tweet.content.substring(0, 100))}</div>`;
     } else if (notif.type === 'follow') {
-      icon = `<span style="color: #1d9bf0;">${icons.follow}</span>`;
+      typeIcon = `<span style="color: #1d9bf0;">${icons.follow}</span>`;
       text = `<strong>${user.name}</strong> 关注了你`;
     } else if (notif.type === 'reply') {
-      icon = icons.comment;
-      text = `<strong>${user.name}</strong> 评论了你的推文`;
+      typeIcon = `<span style="color: #1d9bf0;">${icons.comment}</span>`;
+      text = `<strong>${user.name}</strong> 回复了你的推文`;
     }
 
     return `
       <div class="notification-item">
-        <div class="notification-icon">${icon}</div>
+        <div class="notification-avatar-wrapper">
+          <img class="notification-avatar" src="${user.avatar}" alt="">
+          <div class="notification-type-icon">${typeIcon}</div>
+        </div>
         <div class="notification-content">
-          <div class="notification-avatars">
-            <img class="notification-avatar" src="${user.avatar}" alt="">
-          </div>
           <div class="notification-text">${text}</div>
           <div class="notification-time">${getTimeAgo(notif.timestamp)}</div>
           ${preview}
