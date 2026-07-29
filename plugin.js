@@ -59,7 +59,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '1.1.2',
+    version: '1.2.0',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -185,7 +185,12 @@ const icons = {
   likeFilled: `<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M20.884 13.19c-1.351 2.48-4.001 5.12-8.379 7.67l-.503.3-.504-.3c-4.379-2.55-7.029-5.19-8.382-7.67-1.36-2.5-1.41-4.86-.514-6.67.887-1.79 2.647-2.91 4.601-3.01 1.651-.09 3.368.56 4.798 2.01 1.429-1.45 3.146-2.1 4.796-2.01 1.954.1 3.714 1.22 4.601 3.01.896 1.81.846 4.17-.514 6.67z"/></svg>`,
   share: `<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 2.59l5.7 5.7-1.41 1.42L13 6.41V16h-2V6.41l-3.3 3.3-1.41-1.42L12 2.59zM21 15l-.02 3.51c0 1.38-1.12 2.49-2.5 2.49H5.5C4.11 21 3 19.88 3 18.5V15h2v3.5c0 .28.22.5.5.5h12.98c.28 0 .5-.22.5-.5L19 15h2z"/></svg>`,
   close: `<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M10.59 12L4.54 5.96l1.42-1.42L12 10.59l6.04-6.05 1.42 1.42L13.41 12l6.05 6.04-1.42 1.42L12 13.41l-6.04 6.05-1.42-1.42L10.59 12z"/></svg>`,
-  back: `<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M7.414 13l5.043 5.04-1.414 1.42L3.586 12l7.457-7.46 1.414 1.42L7.414 11H21v2H7.414z"/></svg>`
+  back: `<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M7.414 13l5.043 5.04-1.414 1.42L3.586 12l7.457-7.46 1.414 1.42L7.414 11H21v2H7.414z"/></svg>`,
+  plus: `<svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M13 11h8v2h-8v8h-2v-8H3v-2h8V3h2v8z"/></svg>`,
+  settings: `<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M10.54 1.75h2.92l1.57 2.36c.11.17.32.25.53.21l2.53-.59 2.17 2.17-.58 2.54c-.05.2.04.41.21.53l2.36 1.57v2.92l-2.36 1.57c-.17.12-.26.33-.21.53l.58 2.54-2.17 2.17-2.53-.59c-.21-.04-.42.04-.53.21l-1.57 2.36h-2.92l-1.58-2.36c-.11-.17-.32-.25-.52-.21l-2.54.59-2.17-2.17.58-2.54c.05-.2-.03-.41-.21-.53l-2.35-1.57v-2.92L4.1 8.97c.18-.12.26-.33.21-.53L3.73 5.9 5.9 3.73l2.54.59c.2.04.41-.04.52-.21l1.58-2.36zm1.07 2l-.98 1.47C10.05 6.08 9 6.5 7.99 6.27l-1.46-.34-.6.6.33 1.46c.24 1.01-.18 2.07-1.05 2.64l-1.47.98v.78l1.47.98c.87.57 1.29 1.63 1.05 2.64l-.33 1.46.6.6 1.46-.34c1.01-.23 2.06.19 2.64 1.05l.98 1.47h.78l.97-1.47c.58-.86 1.63-1.28 2.65-1.05l1.45.34.61-.6-.34-1.46c-.23-1.01.18-2.07 1.05-2.64l1.47-.98v-.78l-1.47-.98c-.87-.57-1.28-1.63-1.05-2.64l.34-1.46-.61-.6-1.45.34c-1.02.23-2.07-.19-2.65-1.05l-.97-1.47h-.78zM12 10.5c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5c.82 0 1.5-.67 1.5-1.5s-.68-1.5-1.5-1.5zM8.5 12c0-1.93 1.56-3.5 3.5-3.5 1.93 0 3.5 1.57 3.5 3.5s-1.57 3.5-3.5 3.5c-1.94 0-3.5-1.57-3.5-3.5z"/></svg>`,
+  calendar: `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M7 4V3h2v1h6V3h2v1h1.5C19.89 4 21 5.12 21 6.5v12c0 1.38-1.11 2.5-2.5 2.5h-13C4.12 21 3 19.88 3 18.5v-12C3 5.12 4.12 4 5.5 4H7zm0 2H5.5c-.27 0-.5.22-.5.5V8h14V6.5c0-.28-.22-.5-.5-.5H16v1h-2V6H10v1H8V6zm12 4H5v8.5c0 .28.22.5.5.5h13c.28 0 .5-.22.5-.5V10z"/></svg>`,
+  verified: `<svg viewBox="0 0 24 24" width="18" height="18" fill="#1d9bf0"><path d="M8.52 3.59c.89-1.38 3.05-1.38 3.94 0l.53.82c.23.36.63.61 1.07.67l.96.13c1.61.22 2.39 2.15 1.44 3.53l-.57.82c-.25.36-.31.81-.17 1.23l.31.92c.52 1.54-.78 3.04-2.39 2.75l-.95-.17c-.43-.08-.88.04-1.21.31l-.74.6c-1.24 1.01-3.05.41-3.31-1.1l-.16-.96c-.07-.43-.33-.8-.7-1l-.81-.43c-1.37-.73-1.63-2.59-.48-3.73l.69-.68c.3-.3.45-.73.39-1.15l-.13-.96c-.22-1.61 1.12-2.96 2.73-2.5l.96.27c.43.12.89.05 1.24-.19l.76-.53zm2.63 1.3c-.3-.46-1.02-.46-1.32 0l-.53.82c-.47.72-1.23 1.23-2.08 1.35l-.96.13c-.54.07-.8.72-.48 1.18l.57.82c.4.58.51 1.3.29 1.97l-.31.92c-.17.52.26 1.02.8.92l.95-.17c.68-.12 1.38.07 1.93.49l.74.6c.42.34 1.02.14 1.11-.37l.16-.96c.12-.68.53-1.28 1.12-1.6l.81-.43c.46-.24.55-.87.16-1.25l-.69-.68c-.48-.48-.72-1.17-.62-1.83l.13-.96c.07-.54-.37-.99-.91-.84l-.96.27c-.68.19-1.42.08-2-.37l-.76-.53zm-.11 6.44l-2.83-2.83-1.41 1.41 4.24 4.25 5.66-5.66-1.42-1.41-4.24 4.24z"/></svg>`,
+  follow: `<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M17.863 13.44c1.477 1.58 2.366 3.8 2.632 6.46l.11 1.1H3.395l.11-1.1c.266-2.66 1.155-4.88 2.632-6.46C7.627 11.85 9.648 11 12 11s4.373.85 5.863 2.44zM12 2C9.791 2 8 3.79 8 6s1.791 4 4 4 4-1.79 4-4-1.791-4-4-4z"/></svg>`
 };
 
 /**
@@ -868,6 +873,666 @@ function renderUI(container, roche) {
         cursor: not-allowed;
       }
 
+      /* 页面视图 */
+      .page-view {
+        display: none;
+        padding-top: 60px;
+        padding-bottom: 60px;
+        min-height: 100vh;
+      }
+
+      .page-view.active {
+        display: block;
+      }
+
+      /* 搜索页 */
+      .search-header {
+        position: fixed;
+        top: 60px;
+        left: 0;
+        right: 0;
+        padding: 12px 16px;
+        background: #ffffff;
+        border-bottom: 1px solid #eff3f4;
+        z-index: 99;
+        max-width: 768px;
+        margin: 0 auto;
+      }
+
+      .search-input-wrapper {
+        display: flex;
+        align-items: center;
+        background: #eff3f4;
+        border-radius: 24px;
+        padding: 10px 16px;
+        gap: 12px;
+        color: #536471;
+      }
+
+      .search-input {
+        flex: 1;
+        background: transparent;
+        border: none;
+        outline: none;
+        font-size: 15px;
+        color: #0f1419;
+      }
+
+      .search-input::placeholder {
+        color: #536471;
+      }
+
+      .search-content {
+        padding-top: 60px;
+      }
+
+      .section-title {
+        font-size: 20px;
+        font-weight: 800;
+        padding: 12px 16px;
+        margin: 0;
+        color: #0f1419;
+      }
+
+      .trends-section {
+        border-bottom: 1px solid #eff3f4;
+        padding-bottom: 12px;
+      }
+
+      .trend-item {
+        padding: 12px 16px;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+
+      .trend-item:hover {
+        background: rgba(0, 0, 0, 0.03);
+      }
+
+      .trend-category {
+        font-size: 13px;
+        color: #536471;
+        margin-bottom: 2px;
+      }
+
+      .trend-hashtag {
+        font-size: 15px;
+        font-weight: 700;
+        color: #0f1419;
+        margin-bottom: 2px;
+      }
+
+      .trend-count {
+        font-size: 13px;
+        color: #536471;
+      }
+
+      .recommended-section {
+        padding-bottom: 12px;
+      }
+
+      .recommended-user {
+        padding: 12px 16px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        transition: background 0.2s;
+      }
+
+      .recommended-user:hover {
+        background: rgba(0, 0, 0, 0.03);
+      }
+
+      .recommended-avatar {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+
+      .recommended-info {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .recommended-name {
+        font-size: 15px;
+        font-weight: 700;
+        color: #0f1419;
+      }
+
+      .recommended-username {
+        font-size: 15px;
+        color: #536471;
+      }
+
+      .recommended-bio {
+        font-size: 14px;
+        color: #0f1419;
+        margin-top: 2px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .follow-btn {
+        background: #0f1419;
+        color: #ffffff;
+        border: none;
+        border-radius: 20px;
+        padding: 6px 16px;
+        font-weight: 700;
+        font-size: 14px;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+
+      .follow-btn:hover {
+        background: #272c30;
+      }
+
+      .follow-btn.following {
+        background: transparent;
+        color: #0f1419;
+        border: 1px solid #cfd9de;
+      }
+
+      .follow-btn.following:hover {
+        background: rgba(244, 33, 46, 0.1);
+        color: #f4212e;
+        border-color: rgba(244, 33, 46, 0.1);
+      }
+
+      /* 通知页 */
+      .notifications-content {
+        width: 100%;
+      }
+
+      .notification-item {
+        padding: 12px 16px;
+        border-bottom: 1px solid #eff3f4;
+        display: flex;
+        gap: 12px;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+
+      .notification-item:hover {
+        background: rgba(0, 0, 0, 0.03);
+      }
+
+      .notification-icon {
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+
+      .notification-content {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .notification-avatars {
+        display: flex;
+        gap: 4px;
+        margin-bottom: 8px;
+      }
+
+      .notification-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+      }
+
+      .notification-text {
+        font-size: 15px;
+        color: #0f1419;
+        margin-bottom: 4px;
+      }
+
+      .notification-text strong {
+        font-weight: 700;
+      }
+
+      .notification-time {
+        font-size: 14px;
+        color: #536471;
+      }
+
+      .notification-preview {
+        margin-top: 8px;
+        padding: 12px;
+        background: rgba(0, 0, 0, 0.03);
+        border-radius: 8px;
+        font-size: 14px;
+        color: #536471;
+      }
+
+      /* 私信页 */
+      .messages-list-view {
+        display: block;
+      }
+
+      .messages-list-view.hidden {
+        display: none;
+      }
+
+      .messages-list {
+        width: 100%;
+      }
+
+      .message-item {
+        padding: 16px;
+        border-bottom: 1px solid #eff3f4;
+        display: flex;
+        gap: 12px;
+        cursor: pointer;
+        transition: background 0.2s;
+        position: relative;
+      }
+
+      .message-item:hover {
+        background: rgba(0, 0, 0, 0.03);
+      }
+
+      .message-avatar {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+
+      .message-info {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .message-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 4px;
+      }
+
+      .message-name {
+        font-size: 15px;
+        font-weight: 700;
+        color: #0f1419;
+      }
+
+      .message-time {
+        font-size: 14px;
+        color: #536471;
+      }
+
+      .message-preview {
+        font-size: 15px;
+        color: #536471;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .message-unread-dot {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        width: 8px;
+        height: 8px;
+        background: #1d9bf0;
+        border-radius: 50%;
+      }
+
+      /* 聊天视图 */
+      .chat-view {
+        display: none;
+        flex-direction: column;
+        height: 100vh;
+      }
+
+      .chat-view.active {
+        display: flex;
+      }
+
+      .chat-header {
+        position: fixed;
+        top: 60px;
+        left: 0;
+        right: 0;
+        height: 53px;
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid #eff3f4;
+        display: flex;
+        align-items: center;
+        padding: 0 16px;
+        gap: 12px;
+        z-index: 100;
+        max-width: 768px;
+        margin: 0 auto;
+      }
+
+      .chat-back-btn {
+        cursor: pointer;
+        padding: 8px;
+        color: #0f1419;
+        border-radius: 50%;
+        transition: background 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .chat-back-btn:hover {
+        background: rgba(0, 0, 0, 0.03);
+      }
+
+      .chat-user-info {
+        flex: 1;
+      }
+
+      .chat-user-name {
+        font-size: 17px;
+        font-weight: 700;
+        color: #0f1419;
+      }
+
+      .chat-settings-btn {
+        cursor: pointer;
+        padding: 8px;
+        color: #0f1419;
+        border-radius: 50%;
+        transition: background 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .chat-settings-btn:hover {
+        background: rgba(0, 0, 0, 0.03);
+      }
+
+      .chat-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 16px;
+        padding-top: calc(60px + 53px + 16px);
+        padding-bottom: 80px;
+      }
+
+      .chat-message {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 16px;
+      }
+
+      .chat-message.own {
+        flex-direction: row-reverse;
+      }
+
+      .chat-message-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+
+      .chat-message-bubble {
+        background: #eff3f4;
+        color: #0f1419;
+        border-radius: 18px;
+        padding: 10px 14px;
+        max-width: 70%;
+        word-wrap: break-word;
+      }
+
+      .chat-message.own .chat-message-bubble {
+        background: #1d9bf0;
+        color: #ffffff;
+      }
+
+      .chat-input-area {
+        position: fixed;
+        bottom: 60px;
+        left: 0;
+        right: 0;
+        padding: 12px 16px;
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(12px);
+        border-top: 1px solid #eff3f4;
+        display: flex;
+        gap: 8px;
+        max-width: 768px;
+        margin: 0 auto;
+      }
+
+      .chat-input {
+        flex: 1;
+        background: #eff3f4;
+        border: none;
+        border-radius: 20px;
+        padding: 10px 16px;
+        font-size: 15px;
+        outline: none;
+        color: #0f1419;
+      }
+
+      .chat-input::placeholder {
+        color: #536471;
+      }
+
+      .chat-send-btn {
+        background: #1d9bf0;
+        color: #ffffff;
+        border: none;
+        border-radius: 20px;
+        padding: 8px 20px;
+        font-weight: 700;
+        font-size: 15px;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+
+      .chat-send-btn:hover:not(:disabled) {
+        background: #1a8cd8;
+      }
+
+      .chat-send-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      /* 个人资料页 */
+      .profile-header {
+        position: fixed;
+        top: 60px;
+        left: 0;
+        right: 0;
+        height: 53px;
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid #eff3f4;
+        display: flex;
+        align-items: center;
+        padding: 0 16px;
+        gap: 24px;
+        z-index: 100;
+        max-width: 768px;
+        margin: 0 auto;
+      }
+
+      .profile-back-btn {
+        cursor: pointer;
+        padding: 8px;
+        color: #0f1419;
+        border-radius: 50%;
+        transition: background 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .profile-back-btn:hover {
+        background: rgba(0, 0, 0, 0.03);
+      }
+
+      .profile-header-info {
+        flex: 1;
+      }
+
+      .profile-header-name {
+        font-size: 17px;
+        font-weight: 700;
+        color: #0f1419;
+      }
+
+      .profile-header-tweets {
+        font-size: 13px;
+        color: #536471;
+      }
+
+      .profile-content {
+        padding-top: 53px;
+      }
+
+      .profile-banner {
+        width: 100%;
+        height: 200px;
+        background: #cfd9de;
+      }
+
+      .profile-info {
+        padding: 12px 16px;
+        position: relative;
+      }
+
+      .profile-avatar {
+        width: 134px;
+        height: 134px;
+        border-radius: 50%;
+        border: 4px solid #ffffff;
+        margin-top: -67px;
+        background: #cfd9de;
+      }
+
+      .profile-edit-btn {
+        position: absolute;
+        top: 12px;
+        right: 16px;
+        background: transparent;
+        color: #0f1419;
+        border: 1px solid #cfd9de;
+        border-radius: 20px;
+        padding: 8px 16px;
+        font-weight: 700;
+        font-size: 15px;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+
+      .profile-edit-btn:hover {
+        background: rgba(0, 0, 0, 0.03);
+      }
+
+      .profile-name {
+        font-size: 20px;
+        font-weight: 800;
+        color: #0f1419;
+        margin-top: 12px;
+      }
+
+      .profile-username {
+        font-size: 15px;
+        color: #536471;
+        margin-bottom: 12px;
+      }
+
+      .profile-bio {
+        font-size: 15px;
+        color: #0f1419;
+        margin-bottom: 12px;
+        line-height: 20px;
+      }
+
+      .profile-joined {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        color: #536471;
+        font-size: 15px;
+        margin-bottom: 12px;
+      }
+
+      .profile-stats {
+        display: flex;
+        gap: 20px;
+      }
+
+      .profile-stat {
+        display: flex;
+        gap: 4px;
+        cursor: pointer;
+      }
+
+      .profile-stat:hover .profile-stat-number {
+        text-decoration: underline;
+      }
+
+      .profile-stat-number {
+        font-weight: 700;
+        color: #0f1419;
+        font-size: 15px;
+      }
+
+      .profile-stat-label {
+        color: #536471;
+        font-size: 15px;
+      }
+
+      .profile-tabs {
+        display: flex;
+        border-bottom: 1px solid #eff3f4;
+      }
+
+      .profile-tab {
+        flex: 1;
+        text-align: center;
+        padding: 16px;
+        color: #536471;
+        font-weight: 500;
+        cursor: pointer;
+        position: relative;
+        transition: background 0.2s;
+      }
+
+      .profile-tab:hover {
+        background: rgba(0, 0, 0, 0.03);
+      }
+
+      .profile-tab.active {
+        color: #0f1419;
+        font-weight: 700;
+      }
+
+      .profile-tab.active::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 60px;
+        height: 4px;
+        background: #1d9bf0;
+        border-radius: 2px;
+      }
+
+      .profile-tweets {
+        width: 100%;
+      }
+
       /* 响应式 */
       @media (max-width: 768px) {
         #twitter-app {
@@ -877,7 +1542,11 @@ function renderUI(container, roche) {
         .mobile-top-bar,
         .mobile-bottom-nav,
         .detail-header,
-        .detail-reply-input {
+        .detail-reply-input,
+        .search-header,
+        .chat-header,
+        .chat-input-area,
+        .profile-header {
           max-width: 100%;
         }
       }
@@ -967,14 +1636,128 @@ function renderUI(container, roche) {
     <div class="mobile-bottom-nav">
       <div class="bottom-nav-item active" data-nav="home" title="主页">${icons.home}</div>
       <div class="bottom-nav-item" data-nav="search" title="搜索">${icons.search}</div>
-      <div class="bottom-nav-item compose-btn" data-nav="compose" title="发推文">${icons.compose}</div>
+      <div class="bottom-nav-item compose-btn" data-nav="compose" title="发推文">${icons.plus}</div>
       <div class="bottom-nav-item" data-nav="notifications" title="通知">${icons.notifications}</div>
       <div class="bottom-nav-item" data-nav="messages" title="私信">${icons.messages}</div>
+    </div>
+
+    <!-- 搜索页 -->
+    <div class="page-view" id="search-view">
+      <div class="search-header">
+        <div class="search-input-wrapper">
+          ${icons.search}
+          <input type="text" class="search-input" placeholder="搜索 Twitter">
+        </div>
+      </div>
+      <div class="search-content">
+        <div class="trends-section">
+          <h2 class="section-title">趋势</h2>
+          <div class="trend-item">
+            <div class="trend-category">日本的趋势</div>
+            <div class="trend-hashtag">#人工智能</div>
+            <div class="trend-count">125K 推文</div>
+          </div>
+          <div class="trend-item">
+            <div class="trend-category">科技 · 热门</div>
+            <div class="trend-hashtag">#ClaudeAI</div>
+            <div class="trend-count">89.3K 推文</div>
+          </div>
+          <div class="trend-item">
+            <div class="trend-category">编程 · 热门</div>
+            <div class="trend-hashtag">#JavaScript</div>
+            <div class="trend-count">56.7K 推文</div>
+          </div>
+        </div>
+        <div class="recommended-section">
+          <h2 class="section-title">推荐关注</h2>
+          <div id="recommended-users"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 通知页 -->
+    <div class="page-view" id="notifications-view">
+      <div class="notifications-content" id="notifications-list">
+        <!-- 动态加载通知 -->
+      </div>
+    </div>
+
+    <!-- 私信页 -->
+    <div class="page-view" id="messages-view">
+      <div class="messages-list-view" id="messages-list-view">
+        <div class="messages-list" id="messages-list">
+          <!-- 动态加载对话列表 -->
+        </div>
+      </div>
+      <div class="chat-view" id="chat-view">
+        <div class="chat-header">
+          <div class="chat-back-btn" id="chat-back-btn">${icons.back}</div>
+          <div class="chat-user-info">
+            <div class="chat-user-name" id="chat-user-name"></div>
+          </div>
+          <div class="chat-settings-btn">${icons.settings}</div>
+        </div>
+        <div class="chat-messages" id="chat-messages">
+          <!-- 动态加载消息 -->
+        </div>
+        <div class="chat-input-area">
+          <input type="text" class="chat-input" id="chat-input" placeholder="发送私信">
+          <button class="chat-send-btn" id="chat-send-btn" disabled>发送</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 个人资料页 -->
+    <div class="page-view" id="profile-view">
+      <div class="profile-header">
+        <div class="profile-back-btn" id="profile-back-btn">${icons.back}</div>
+        <div class="profile-header-info">
+          <div class="profile-header-name" id="profile-header-name"></div>
+          <div class="profile-header-tweets" id="profile-header-tweets"></div>
+        </div>
+      </div>
+      <div class="profile-content">
+        <div class="profile-banner"></div>
+        <div class="profile-info">
+          <img class="profile-avatar" id="profile-avatar" src="" alt="">
+          <button class="profile-edit-btn" id="profile-action-btn"></button>
+          <div class="profile-name" id="profile-name"></div>
+          <div class="profile-username" id="profile-username"></div>
+          <div class="profile-bio" id="profile-bio"></div>
+          <div class="profile-joined">
+            ${icons.calendar}
+            <span id="profile-joined"></span>
+          </div>
+          <div class="profile-stats">
+            <div class="profile-stat">
+              <span class="profile-stat-number" id="profile-following">0</span>
+              <span class="profile-stat-label">正在关注</span>
+            </div>
+            <div class="profile-stat">
+              <span class="profile-stat-number" id="profile-followers">0</span>
+              <span class="profile-stat-label">关注者</span>
+            </div>
+          </div>
+        </div>
+        <div class="profile-tabs">
+          <div class="profile-tab active" data-tab="tweets">推文</div>
+          <div class="profile-tab" data-tab="replies">回复</div>
+          <div class="profile-tab" data-tab="media">媒体</div>
+          <div class="profile-tab" data-tab="likes">喜欢</div>
+        </div>
+        <div class="profile-tweets" id="profile-tweets-list">
+          <!-- 动态加载用户推文 -->
+        </div>
+      </div>
     </div>
   `;
 
   container.replaceChildren();
   container.appendChild(appDiv);
+
+  // 初始化数据结构
+  initializeNotifications();
+  initializeMessages();
 
   // 绑定事件
   bindEvents(roche);
@@ -984,6 +1767,24 @@ function renderUI(container, roche) {
 
   // 渲染推文列表
   renderTweets(roche);
+}
+
+/**
+ * 初始化通知数据
+ */
+function initializeNotifications() {
+  if (!twitterData.notifications) {
+    twitterData.notifications = [];
+  }
+}
+
+/**
+ * 初始化私信数据
+ */
+function initializeMessages() {
+  if (!twitterData.conversations) {
+    twitterData.conversations = {};
+  }
 }
 
 /**
@@ -997,7 +1798,7 @@ function bindEvents(roche) {
 
   // 顶部头像点击 - 显示个人资料
   document.getElementById('top-bar-avatar').addEventListener('click', () => {
-    showToast('个人资料功能开发中...', 'info');
+    showProfile(currentUser, roche);
   });
 
   // 详情页返回按钮
@@ -1043,10 +1844,42 @@ function bindEvents(roche) {
 
       if (nav === 'home') {
         switchView('timeline');
-      } else {
-        showToast(`${item.title}功能开发中...`, 'info');
+      } else if (nav === 'search') {
+        switchView('search');
+        renderSearch(roche);
+      } else if (nav === 'notifications') {
+        switchView('notifications');
+        renderNotifications(roche);
+      } else if (nav === 'messages') {
+        switchView('messages');
+        renderMessages(roche);
       }
     });
+  });
+
+  // 个人资料页返回按钮
+  document.getElementById('profile-back-btn').addEventListener('click', () => {
+    switchView('timeline');
+  });
+
+  // 聊天页返回按钮
+  document.getElementById('chat-back-btn').addEventListener('click', () => {
+    document.getElementById('chat-view').classList.remove('active');
+    document.getElementById('messages-list-view').classList.remove('hidden');
+  });
+
+  // 聊天输入
+  const chatInput = document.getElementById('chat-input');
+  const chatSendBtn = document.getElementById('chat-send-btn');
+
+  chatInput.addEventListener('input', () => {
+    chatSendBtn.disabled = chatInput.value.trim().length === 0;
+  });
+
+  chatSendBtn.addEventListener('click', () => {
+    sendMessage(roche, chatInput.value.trim());
+    chatInput.value = '';
+    chatSendBtn.disabled = true;
   });
 }
 
@@ -1239,12 +2072,23 @@ function switchView(view) {
 
   const timelineView = document.getElementById('tweets-list');
   const detailView = document.getElementById('tweet-detail-view');
+  const searchView = document.getElementById('search-view');
+  const notificationsView = document.getElementById('notifications-view');
+  const messagesView = document.getElementById('messages-view');
+  const profileView = document.getElementById('profile-view');
   const topBar = document.querySelector('.mobile-top-bar');
+
+  // 隐藏所有视图
+  timelineView.style.display = 'none';
+  detailView.classList.remove('active');
+  searchView.classList.remove('active');
+  notificationsView.classList.remove('active');
+  messagesView.classList.remove('active');
+  profileView.classList.remove('active');
 
   if (view === 'timeline') {
     // 显示时间线
     timelineView.style.display = 'block';
-    detailView.classList.remove('active');
     topBar.style.display = 'flex';
 
     // 重置底部导航
@@ -1252,9 +2096,24 @@ function switchView(view) {
     document.querySelector('[data-nav="home"]').classList.add('active');
   } else if (view === 'tweetDetail') {
     // 显示详情页
-    timelineView.style.display = 'none';
     detailView.classList.add('active');
     topBar.style.display = 'none';
+  } else if (view === 'search') {
+    // 显示搜索页
+    searchView.classList.add('active');
+    topBar.style.display = 'flex';
+  } else if (view === 'notifications') {
+    // 显示通知页
+    notificationsView.classList.add('active');
+    topBar.style.display = 'flex';
+  } else if (view === 'messages') {
+    // 显示私信页
+    messagesView.classList.add('active');
+    topBar.style.display = 'flex';
+  } else if (view === 'profile') {
+    // 显示个人资料页
+    profileView.classList.add('active');
+    topBar.style.display = 'flex';
   }
 }
 
@@ -1578,6 +2437,405 @@ function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
+}
+
+/**
+ * 渲染搜索页
+ */
+function renderSearch(roche) {
+  const recommendedEl = document.getElementById('recommended-users');
+  const users = Object.values(twitterData.users).filter(u => u.id !== currentUser && u.isCharacter);
+
+  recommendedEl.innerHTML = users.slice(0, 5).map(user => {
+    const isFollowing = twitterData.follows[currentUser]?.includes(user.id);
+    return `
+      <div class="recommended-user">
+        <img class="recommended-avatar" src="${user.avatar}" alt="">
+        <div class="recommended-info">
+          <div class="recommended-name">${user.name}</div>
+          <div class="recommended-username">${user.username}</div>
+          <div class="recommended-bio">${escapeHtml(user.bio)}</div>
+        </div>
+        <button class="follow-btn ${isFollowing ? 'following' : ''}" data-user-id="${user.id}">
+          ${isFollowing ? '正在关注' : '关注'}
+        </button>
+      </div>
+    `;
+  }).join('');
+
+  // 绑定关注按钮
+  recommendedEl.querySelectorAll('.follow-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const userId = btn.dataset.userId;
+      await toggleFollow(userId, roche);
+      renderSearch(roche);
+    });
+  });
+}
+
+/**
+ * 渲染通知页
+ */
+function renderNotifications(roche) {
+  const notificationsEl = document.getElementById('notifications-list');
+
+  // 生成一些示例通知
+  if (twitterData.notifications.length === 0) {
+    // 为每条推文生成一些随机通知
+    const users = Object.values(twitterData.users).filter(u => u.id !== currentUser && u.isCharacter);
+
+    twitterData.tweets.forEach(tweet => {
+      if (tweet.userId === currentUser && users.length > 0) {
+        // 随机选择一些用户来点赞、转发
+        const likeUser = users[Math.floor(Math.random() * users.length)];
+        const retweetUser = users[Math.floor(Math.random() * users.length)];
+
+        if (Math.random() > 0.5) {
+          twitterData.notifications.push({
+            id: Date.now() + Math.random(),
+            type: 'like',
+            userId: likeUser.id,
+            tweetId: tweet.id,
+            timestamp: Date.now() - Math.floor(Math.random() * 86400000)
+          });
+        }
+
+        if (Math.random() > 0.6) {
+          twitterData.notifications.push({
+            id: Date.now() + Math.random(),
+            type: 'retweet',
+            userId: retweetUser.id,
+            tweetId: tweet.id,
+            timestamp: Date.now() - Math.floor(Math.random() * 86400000)
+          });
+        }
+      }
+    });
+
+    // 添加关注通知
+    users.slice(0, 2).forEach(user => {
+      twitterData.notifications.push({
+        id: Date.now() + Math.random(),
+        type: 'follow',
+        userId: user.id,
+        timestamp: Date.now() - Math.floor(Math.random() * 86400000)
+      });
+    });
+  }
+
+  if (twitterData.notifications.length === 0) {
+    notificationsEl.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">🔔</div>
+        <div>还没有通知</div>
+      </div>
+    `;
+    return;
+  }
+
+  // 按时间排序
+  twitterData.notifications.sort((a, b) => b.timestamp - a.timestamp);
+
+  notificationsEl.innerHTML = twitterData.notifications.map(notif => {
+    const user = twitterData.users[notif.userId];
+    if (!user) return '';
+
+    let icon = '';
+    let text = '';
+    let preview = '';
+
+    if (notif.type === 'like') {
+      icon = `<span style="color: #f91880;">${icons.likeFilled}</span>`;
+      text = `<strong>${user.name}</strong> 赞了你的推文`;
+      const tweet = twitterData.tweets.find(t => t.id === notif.tweetId);
+      if (tweet) preview = `<div class="notification-preview">${escapeHtml(tweet.content.substring(0, 100))}</div>`;
+    } else if (notif.type === 'retweet') {
+      icon = `<span style="color: #00ba7c;">${icons.retweet}</span>`;
+      text = `<strong>${user.name}</strong> 转发了你的推文`;
+      const tweet = twitterData.tweets.find(t => t.id === notif.tweetId);
+      if (tweet) preview = `<div class="notification-preview">${escapeHtml(tweet.content.substring(0, 100))}</div>`;
+    } else if (notif.type === 'follow') {
+      icon = `<span style="color: #1d9bf0;">${icons.follow}</span>`;
+      text = `<strong>${user.name}</strong> 关注了你`;
+    } else if (notif.type === 'reply') {
+      icon = icons.comment;
+      text = `<strong>${user.name}</strong> 评论了你的推文`;
+    }
+
+    return `
+      <div class="notification-item">
+        <div class="notification-icon">${icon}</div>
+        <div class="notification-content">
+          <div class="notification-avatars">
+            <img class="notification-avatar" src="${user.avatar}" alt="">
+          </div>
+          <div class="notification-text">${text}</div>
+          <div class="notification-time">${getTimeAgo(notif.timestamp)}</div>
+          ${preview}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+/**
+ * 渲染私信页
+ */
+let currentChatUser = null;
+
+function renderMessages(roche) {
+  const messagesEl = document.getElementById('messages-list');
+
+  // 生成一些示例对话
+  if (Object.keys(twitterData.conversations).length === 0) {
+    const users = Object.values(twitterData.users).filter(u => u.id !== currentUser && u.isCharacter);
+
+    users.slice(0, 3).forEach(user => {
+      twitterData.conversations[user.id] = {
+        userId: user.id,
+        messages: [
+          {
+            id: Date.now(),
+            from: user.id,
+            content: '你好！很高兴认识你。',
+            timestamp: Date.now() - Math.floor(Math.random() * 86400000)
+          }
+        ],
+        unread: Math.random() > 0.5
+      };
+    });
+  }
+
+  const conversations = Object.values(twitterData.conversations).sort((a, b) => {
+    const aLast = a.messages[a.messages.length - 1]?.timestamp || 0;
+    const bLast = b.messages[b.messages.length - 1]?.timestamp || 0;
+    return bLast - aLast;
+  });
+
+  if (conversations.length === 0) {
+    messagesEl.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">✉️</div>
+        <div>还没有私信</div>
+      </div>
+    `;
+    return;
+  }
+
+  messagesEl.innerHTML = conversations.map(conv => {
+    const user = twitterData.users[conv.userId];
+    if (!user) return '';
+
+    const lastMsg = conv.messages[conv.messages.length - 1];
+    return `
+      <div class="message-item" data-user-id="${user.id}">
+        <img class="message-avatar" src="${user.avatar}" alt="">
+        <div class="message-info">
+          <div class="message-header">
+            <div class="message-name">${user.name}</div>
+            <div class="message-time">${getTimeAgo(lastMsg.timestamp)}</div>
+          </div>
+          <div class="message-preview">${escapeHtml(lastMsg.content)}</div>
+        </div>
+        ${conv.unread ? '<div class="message-unread-dot"></div>' : ''}
+      </div>
+    `;
+  }).join('');
+
+  // 绑定点击事件
+  messagesEl.querySelectorAll('.message-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const userId = item.dataset.userId;
+      openChat(userId, roche);
+    });
+  });
+}
+
+/**
+ * 打开聊天界面
+ */
+function openChat(userId, roche) {
+  currentChatUser = userId;
+  const user = twitterData.users[userId];
+  const conversation = twitterData.conversations[userId];
+
+  // 标记为已读
+  if (conversation) {
+    conversation.unread = false;
+  }
+
+  // 更新聊天头部
+  document.getElementById('chat-user-name').textContent = user.name;
+
+  // 渲染消息
+  const chatMessages = document.getElementById('chat-messages');
+  chatMessages.innerHTML = conversation.messages.map(msg => {
+    const isOwn = msg.from === currentUser;
+    const msgUser = twitterData.users[msg.from];
+    return `
+      <div class="chat-message ${isOwn ? 'own' : ''}">
+        <img class="chat-message-avatar" src="${msgUser.avatar}" alt="">
+        <div class="chat-message-bubble">${escapeHtml(msg.content)}</div>
+      </div>
+    `;
+  }).join('');
+
+  // 滚动到底部
+  setTimeout(() => {
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }, 100);
+
+  // 显示聊天界面
+  document.getElementById('messages-list-view').classList.add('hidden');
+  document.getElementById('chat-view').classList.add('active');
+}
+
+/**
+ * 发送消息
+ */
+async function sendMessage(roche, content) {
+  if (!content || !currentChatUser) return;
+
+  const conversation = twitterData.conversations[currentChatUser];
+  if (!conversation) return;
+
+  const message = {
+    id: Date.now(),
+    from: currentUser,
+    content: content,
+    timestamp: Date.now()
+  };
+
+  conversation.messages.push(message);
+  await saveData(roche);
+
+  // 重新渲染聊天
+  openChat(currentChatUser, roche);
+
+  showToast('消息已发送', 'success');
+}
+
+/**
+ * 显示个人资料页
+ */
+function showProfile(userId, roche) {
+  const user = twitterData.users[userId];
+  if (!user) return;
+
+  const isOwnProfile = userId === currentUser;
+  const userTweets = twitterData.tweets.filter(t => t.userId === userId);
+
+  // 更新头部信息
+  document.getElementById('profile-header-name').textContent = user.name;
+  document.getElementById('profile-header-tweets').textContent = `${userTweets.length} 推文`;
+
+  // 更新个人信息
+  document.getElementById('profile-avatar').src = user.avatar;
+  document.getElementById('profile-name').textContent = user.name;
+  document.getElementById('profile-username').textContent = user.username;
+  document.getElementById('profile-bio').textContent = user.bio;
+  document.getElementById('profile-joined').textContent = '加入于 2024年1月';
+  document.getElementById('profile-following').textContent = user.following || 0;
+  document.getElementById('profile-followers').textContent = user.followers || 0;
+
+  // 设置按钮
+  const actionBtn = document.getElementById('profile-action-btn');
+  if (isOwnProfile) {
+    actionBtn.textContent = '编辑资料';
+    actionBtn.onclick = () => showToast('编辑功能开发中...', 'info');
+  } else {
+    const isFollowing = twitterData.follows[currentUser]?.includes(userId);
+    actionBtn.textContent = isFollowing ? '正在关注' : '关注';
+    actionBtn.className = `profile-edit-btn ${isFollowing ? 'following' : ''}`;
+    actionBtn.onclick = async () => {
+      await toggleFollow(userId, roche);
+      showProfile(userId, roche);
+    };
+  }
+
+  // 渲染推文列表
+  const tweetsListEl = document.getElementById('profile-tweets-list');
+  if (userTweets.length === 0) {
+    tweetsListEl.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">🐦</div>
+        <div>还没有推文</div>
+      </div>
+    `;
+  } else {
+    tweetsListEl.innerHTML = userTweets.map(tweet => {
+      const isLiked = tweet.likes.includes(currentUser);
+      const isRetweeted = tweet.retweets.includes(currentUser);
+      const timeAgo = getTimeAgo(tweet.timestamp);
+
+      return `
+        <div class="tweet-item" data-tweet-id="${tweet.id}">
+          <div class="tweet-header">
+            <img class="tweet-avatar" src="${user.avatar}" alt="">
+            <div class="tweet-content">
+              <div class="tweet-author">
+                <span class="tweet-author-name">${user.name}</span>
+                <span class="tweet-author-username">${user.username}</span>
+                <span class="tweet-time">· ${timeAgo}</span>
+              </div>
+              <div class="tweet-text">${escapeHtml(tweet.content)}</div>
+              <div class="tweet-actions">
+                <div class="tweet-action" data-action="reply">
+                  <span class="action-icon">${icons.comment}</span>
+                  <span>${tweet.replies.length || ''}</span>
+                </div>
+                <div class="tweet-action ${isRetweeted ? 'retweeted' : ''}" data-action="retweet">
+                  <span class="action-icon">${icons.retweet}</span>
+                  <span>${tweet.retweets.length || ''}</span>
+                </div>
+                <div class="tweet-action ${isLiked ? 'liked' : ''}" data-action="like">
+                  <span class="action-icon">${isLiked ? icons.likeFilled : icons.like}</span>
+                  <span>${tweet.likes.length || ''}</span>
+                </div>
+                <div class="tweet-action" data-action="share">
+                  <span class="action-icon">${icons.share}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // 绑定事件
+    tweetsListEl.querySelectorAll('.tweet-item').forEach(el => {
+      el.addEventListener('click', (e) => {
+        if (e.target.closest('.tweet-action')) return;
+        const tweetId = parseInt(el.dataset.tweetId);
+        showTweetDetail(tweetId, roche);
+      });
+    });
+
+    tweetsListEl.querySelectorAll('.tweet-action').forEach(el => {
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const action = el.dataset.action;
+        const tweetId = parseInt(el.closest('.tweet-item').dataset.tweetId);
+        handleTweetAction(action, tweetId, roche);
+      });
+    });
+  }
+
+  // 绑定标签切换
+  document.querySelectorAll('.profile-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.profile-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+
+      const tabType = tab.dataset.tab;
+      if (tabType !== 'tweets') {
+        showToast('功能开发中...', 'info');
+      }
+    });
+  });
+
+  // 切换到个人资料视图
+  switchView('profile');
 }
 
 })(); // 立即执行函数结束
