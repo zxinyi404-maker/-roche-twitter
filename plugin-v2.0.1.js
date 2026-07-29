@@ -67,7 +67,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '2.0.2',
+    version: '2.0.1',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -3503,16 +3503,9 @@ function switchView(view) {
  * 显示推文详情
  */
 function showTweetDetail(tweetId, roche) {
-  console.log('[Twitter] showTweetDetail called, tweetId:', tweetId);
-
   const tweet = twitterData.tweets.find(t => t.id === tweetId);
-  if (!tweet) {
-    console.error('[Twitter] Tweet not found:', tweetId);
-    showToast('推文不存在', 'error');
-    return;
-  }
+  if (!tweet) return;
 
-  console.log('[Twitter] Found tweet:', tweet);
   currentTweetId = tweetId;
   const user = twitterData.users[tweet.userId];
   const currentUserData = twitterData.users[currentUser];
