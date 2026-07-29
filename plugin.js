@@ -20,13 +20,17 @@ let twitterData = {
 // 当前登录用户
 let currentUser = null;
 
+// 当前视图状态
+let currentView = 'timeline';
+let currentTweetId = null;
+
 /**
  * 注册插件到 Roche 系统
  */
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '1.0.7',
+    version: '1.0.8',
     apps: [{
       id: 'twitter-home',
       name: 'Twitter',
@@ -493,6 +497,231 @@ function renderUI(container, roche) {
         cursor: not-allowed;
       }
 
+      /* 推文详情页 */
+      .tweet-detail-view {
+        display: none;
+      }
+
+      .tweet-detail-view.active {
+        display: block;
+      }
+
+      .detail-header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 60px;
+        background: #000;
+        border-bottom: 1px solid #2f3336;
+        display: flex;
+        align-items: center;
+        padding: 0 16px;
+        z-index: 100;
+        max-width: 768px;
+        margin: 0 auto;
+      }
+
+      .detail-back-btn {
+        font-size: 20px;
+        cursor: pointer;
+        padding: 8px;
+        transition: opacity 0.2s;
+        color: #fff;
+      }
+
+      .detail-back-btn:active {
+        opacity: 0.7;
+      }
+
+      .detail-title {
+        margin-left: 24px;
+        font-size: 19px;
+        font-weight: 700;
+      }
+
+      .detail-main {
+        padding-top: 60px;
+        padding-bottom: 80px;
+      }
+
+      .detail-tweet {
+        padding: 16px;
+        border-bottom: 1px solid #2f3336;
+      }
+
+      .detail-tweet-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+
+      .detail-tweet-avatar {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+      }
+
+      .detail-tweet-author {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .detail-tweet-name {
+        font-weight: 700;
+        font-size: 16px;
+        color: #fff;
+      }
+
+      .detail-tweet-username {
+        color: #71767b;
+        font-size: 15px;
+      }
+
+      .detail-tweet-text {
+        font-size: 23px;
+        line-height: 28px;
+        margin: 16px 0;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        color: #fff;
+      }
+
+      .detail-tweet-time {
+        color: #71767b;
+        font-size: 15px;
+        padding: 16px 0;
+        border-top: 1px solid #2f3336;
+      }
+
+      .detail-tweet-stats {
+        display: flex;
+        gap: 20px;
+        padding: 16px 0;
+        border-top: 1px solid #2f3336;
+        border-bottom: 1px solid #2f3336;
+      }
+
+      .detail-stat-item {
+        display: flex;
+        gap: 4px;
+        font-size: 15px;
+      }
+
+      .detail-stat-number {
+        font-weight: 700;
+        color: #fff;
+      }
+
+      .detail-stat-label {
+        color: #71767b;
+      }
+
+      .detail-tweet-actions {
+        display: flex;
+        justify-content: space-around;
+        padding: 12px 0;
+      }
+
+      .detail-action {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #71767b;
+        font-size: 20px;
+        cursor: pointer;
+        padding: 12px;
+        border-radius: 50%;
+        transition: all 0.2s;
+        width: 40px;
+        height: 40px;
+      }
+
+      .detail-action:active {
+        background: rgba(29, 155, 240, 0.1);
+      }
+
+      .detail-action.liked {
+        color: #f91880;
+      }
+
+      .detail-action.retweeted {
+        color: #00ba7c;
+      }
+
+      .detail-replies {
+        padding: 16px;
+      }
+
+      .detail-reply-input {
+        display: flex;
+        gap: 12px;
+        padding: 16px;
+        border-top: 1px solid #2f3336;
+        background: #000;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        max-width: 768px;
+        margin: 0 auto;
+      }
+
+      .detail-reply-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+
+      .detail-reply-form {
+        flex: 1;
+        display: flex;
+        gap: 12px;
+        align-items: center;
+      }
+
+      .detail-reply-textarea {
+        flex: 1;
+        background: #16181c;
+        border: 1px solid #2f3336;
+        border-radius: 20px;
+        color: #fff;
+        font-size: 15px;
+        padding: 8px 16px;
+        resize: none;
+        outline: none;
+        font-family: inherit;
+        min-height: 40px;
+        max-height: 120px;
+      }
+
+      .detail-reply-textarea::placeholder {
+        color: #71767b;
+      }
+
+      .detail-reply-btn {
+        background: #1d9bf0;
+        color: #fff;
+        border: none;
+        border-radius: 20px;
+        padding: 8px 16px;
+        font-weight: 700;
+        font-size: 14px;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+
+      .detail-reply-btn:active:not(:disabled) {
+        background: #1a8cd8;
+      }
+
+      .detail-reply-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
       /* 响应式 */
       @media (max-width: 768px) {
         #twitter-app {
@@ -500,7 +729,9 @@ function renderUI(container, roche) {
         }
 
         .mobile-top-bar,
-        .mobile-bottom-nav {
+        .mobile-bottom-nav,
+        .detail-header,
+        .detail-reply-input {
           max-width: 100%;
         }
       }
@@ -521,11 +752,35 @@ function renderUI(container, roche) {
 
     <!-- 主内容区 -->
     <div class="mobile-main">
+      <!-- 时间线视图 -->
       <div class="tweets-list" id="tweets-list">
         <div class="empty-state">
           <div class="empty-state-icon">🐦</div>
           <div>还没有推文</div>
           <div style="margin-top: 8px; font-size: 14px;">发布你的第一条推文吧！</div>
+        </div>
+      </div>
+
+      <!-- 推文详情视图 -->
+      <div class="tweet-detail-view" id="tweet-detail-view">
+        <!-- 详情页头部 -->
+        <div class="detail-header">
+          <div class="detail-back-btn" id="detail-back-btn">←</div>
+          <div class="detail-title">帖子</div>
+        </div>
+
+        <!-- 详情页主内容 -->
+        <div class="detail-main" id="detail-main">
+          <!-- 动态加载推文详情 -->
+        </div>
+
+        <!-- 回复输入框 -->
+        <div class="detail-reply-input" id="detail-reply-input">
+          <img class="detail-reply-avatar" id="detail-reply-avatar" src="" alt="">
+          <div class="detail-reply-form">
+            <textarea class="detail-reply-textarea" id="detail-reply-textarea" placeholder="发布你的回复" rows="1"></textarea>
+            <button class="detail-reply-btn" id="detail-reply-btn" disabled>回复</button>
+          </div>
         </div>
       </div>
     </div>
@@ -534,9 +789,9 @@ function renderUI(container, roche) {
     <div class="mobile-bottom-nav">
       <div class="bottom-nav-item active" data-nav="home" title="主页">🏠</div>
       <div class="bottom-nav-item" data-nav="search" title="搜索">🔍</div>
+      <div class="bottom-nav-item" data-nav="gork" title="退出">✏️</div>
       <div class="bottom-nav-item" data-nav="notifications" title="通知">🔔</div>
       <div class="bottom-nav-item" data-nav="messages" title="私信">✉️</div>
-      <div class="bottom-nav-item" data-nav="profile" title="个人资料">👤</div>
     </div>
 
     <!-- 悬浮发推按钮 -->
@@ -570,16 +825,48 @@ function bindEvents(roche) {
     showUserSwitcher(roche);
   });
 
+  // 详情页返回按钮
+  document.getElementById('detail-back-btn').addEventListener('click', () => {
+    switchView('timeline');
+  });
+
+  // 详情页回复功能
+  const replyTextarea = document.getElementById('detail-reply-textarea');
+  const replyBtn = document.getElementById('detail-reply-btn');
+
+  replyTextarea.addEventListener('input', () => {
+    replyBtn.disabled = replyTextarea.value.trim().length === 0;
+    // 自动调整高度
+    replyTextarea.style.height = 'auto';
+    replyTextarea.style.height = Math.min(replyTextarea.scrollHeight, 120) + 'px';
+  });
+
+  replyBtn.addEventListener('click', () => {
+    postReply(roche, currentTweetId, replyTextarea.value.trim());
+    replyTextarea.value = '';
+    replyTextarea.style.height = 'auto';
+    replyBtn.disabled = true;
+  });
+
   // 底部导航切换
   document.querySelectorAll('.bottom-nav-item').forEach(item => {
     item.addEventListener('click', () => {
+      const nav = item.dataset.nav;
+
+      if (nav === 'gork') {
+        // 退出功能
+        exitApp();
+        return;
+      }
+
       // 移除所有 active 状态
       document.querySelectorAll('.bottom-nav-item').forEach(i => i.classList.remove('active'));
       // 添加当前 active 状态
       item.classList.add('active');
 
-      const nav = item.dataset.nav;
-      if (nav !== 'home') {
+      if (nav === 'home') {
+        switchView('timeline');
+      } else {
         roche.ui.message(`${item.title}功能开发中...`, 'info');
       }
     });
@@ -745,6 +1032,17 @@ function renderTweets(roche) {
     `;
   }).join('');
 
+  // 绑定推文点击事件 - 进入详情页
+  listEl.querySelectorAll('.tweet-item').forEach(el => {
+    el.addEventListener('click', (e) => {
+      // 如果点击的是操作按钮，不进入详情页
+      if (e.target.closest('.tweet-action')) return;
+
+      const tweetId = parseInt(el.dataset.tweetId);
+      showTweetDetail(tweetId, roche);
+    });
+  });
+
   // 绑定推文操作事件
   listEl.querySelectorAll('.tweet-action').forEach(el => {
     el.addEventListener('click', (e) => {
@@ -754,6 +1052,186 @@ function renderTweets(roche) {
       handleTweetAction(action, tweetId, roche);
     });
   });
+}
+
+/**
+ * 切换视图
+ */
+function switchView(view) {
+  currentView = view;
+
+  const timelineView = document.getElementById('tweets-list');
+  const detailView = document.getElementById('tweet-detail-view');
+  const topBar = document.querySelector('.mobile-top-bar');
+  const floatingBtn = document.getElementById('floating-compose-btn');
+
+  if (view === 'timeline') {
+    // 显示时间线
+    timelineView.style.display = 'block';
+    detailView.classList.remove('active');
+    topBar.style.display = 'flex';
+    floatingBtn.style.display = 'flex';
+
+    // 重置底部导航
+    document.querySelectorAll('.bottom-nav-item').forEach(i => i.classList.remove('active'));
+    document.querySelector('[data-nav="home"]').classList.add('active');
+  } else if (view === 'tweetDetail') {
+    // 显示详情页
+    timelineView.style.display = 'none';
+    detailView.classList.add('active');
+    topBar.style.display = 'none';
+    floatingBtn.style.display = 'none';
+  }
+}
+
+/**
+ * 显示推文详情
+ */
+function showTweetDetail(tweetId, roche) {
+  const tweet = twitterData.tweets.find(t => t.id === tweetId);
+  if (!tweet) return;
+
+  currentTweetId = tweetId;
+  const user = twitterData.users[tweet.userId];
+  const currentUserData = twitterData.users[currentUser];
+  const isLiked = tweet.likes.includes(currentUser);
+  const isRetweeted = tweet.retweets.includes(currentUser);
+
+  // 格式化时间
+  const date = new Date(tweet.timestamp);
+  const formattedTime = date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+  const formattedDate = date.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' });
+
+  // 渲染详情内容
+  const detailMain = document.getElementById('detail-main');
+  detailMain.innerHTML = `
+    <div class="detail-tweet">
+      <div class="detail-tweet-header">
+        <img class="detail-tweet-avatar" src="${user.avatar}" alt="">
+        <div class="detail-tweet-author">
+          <div class="detail-tweet-name">${user.name}</div>
+          <div class="detail-tweet-username">${user.username}</div>
+        </div>
+      </div>
+      <div class="detail-tweet-text">${escapeHtml(tweet.content)}</div>
+      <div class="detail-tweet-time">${formattedTime} · ${formattedDate}</div>
+      <div class="detail-tweet-stats">
+        <div class="detail-stat-item">
+          <span class="detail-stat-number">${tweet.retweets.length}</span>
+          <span class="detail-stat-label">转发</span>
+        </div>
+        <div class="detail-stat-item">
+          <span class="detail-stat-number">${tweet.likes.length}</span>
+          <span class="detail-stat-label">喜欢</span>
+        </div>
+      </div>
+      <div class="detail-tweet-actions">
+        <div class="detail-action" data-action="reply">💬</div>
+        <div class="detail-action ${isRetweeted ? 'retweeted' : ''}" data-action="retweet">🔁</div>
+        <div class="detail-action ${isLiked ? 'liked' : ''}" data-action="like">${isLiked ? '❤️' : '🤍'}</div>
+        <div class="detail-action" data-action="share">📤</div>
+      </div>
+    </div>
+    <div class="detail-replies" id="detail-replies">
+      ${tweet.replies.length === 0 ? '<div style="padding: 40px 20px; text-align: center; color: #71767b;">暂无回复</div>' : ''}
+    </div>
+  `;
+
+  // 更新回复输入框头像
+  document.getElementById('detail-reply-avatar').src = currentUserData.avatar;
+
+  // 绑定详情页操作按钮
+  detailMain.querySelectorAll('.detail-action').forEach(el => {
+    el.addEventListener('click', (e) => {
+      const action = el.dataset.action;
+      handleDetailAction(action, tweetId, roche);
+    });
+  });
+
+  // 切换到详情视图
+  switchView('tweetDetail');
+}
+
+/**
+ * 处理详情页操作
+ */
+async function handleDetailAction(action, tweetId, roche) {
+  const tweet = twitterData.tweets.find(t => t.id === tweetId);
+  if (!tweet) return;
+
+  switch (action) {
+    case 'like':
+      const likeIndex = tweet.likes.indexOf(currentUser);
+      if (likeIndex > -1) {
+        tweet.likes.splice(likeIndex, 1);
+      } else {
+        tweet.likes.push(currentUser);
+      }
+      await saveData(roche);
+      showTweetDetail(tweetId, roche);
+      break;
+
+    case 'retweet':
+      const retweetIndex = tweet.retweets.indexOf(currentUser);
+      if (retweetIndex > -1) {
+        tweet.retweets.splice(retweetIndex, 1);
+      } else {
+        tweet.retweets.push(currentUser);
+      }
+      await saveData(roche);
+      showTweetDetail(tweetId, roche);
+      break;
+
+    case 'reply':
+      // 聚焦到回复输入框
+      document.getElementById('detail-reply-textarea').focus();
+      break;
+
+    case 'share':
+      roche.ui.message('分享功能开发中...', 'info');
+      break;
+  }
+}
+
+/**
+ * 发布回复
+ */
+async function postReply(roche, tweetId, content) {
+  if (!content || !content.trim()) return;
+
+  const tweet = twitterData.tweets.find(t => t.id === tweetId);
+  if (!tweet) return;
+
+  const reply = {
+    id: Date.now(),
+    userId: currentUser,
+    content: content.trim(),
+    timestamp: Date.now()
+  };
+
+  if (!tweet.replies) {
+    tweet.replies = [];
+  }
+  tweet.replies.push(reply);
+
+  await saveData(roche);
+  roche.ui.message('回复已发布！', 'success');
+
+  // 刷新详情页
+  showTweetDetail(tweetId, roche);
+}
+
+/**
+ * 退出应用
+ */
+function exitApp() {
+  // 尝试返回上一页
+  if (window.history.length > 1) {
+    window.history.back();
+  } else {
+    // 如果没有历史记录，尝试关闭窗口
+    window.close();
+  }
 }
 
 /**
