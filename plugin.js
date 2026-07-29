@@ -5115,7 +5115,7 @@ function renderMessages(roche) {
   const filterBtn = document.getElementById('messages-filter-btn');
   if (filterBtn) {
     filterBtn.onclick = () => {
-      showToast('筛选功能开发中...', 'info');
+      showMessagesFilterMenu();
     };
   }
 
@@ -5123,7 +5123,7 @@ function renderMessages(roche) {
   const writeBtn = document.getElementById('messages-write-btn');
   if (writeBtn) {
     writeBtn.onclick = () => {
-      showToast('新建私信功能开发中...', 'info');
+      showNewMessageDialog(roche);
     };
   }
 
@@ -5174,6 +5174,271 @@ function renderMessages(roche) {
       const userId = item.dataset.userId;
       openChat(userId, roche);
     });
+  });
+}
+
+/**
+ * 显示私信筛选菜单
+ */
+function showMessagesFilterMenu() {
+  // 创建遮罩层
+  const overlay = document.createElement('div');
+  overlay.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    z-index: 10000;
+    animation: fadeIn 0.2s;
+  `;
+
+  // 创建菜单
+  const menu = document.createElement('div');
+  menu.style.cssText = `
+    background: white;
+    border-radius: 16px 16px 0 0;
+    width: 100%;
+    max-width: 600px;
+    padding: 8px 0;
+    animation: slideUpMenu 0.3s;
+  `;
+
+  menu.innerHTML = `
+    <div style="padding: 16px 16px 8px 16px; color: #536471; font-size: 13px;">显示</div>
+
+    <div class="filter-menu-option" data-filter="all">
+      <div style="flex: 1;">
+        <div style="font-size: 15px; font-weight: 500; color: #0f1419;">全部私信</div>
+      </div>
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="#1d9bf0" style="display: none;" class="check-icon"><path d="M9 20l-7-7 1.41-1.41L9 17.17 20.59 5.59 22 7l-13 13z"></path></svg>
+    </div>
+
+    <div class="filter-menu-option" data-filter="unread">
+      <div style="flex: 1;">
+        <div style="font-size: 15px; font-weight: 500; color: #0f1419;">未读</div>
+      </div>
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="#1d9bf0" style="display: none;" class="check-icon"><path d="M9 20l-7-7 1.41-1.41L9 17.17 20.59 5.59 22 7l-13 13z"></path></svg>
+    </div>
+
+    <div class="filter-menu-option" data-filter="important">
+      <div style="flex: 1;">
+        <div style="font-size: 15px; font-weight: 500; color: #0f1419;">重要</div>
+      </div>
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="#1d9bf0" style="display: none;" class="check-icon"><path d="M9 20l-7-7 1.41-1.41L9 17.17 20.59 5.59 22 7l-13 13z"></path></svg>
+    </div>
+
+    <button class="filter-cancel-btn">取消</button>
+
+    <style>
+      .filter-menu-option {
+        display: flex;
+        align-items: center;
+        padding: 16px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .filter-menu-option:hover {
+        background: rgba(0, 0, 0, 0.03);
+      }
+
+      .filter-cancel-btn {
+        width: 100%;
+        padding: 16px;
+        border: none;
+        background: transparent;
+        color: #0f1419;
+        font-weight: 700;
+        font-size: 17px;
+        cursor: pointer;
+        margin-top: 8px;
+        border-radius: 8px;
+        transition: all 0.2s;
+      }
+
+      .filter-cancel-btn:hover {
+        background: rgba(0, 0, 0, 0.05);
+      }
+    </style>
+  `;
+
+  overlay.appendChild(menu);
+  document.body.appendChild(overlay);
+
+  // 默认选中"全部"
+  menu.querySelector('[data-filter="all"] .check-icon').style.display = 'block';
+
+  // 绑定选项点击事件
+  menu.querySelectorAll('.filter-menu-option').forEach(option => {
+    option.addEventListener('click', () => {
+      const filter = option.dataset.filter;
+
+      // 更新按钮文字
+      const filterBtn = document.getElementById('messages-filter-btn');
+      const filterText = filter === 'all' ? '全部' : filter === 'unread' ? '未读' : '重要';
+      filterBtn.querySelector('span').textContent = filterText;
+
+      // 这里可以根据筛选条件过滤对话列表
+      console.log('[私信] 切换筛选:', filter);
+
+      document.body.removeChild(overlay);
+      showToast(`切换到：${filterText}`, 'info');
+    });
+  });
+
+  // 取消按钮
+  menu.querySelector('.filter-cancel-btn').addEventListener('click', () => {
+    document.body.removeChild(overlay);
+  });
+
+  // 点击遮罩层关闭
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) {
+      document.body.removeChild(overlay);
+    }
+  });
+}
+
+/**
+ * 显示新建私信对话框
+ */
+function showNewMessageDialog(roche) {
+  // 创建遮罩层
+  const overlay = document.createElement('div');
+  overlay.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    animation: fadeIn 0.2s;
+    padding: 20px;
+  `;
+
+  // 创建对话框
+  const dialog = document.createElement('div');
+  dialog.style.cssText = `
+    background: white;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 600px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    animation: scaleIn 0.2s;
+  `;
+
+  const users = Object.values(twitterData.users).filter(u => u.id !== currentUser && u.isPersona);
+
+  dialog.innerHTML = `
+    <div style="padding: 16px; border-bottom: 1px solid #eff3f4; display: flex; align-items: center; justify-content: space-between;">
+      <div style="font-size: 20px; font-weight: 700; color: #0f1419;">新建私信</div>
+      <div class="dialog-close-btn" style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 50%; cursor: pointer; transition: background 0.2s;">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="#0f1419"><path d="M10.59 12L4.54 5.96l1.42-1.42L12 10.59l6.04-6.05 1.42 1.42L13.41 12l6.05 6.04-1.42 1.42L12 13.41l-6.04 6.05-1.42-1.42L10.59 12z"></path></svg>
+      </div>
+    </div>
+
+    <div style="padding: 16px; border-bottom: 1px solid #eff3f4;">
+      <div style="display: flex; align-items: center; background: #eff3f4; border-radius: 24px; padding: 10px 16px; gap: 12px;">
+        ${icons.search}
+        <input type="text" placeholder="搜索联系人" id="new-message-search" style="flex: 1; background: transparent; border: none; outline: none; font-size: 15px; color: #0f1419;">
+      </div>
+    </div>
+
+    <div style="flex: 1; overflow-y: auto;" id="contact-list">
+      ${users.map(user => `
+        <div class="contact-item" data-user-id="${user.id}" style="padding: 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: background 0.2s;">
+          <img src="${user.avatar}" style="width: 48px; height: 48px; border-radius: 50%;" alt="">
+          <div style="flex: 1;">
+            <div style="font-size: 15px; font-weight: 700; color: #0f1419;">${user.name}</div>
+            <div style="font-size: 15px; color: #536471;">${user.username}</div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+
+    <style>
+      @keyframes scaleIn {
+        from { transform: scale(0.9); opacity: 0; }
+        to { transform: scale(1); opacity: 1; }
+      }
+
+      .dialog-close-btn:hover {
+        background: rgba(0, 0, 0, 0.05);
+      }
+
+      .contact-item:hover {
+        background: rgba(0, 0, 0, 0.03);
+      }
+    </style>
+  `;
+
+  overlay.appendChild(dialog);
+  document.body.appendChild(overlay);
+
+  // 绑定关闭按钮
+  dialog.querySelector('.dialog-close-btn').addEventListener('click', () => {
+    document.body.removeChild(overlay);
+  });
+
+  // 绑定搜索功能
+  const searchInput = dialog.querySelector('#new-message-search');
+  const contactList = dialog.querySelector('#contact-list');
+
+  searchInput.addEventListener('input', (e) => {
+    const query = e.target.value.toLowerCase();
+    const contacts = contactList.querySelectorAll('.contact-item');
+
+    contacts.forEach(contact => {
+      const name = contact.querySelector('div > div:first-child').textContent.toLowerCase();
+      const username = contact.querySelector('div > div:last-child').textContent.toLowerCase();
+
+      if (name.includes(query) || username.includes(query)) {
+        contact.style.display = 'flex';
+      } else {
+        contact.style.display = 'none';
+      }
+    });
+  });
+
+  // 绑定联系人点击事件
+  dialog.querySelectorAll('.contact-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const userId = item.dataset.userId;
+
+      // 创建或打开对话
+      if (!twitterData.conversations[userId]) {
+        twitterData.conversations[userId] = {
+          userId: userId,
+          messages: [],
+          unread: false
+        };
+        saveData(roche);
+      }
+
+      // 关闭对话框
+      document.body.removeChild(overlay);
+
+      // 打开聊天界面
+      openChat(userId, roche);
+    });
+  });
+
+  // 点击遮罩层关闭
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) {
+      document.body.removeChild(overlay);
+    }
   });
 }
 
