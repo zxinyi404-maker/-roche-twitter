@@ -97,7 +97,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '4.6.1',
+    version: '4.7.0',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -3533,6 +3533,215 @@ function bindEvents(container, roche) {
       const tabType = tab.dataset.tab;
       renderTweets(roche, tabType);
     });
+  });
+
+  // 添加下拉刷新功能
+  const timelineContent = document.querySelector('.timeline-content');
+  let startY = 0;
+  let currentY = 0;
+  let isDragging = false;
+  let refreshIndicator = null;
+
+  timelineContent.addEventListener('touchstart', (e) => {
+    // 只在滚动到顶部时触发
+    if (timelineContent.scrollTop === 0) {
+      startY = e.touches[0].pageY;
+      isDragging = true;
+    }
+  });
+
+  timelineContent.addEventListener('touchmove', (e) => {
+    if (!isDragging || timelineContent.scrollTop > 0) return;
+
+    currentY = e.touches[0].pageY;
+    const deltaY = currentY - startY;
+
+    // 只在下拉时显示
+    if (deltaY > 0) {
+      e.preventDefault();
+
+      // 创建刷新指示器
+      if (!refreshIndicator) {
+        refreshIndicator = document.createElement('div');
+        refreshIndicator.style.cssText = `
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: ${Math.min(deltaY, 80)}px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #1d9bf0;
+          font-size: 14px;
+          font-weight: 600;
+          background: rgba(255, 255, 255, 0.95);
+          z-index: 100;
+          transition: height 0.2s;
+        `;
+        refreshIndicator.innerHTML = deltaY > 60
+          ? '<span>🔄 松开刷新</span>'
+          : '<span>⬇️ 下拉刷新</span>';
+        timelineContent.style.position = 'relative';
+        timelineContent.insertBefore(refreshIndicator, timelineContent.firstChild);
+      } else {
+        refreshIndicator.style.height = `${Math.min(deltaY, 80)}px`;
+        refreshIndicator.innerHTML = deltaY > 60
+          ? '<span>🔄 松开刷新</span>'
+          : '<span>⬇️ 下拉刷新</span>';
+      }
+    }
+  });
+
+  timelineContent.addEventListener('touchend', async (e) => {
+    if (!isDragging) return;
+
+    const deltaY = currentY - startY;
+
+    if (deltaY > 60 && refreshIndicator) {
+      // 触发刷新
+      refreshIndicator.innerHTML = '<span>🔄 刷新中...</span>';
+
+      try {
+        // 获取当前标签
+        const activeTab = document.querySelector('.timeline-tab.active');
+        const tabType = activeTab ? activeTab.dataset.tab : 'recommended';
+
+        // 刷新推文列表
+        await renderTweets(roche, tabType);
+
+        refreshIndicator.innerHTML = '<span>✅ 刷新成功</span>';
+        setTimeout(() => {
+          if (refreshIndicator && refreshIndicator.parentNode) {
+            refreshIndicator.parentNode.removeChild(refreshIndicator);
+            refreshIndicator = null;
+          }
+        }, 500);
+      } catch (error) {
+        console.error('刷新失败:', error);
+        refreshIndicator.innerHTML = '<span>❌ 刷新失败</span>';
+        setTimeout(() => {
+          if (refreshIndicator && refreshIndicator.parentNode) {
+            refreshIndicator.parentNode.removeChild(refreshIndicator);
+            refreshIndicator = null;
+          }
+        }, 500);
+      }
+    } else {
+      // 没有达到刷新阈值，移除指示器
+      if (refreshIndicator && refreshIndicator.parentNode) {
+        refreshIndicator.parentNode.removeChild(refreshIndicator);
+        refreshIndicator = null;
+      }
+    }
+
+    isDragging = false;
+    startY = 0;
+    currentY = 0;
+  });
+
+  // 鼠标拖动支持（桌面端）
+  let isMouseDragging = false;
+  let mouseStartY = 0;
+  let mouseCurrentY = 0;
+
+  timelineContent.addEventListener('mousedown', (e) => {
+    if (timelineContent.scrollTop === 0) {
+      mouseStartY = e.pageY;
+      isMouseDragging = true;
+      e.preventDefault();
+    }
+  });
+
+  timelineContent.addEventListener('mousemove', (e) => {
+    if (!isMouseDragging || timelineContent.scrollTop > 0) return;
+
+    mouseCurrentY = e.pageY;
+    const deltaY = mouseCurrentY - mouseStartY;
+
+    if (deltaY > 0) {
+      e.preventDefault();
+
+      if (!refreshIndicator) {
+        refreshIndicator = document.createElement('div');
+        refreshIndicator.style.cssText = `
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: ${Math.min(deltaY, 80)}px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #1d9bf0;
+          font-size: 14px;
+          font-weight: 600;
+          background: rgba(255, 255, 255, 0.95);
+          z-index: 100;
+          transition: height 0.2s;
+        `;
+        refreshIndicator.innerHTML = deltaY > 60
+          ? '<span>🔄 松开刷新</span>'
+          : '<span>⬇️ 下拉刷新</span>';
+        timelineContent.style.position = 'relative';
+        timelineContent.insertBefore(refreshIndicator, timelineContent.firstChild);
+      } else {
+        refreshIndicator.style.height = `${Math.min(deltaY, 80)}px`;
+        refreshIndicator.innerHTML = deltaY > 60
+          ? '<span>🔄 松开刷新</span>'
+          : '<span>⬇️ 下拉刷新</span>';
+      }
+    }
+  });
+
+  timelineContent.addEventListener('mouseup', async (e) => {
+    if (!isMouseDragging) return;
+
+    const deltaY = mouseCurrentY - mouseStartY;
+
+    if (deltaY > 60 && refreshIndicator) {
+      refreshIndicator.innerHTML = '<span>🔄 刷新中...</span>';
+
+      try {
+        const activeTab = document.querySelector('.timeline-tab.active');
+        const tabType = activeTab ? activeTab.dataset.tab : 'recommended';
+        await renderTweets(roche, tabType);
+
+        refreshIndicator.innerHTML = '<span>✅ 刷新成功</span>';
+        setTimeout(() => {
+          if (refreshIndicator && refreshIndicator.parentNode) {
+            refreshIndicator.parentNode.removeChild(refreshIndicator);
+            refreshIndicator = null;
+          }
+        }, 500);
+      } catch (error) {
+        console.error('刷新失败:', error);
+        refreshIndicator.innerHTML = '<span>❌ 刷新失败</span>';
+        setTimeout(() => {
+          if (refreshIndicator && refreshIndicator.parentNode) {
+            refreshIndicator.parentNode.removeChild(refreshIndicator);
+            refreshIndicator = null;
+          }
+        }, 500);
+      }
+    } else {
+      if (refreshIndicator && refreshIndicator.parentNode) {
+        refreshIndicator.parentNode.removeChild(refreshIndicator);
+        refreshIndicator = null;
+      }
+    }
+
+    isMouseDragging = false;
+    mouseStartY = 0;
+    mouseCurrentY = 0;
+  });
+
+  document.addEventListener('mouseleave', () => {
+    if (isMouseDragging && refreshIndicator && refreshIndicator.parentNode) {
+      refreshIndicator.parentNode.removeChild(refreshIndicator);
+      refreshIndicator = null;
+      isMouseDragging = false;
+    }
   });
 
   // 详情页返回按钮
