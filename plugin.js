@@ -67,7 +67,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '2.9.2',
+    version: '2.9.3',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -5285,7 +5285,7 @@ async function renderMessages(roche) {
     if (welcomeEl) welcomeEl.style.display = 'none';
     if (messagesEl) messagesEl.style.display = 'block';
 
-    // 为每个对话获取最后一条消息
+    // 为每个对话获取最后一条消息和头像
     const conversationsWithMessages = await Promise.all(conversations.map(async (conv) => {
       try {
         // 获取最近的记忆作为最后一条消息
@@ -5303,10 +5303,37 @@ async function renderMessages(roche) {
           ? (memories[0].timestamp || Date.now())
           : Date.now();
 
+        // 获取 Char 头像
+        let avatarUrl = null;
+
+        // 1. 尝试通过 persona API 获取
+        if (conv.id) {
+          try {
+            const persona = await roche.persona.get(conv.id);
+            if (persona?.avatar) {
+              avatarUrl = persona.avatar;
+            }
+          } catch (e) {
+            // persona API 可能不存在
+          }
+        }
+
+        // 2. 如果还没有头像，检查 conversation 本身的字段
+        if (!avatarUrl) {
+          const possibleFields = ['avatar', 'avatarUrl', 'image', 'imageUrl', 'icon', 'picture'];
+          for (const field of possibleFields) {
+            if (conv[field]) {
+              avatarUrl = conv[field];
+              break;
+            }
+          }
+        }
+
         return {
           ...conv,
           lastMessage,
           lastTimestamp,
+          avatarUrl,
           unread: false // 可以后续添加未读逻辑
         };
       } catch (e) {
@@ -5324,15 +5351,18 @@ async function renderMessages(roche) {
 
     // 渲染对话列表
     messagesEl.innerHTML = conversationsWithMessages.map(conv => {
-      // 生成头像（使用首字母渐变）
+      // 头像处理
       const initial = conv.title ? conv.title.charAt(0).toUpperCase() : '?';
       const avatarGradient = `linear-gradient(135deg, #667eea 0%, #764ba2 100%)`;
 
+      // 如果有真实头像，显示图片；否则显示首字母
+      const avatarHtml = conv.avatarUrl
+        ? `<img src="${conv.avatarUrl}" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; flex-shrink: 0;" alt="${conv.title || '头像'}">`
+        : `<div style="width: 48px; height: 48px; border-radius: 50%; background: ${avatarGradient}; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; font-weight: 700; flex-shrink: 0;">${initial}</div>`;
+
       return `
         <div class="message-item" data-conv-id="${conv.id}" style="padding: 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: background 0.2s; border-bottom: 1px solid #eff3f4;">
-          <div style="width: 48px; height: 48px; border-radius: 50%; background: ${avatarGradient}; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; font-weight: 700; flex-shrink: 0;">
-            ${initial}
-          </div>
+          ${avatarHtml}
           <div class="message-info" style="flex: 1; min-width: 0;">
             <div class="message-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
               <div class="message-name" style="font-size: 15px; font-weight: 700; color: #0f1419;">${conv.title || '未命名对话'}</div>
