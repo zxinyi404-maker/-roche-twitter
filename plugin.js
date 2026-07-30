@@ -67,7 +67,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '3.5.0',
+    version: '3.5.1',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -4249,8 +4249,9 @@ function showTweetDetail(tweetId, roche) {
   }
 
   // 绑定详情页操作按钮
-  detailMain.querySelectorAll('.detail-action-icon').forEach(el => {
+  detailMain.querySelectorAll('.detail-action-btn').forEach(el => {
     el.addEventListener('click', (e) => {
+      e.stopPropagation();
       const action = el.dataset.action;
       handleDetailAction(action, tweetId, roche);
     });
