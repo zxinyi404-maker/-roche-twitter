@@ -1732,6 +1732,7 @@ function renderUI(container, roche) {
         z-index: 100;
         max-width: 768px;
         margin: 0 auto;
+        position: relative;
       }
 
       .notifications-top-left {
