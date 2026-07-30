@@ -90,7 +90,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '4.3.1',
+    version: '4.3.2',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -3736,11 +3736,13 @@ async function switchPersona(personaId, roche) {
   }
 
   try {
-    // 调用 Roche API 切换 Persona（如果有 conversationId）
-    if (persona.conversationId) {
+    // 调用 Roche API 切换 Persona（如果有 conversationId 且 API 存在）
+    if (persona.conversationId && roche.persona?.setActiveUserPersona) {
       console.log('[Twitter] 正在切换 Persona...', personaId);
       await roche.persona.setActiveUserPersona(personaId);
       console.log('[Twitter] Persona 切换成功');
+    } else if (persona.conversationId) {
+      console.log('[Twitter] roche.persona.setActiveUserPersona 不可用，仅切换本地状态');
     }
 
     // 更新本地当前用户
@@ -8489,6 +8491,13 @@ async function generateNPC(roche) {
       messages: [{ role: 'user', content: prompt }]
     });
 
+    console.log('[NPC] AI 响应:', response);
+
+    // 检查响应是否有效
+    if (!response || !response.content) {
+      throw new Error('AI 返回空响应');
+    }
+
     // 解析 JSON
     const jsonMatch = response.content.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
@@ -8500,7 +8509,7 @@ async function generateNPC(roche) {
 
   } catch (error) {
     console.error('[NPC] 生成 NPC 失败:', error);
-    return null;
+    throw error;
   }
 }
 
