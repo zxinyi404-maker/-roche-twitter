@@ -67,7 +67,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '2.9.7',
+    version: '3.0.0',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -6001,6 +6001,47 @@ async function openChatWithConv(convId, roche) {
       return;
     }
 
+    // 获取 Char 头像
+    let charAvatar = null;
+
+    // 1. 尝试通过 persona API 获取
+    if (conv.id) {
+      try {
+        const persona = await roche.persona.get(conv.id);
+        console.log('[Twitter] 聊天页面 - 获取 persona:', persona);
+        if (persona?.avatar) {
+          charAvatar = persona.avatar;
+          console.log('[Twitter] 聊天页面 - Char 头像:', charAvatar);
+        }
+      } catch (e) {
+        console.log('[Twitter] 聊天页面 - persona API 失败:', e);
+      }
+    }
+
+    // 2. 检查 conversation 本身的字段
+    if (!charAvatar) {
+      const possibleFields = ['avatar', 'avatarUrl', 'image', 'imageUrl', 'icon', 'picture'];
+      for (const field of possibleFields) {
+        if (conv[field]) {
+          charAvatar = conv[field];
+          console.log(`[Twitter] 聊天页面 - 在 conversation.${field} 找到头像:`, charAvatar);
+          break;
+        }
+      }
+    }
+
+    // 3. 如果还没有，使用默认头像（首字母渐变）
+    if (!charAvatar) {
+      const initial = (conv.title || '?').charAt(0).toUpperCase();
+      charAvatar = `data:image/svg+xml,${encodeURIComponent(`
+        <svg width="48" height="48" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="24" cy="24" r="24" fill="#667eea"/>
+          <text x="24" y="32" font-size="20" fill="white" text-anchor="middle" font-family="Arial">${initial}</text>
+        </svg>
+      `)}`;
+      console.log('[Twitter] 聊天页面 - 使用默认头像（首字母）');
+    }
+
     // 更新聊天头部
     document.getElementById('chat-user-name').textContent = conv.title || '未命名对话';
 
@@ -6019,13 +6060,18 @@ async function openChatWithConv(convId, roche) {
         </div>
       `;
     } else {
+      // 获取当前用户头像
+      const currentUserData = twitterData.users[currentUser];
+      const userAvatar = currentUserData?.avatar || generateAvatar(currentUserData?.name || 'User');
+
       // 从记忆中构建消息列表
       chatMessages.innerHTML = memories.map((mem, idx) => {
         const text = mem.summaryText || mem.text || '';
         const isOwn = idx % 2 === 0; // 简化处理：交替显示
 
         return `
-          <div class="chat-message ${isOwn ? 'own' : ''}" style="margin-bottom: 16px;">
+          <div class="chat-message ${isOwn ? 'own' : ''}" style="display: flex; gap: 8px; margin-bottom: 16px; ${isOwn ? 'flex-direction: row-reverse;' : ''}">
+            <img class="chat-message-avatar" src="${isOwn ? userAvatar : charAvatar}" alt="" style="width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; object-fit: cover;">
             <div class="chat-message-bubble" style="
               background: ${isOwn ? '#1d9bf0' : '#eff3f4'};
               color: ${isOwn ? 'white' : '#0f1419'};
@@ -6033,7 +6079,6 @@ async function openChatWithConv(convId, roche) {
               border-radius: 18px;
               max-width: 70%;
               word-wrap: break-word;
-              ${isOwn ? 'margin-left: auto;' : 'margin-right: auto;'}
             ">${escapeHtml(text)}</div>
           </div>
         `;
