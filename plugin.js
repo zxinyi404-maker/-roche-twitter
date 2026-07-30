@@ -68,7 +68,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '3.8.2',
+    version: '3.9.0',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -266,7 +266,7 @@ function renderUI(container, roche) {
 
       /* 顶部导航栏 */
       .mobile-top-bar {
-        position: fixed;
+        position: sticky;
         top: 0;
         left: 0;
         right: 0;
@@ -597,7 +597,7 @@ function renderUI(container, roche) {
 
       /* 主页标签 */
       .timeline-tabs {
-        position: fixed;
+        position: sticky;
         top: calc(60px + env(safe-area-inset-top));
         left: 0;
         right: 0;
@@ -644,7 +644,7 @@ function renderUI(container, roche) {
       }
 
       .timeline-content {
-        padding-top: calc(60px + env(safe-area-inset-top) + 53px); /* 顶部栏60px + 标签栏53px */
+        padding-top: 0; /* 顶部栏和标签栏不再固定，不需要 padding */
         padding-bottom: calc(60px + env(safe-area-inset-bottom));
         overflow-y: auto;
         height: 100vh;
@@ -1486,7 +1486,7 @@ function renderUI(container, roche) {
 
       /* 搜索页 */
       .search-top-bar {
-        position: fixed;
+        position: sticky;
         top: env(safe-area-inset-top);
         left: 0;
         right: 0;
@@ -1625,7 +1625,7 @@ function renderUI(container, roche) {
       }
 
       .search-content {
-        padding-top: calc(60px + env(safe-area-inset-top) + 50px); /* 顶部栏 + 搜索输入框区域 */
+        padding-top: 0; /* 顶部栏不再固定，不需要 padding */
         padding-bottom: calc(60px + env(safe-area-inset-bottom));
         overflow-y: auto;
         height: 100vh;
@@ -1633,7 +1633,7 @@ function renderUI(container, roche) {
       }
 
       .search-header {
-        position: fixed;
+        position: sticky;
         top: calc(60px + env(safe-area-inset-top));
         left: 0;
         right: 0;
@@ -1764,7 +1764,7 @@ function renderUI(container, roche) {
 
       /* 通知页 */
       .notifications-top-bar {
-        position: fixed;
+        position: sticky;
         top: env(safe-area-inset-top);
         left: 0;
         right: 0;
@@ -1885,7 +1885,7 @@ function renderUI(container, roche) {
 
       .notifications-content {
         width: 100%;
-        padding-top: calc(60px + env(safe-area-inset-top) + 53px); /* 顶部栏 + 标签栏 */
+        padding-top: 0; /* 顶部栏不再固定，不需要 padding */
         padding-bottom: calc(60px + env(safe-area-inset-bottom));
         overflow-y: auto;
         height: 100vh;
@@ -1974,7 +1974,7 @@ function renderUI(container, roche) {
       }
 
       .messages-top-bar {
-        position: fixed;
+        position: sticky;
         top: env(safe-area-inset-top);
         left: 0;
         right: 0;
@@ -2038,7 +2038,7 @@ function renderUI(container, roche) {
       }
 
       .messages-search-bar {
-        position: fixed;
+        position: sticky;
         top: calc(60px + env(safe-area-inset-top));
         left: 0;
         right: 0;
@@ -2075,7 +2075,7 @@ function renderUI(container, roche) {
       }
 
       .messages-content {
-        padding-top: calc(120px + env(safe-area-inset-top) + 24px); /* 顶部栏60px + 搜索栏高度60px + padding */
+        padding-top: 0; /* 顶部栏不再固定，不需要 padding */
         padding-bottom: calc(60px + env(safe-area-inset-bottom));
         overflow-y: auto;
         height: 100vh;
