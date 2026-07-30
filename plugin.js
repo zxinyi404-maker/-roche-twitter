@@ -67,7 +67,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '2.7.0',
+    version: '2.8.0',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -5139,7 +5139,7 @@ function renderNotifications(roche) {
  */
 let currentChatUser = null;
 
-function renderMessages(roche) {
+async function renderMessages(roche) {
   // 更新顶部栏头像
   const avatarImg = document.getElementById('messages-avatar-img');
   const currentUserData = twitterData.users[currentUser];
@@ -5182,51 +5182,107 @@ function renderMessages(roche) {
   const messagesEl = document.getElementById('messages-list');
   const welcomeEl = document.getElementById('messages-welcome');
 
-  // 生成一些示例对话
-  if (Object.keys(twitterData.conversations).length === 0) {
+  try {
+    // 从 Roche 加载真实的对话列表
+    const conversations = await roche.conversation.list();
+
+    if (!conversations || conversations.length === 0) {
+      // 显示欢迎界面
+      if (welcomeEl) welcomeEl.style.display = 'block';
+      if (messagesEl) messagesEl.style.display = 'none';
+      return;
+    }
+
+    // 隐藏欢迎界面，显示对话列表
+    if (welcomeEl) welcomeEl.style.display = 'none';
+    if (messagesEl) messagesEl.style.display = 'block';
+
+    // 为每个对话获取最后一条消息
+    const conversationsWithMessages = await Promise.all(conversations.map(async (conv) => {
+      try {
+        // 获取最近的记忆作为最后一条消息
+        const longTerm = await roche.memory.getLongTerm({
+          conversationId: conv.id,
+          limit: 1
+        });
+
+        const memories = [...(longTerm.facts || []), ...(longTerm.vectors || [])];
+        const lastMessage = memories.length > 0
+          ? (memories[0].summaryText || memories[0].text || '开始新对话...')
+          : '开始新对话...';
+
+        const lastTimestamp = memories.length > 0
+          ? (memories[0].timestamp || Date.now())
+          : Date.now();
+
+        return {
+          ...conv,
+          lastMessage,
+          lastTimestamp,
+          unread: false // 可以后续添加未读逻辑
+        };
+      } catch (e) {
+        return {
+          ...conv,
+          lastMessage: '加载失败',
+          lastTimestamp: Date.now(),
+          unread: false
+        };
+      }
+    }));
+
+    // 按时间排序
+    conversationsWithMessages.sort((a, b) => b.lastTimestamp - a.lastTimestamp);
+
+    // 渲染对话列表
+    messagesEl.innerHTML = conversationsWithMessages.map(conv => {
+      // 生成头像（使用首字母渐变）
+      const initial = conv.title ? conv.title.charAt(0).toUpperCase() : '?';
+      const avatarGradient = `linear-gradient(135deg, #667eea 0%, #764ba2 100%)`;
+
+      return `
+        <div class="message-item" data-conv-id="${conv.id}" style="padding: 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: background 0.2s; border-bottom: 1px solid #eff3f4;">
+          <div style="width: 48px; height: 48px; border-radius: 50%; background: ${avatarGradient}; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; font-weight: 700; flex-shrink: 0;">
+            ${initial}
+          </div>
+          <div class="message-info" style="flex: 1; min-width: 0;">
+            <div class="message-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <div class="message-name" style="font-size: 15px; font-weight: 700; color: #0f1419;">${conv.title || '未命名对话'}</div>
+              <div class="message-time" style="font-size: 13px; color: #536471;">${getTimeAgo(conv.lastTimestamp)}</div>
+            </div>
+            <div class="message-preview" style="font-size: 15px; color: #536471; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(conv.lastMessage.substring(0, 80))}</div>
+          </div>
+          ${conv.unread ? '<div class="message-unread-dot" style="width: 8px; height: 8px; border-radius: 50%; background: #1d9bf0; flex-shrink: 0;"></div>' : ''}
+        </div>
+      `;
+    }).join('');
+
+    // 绑定点击事件
+    messagesEl.querySelectorAll('.message-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const convId = item.dataset.convId;
+        openChatWithConv(convId, roche);
+      });
+    });
+
+    // 添加悬停效果
+    const style = document.createElement('style');
+    style.textContent = `
+      .message-item:hover {
+        background: rgba(0, 0, 0, 0.03);
+      }
+    `;
+    if (!document.getElementById('message-item-styles')) {
+      style.id = 'message-item-styles';
+      document.head.appendChild(style);
+    }
+
+  } catch (error) {
+    console.error('加载私信列表失败:', error);
     // 显示欢迎界面
     if (welcomeEl) welcomeEl.style.display = 'block';
     if (messagesEl) messagesEl.style.display = 'none';
-    return;
   }
-
-  // 隐藏欢迎界面，显示对话列表
-  if (welcomeEl) welcomeEl.style.display = 'none';
-  if (messagesEl) messagesEl.style.display = 'block';
-
-  const conversations = Object.values(twitterData.conversations).sort((a, b) => {
-    const aLast = a.messages[a.messages.length - 1]?.timestamp || 0;
-    const bLast = b.messages[b.messages.length - 1]?.timestamp || 0;
-    return bLast - aLast;
-  });
-
-  messagesEl.innerHTML = conversations.map(conv => {
-    const user = twitterData.users[conv.userId];
-    if (!user) return '';
-
-    const lastMsg = conv.messages[conv.messages.length - 1];
-    return `
-      <div class="message-item" data-user-id="${user.id}">
-        <img class="message-avatar" src="${user.avatar}" alt="">
-        <div class="message-info">
-          <div class="message-header">
-            <div class="message-name">${user.name}</div>
-            <div class="message-time">${getTimeAgo(lastMsg.timestamp)}</div>
-          </div>
-          <div class="message-preview">${escapeHtml(lastMsg.content)}</div>
-        </div>
-        ${conv.unread ? '<div class="message-unread-dot"></div>' : ''}
-      </div>
-    `;
-  }).join('');
-
-  // 绑定点击事件
-  messagesEl.querySelectorAll('.message-item').forEach(item => {
-    item.addEventListener('click', () => {
-      const userId = item.dataset.userId;
-      openChat(userId, roche);
-    });
-  });
 }
 
 /**
