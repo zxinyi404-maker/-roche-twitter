@@ -67,7 +67,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '3.4.0',
+    version: '3.4.1',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -4916,6 +4916,11 @@ async function showShareDialog(tweet, roche) {
 
     // 获取帖子作者信息
     const tweetUser = twitterData.users[tweet.user];
+    if (!tweetUser) {
+      console.error('[Twitter] 找不到推文作者:', tweet.user);
+      showToast('推文信息错误', 'error');
+      return;
+    }
     const tweetContent = tweet.content.length > 100 ? tweet.content.substring(0, 100) + '...' : tweet.content;
 
     dialog.innerHTML = `
@@ -4999,6 +5004,12 @@ async function showShareDialog(tweet, roche) {
 async function shareTweetToConversation(tweet, convId, roche) {
   try {
     const tweetUser = twitterData.users[tweet.user];
+    if (!tweetUser) {
+      console.error('[Twitter] 找不到推文作者:', tweet.user);
+      showToast('推文信息错误', 'error');
+      return;
+    }
+
     const shareMessage = `【分享推文】\n\n@${tweetUser.username}: ${tweet.content}\n\n—— 来自 Twitter`;
 
     // 使用 AI 聊天 API 发送分享消息
@@ -5215,6 +5226,11 @@ function renderSearch(roche) {
   });
 
   const recommendedEl = document.getElementById('recommended-users');
+  if (!recommendedEl) {
+    console.error('[Twitter] 找不到推荐用户容器');
+    return;
+  }
+
   // 只显示其他 Persona（不是当前用户）
   const users = Object.values(twitterData.users).filter(u => u.id !== currentUser && u.isPersona);
 
@@ -6193,37 +6209,17 @@ async function openChatWithConv(convId, roche) {
     let charAvatar = null;
     console.log('[Twitter] 开始获取 Char 头像...');
 
-    // 1. 尝试通过 persona API 获取
-    if (conv.id) {
-      try {
-        console.log('[Twitter] 尝试调用 roche.persona.get:', conv.id);
-        const persona = await roche.persona.get(conv.id);
-        console.log('[Twitter] 聊天页面 - 获取 persona 成功:', persona);
-        if (persona?.avatar) {
-          charAvatar = persona.avatar;
-          console.log('[Twitter] 聊天页面 - Char 头像:', charAvatar);
-        } else {
-          console.log('[Twitter] persona 没有 avatar 字段');
-        }
-      } catch (e) {
-        console.error('[Twitter] 聊天页面 - persona API 失败:', e);
+    // 1. 检查 conversation 本身的字段
+    const possibleFields = ['avatar', 'avatarUrl', 'image', 'imageUrl', 'icon', 'picture'];
+    for (const field of possibleFields) {
+      if (conv[field]) {
+        charAvatar = conv[field];
+        console.log(`[Twitter] 聊天页面 - 在 conversation.${field} 找到头像:`, charAvatar);
+        break;
       }
     }
 
-    // 2. 检查 conversation 本身的字段
-    if (!charAvatar) {
-      console.log('[Twitter] persona 没有头像，检查 conversation 字段...');
-      const possibleFields = ['avatar', 'avatarUrl', 'image', 'imageUrl', 'icon', 'picture'];
-      for (const field of possibleFields) {
-        if (conv[field]) {
-          charAvatar = conv[field];
-          console.log(`[Twitter] 聊天页面 - 在 conversation.${field} 找到头像:`, charAvatar);
-          break;
-        }
-      }
-    }
-
-    // 3. 如果还没有，使用默认头像（首字母渐变）
+    // 2. 如果还没有，使用默认头像（首字母渐变）
     if (!charAvatar) {
       const initial = (conv.title || '?').charAt(0).toUpperCase();
       charAvatar = `data:image/svg+xml,${encodeURIComponent(`
