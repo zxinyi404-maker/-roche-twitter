@@ -1,11 +1,11 @@
 {
   "id": "twitter-x-2026",
   "name": "𝕏 (Twitter)",
-  "version": "5.4.0",
-  "description": "🐦 完全还原推特 | 长按删除私信 | Char AI 自主发推 | 优化体验 | iOS 适配",
+  "version": "5.4.1",
+  "description": "🐦 完全还原推特 | 修复分享功能 | 添加私信按钮 | 优化体验 | iOS 适配",
   "author": "zxinyi404",
   "icon": "𝕏",
-  "entry": "https://raw.githubusercontent.com/zxinyi404-maker/-roche-twitter/main/plugin.js?v=20260731800000",
+  "entry": "https://raw.githubusercontent.com/zxinyi404-maker/-roche-twitter/main/plugin.js?v=20260731810000",
   "hash": "",
   "permissions": [
     "persona:read",

@@ -97,7 +97,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '5.4.0',
+    version: '5.4.1',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -5670,12 +5670,16 @@ async function shareTweetToConversation(tweet, convId, roche) {
 
     const shareMessage = `【分享推文】\n\n@${tweetUser.username}: ${tweet.content}\n\n—— 来自 Twitter`;
 
-    // 保存用户消息到记忆（带角色标记）
-    await roche.memory.saveLongTerm({
+    // 使用 roche.ai.chat 发送分享消息（这样会自动保存到记忆）
+    await roche.ai.chat({
       conversationId: convId,
-      text: shareMessage,
-      metadata: { role: 'user', timestamp: Date.now(), type: 'share' },
-      importance: 3
+      messages: [
+        {
+          role: 'user',
+          content: shareMessage
+        }
+      ],
+      stream: false
     });
 
     showToast('已分享到私信', 'success');
@@ -5685,12 +5689,12 @@ async function shareTweetToConversation(tweet, convId, roche) {
       switchView('messages');
       // 加载消息列表后打开对话
       setTimeout(() => {
-        showChatWithConversation(convId, roche);
+        openChatWithConv(roche, convId);
       }, 100);
     }, 300);
   } catch (error) {
     console.error('分享失败:', error);
-    showToast('分享失败', 'error');
+    showToast('分享失败: ' + error.message, 'error');
   }
 }
 
@@ -8074,11 +8078,54 @@ function showProfile(userId, roche) {
     actionBtn.onclick = () => showEditProfileDialog(roche);
   } else {
     const isFollowing = twitterData.follows[currentUser]?.includes(userId);
+
+    // 创建按钮容器
+    const buttonContainer = actionBtn.parentElement;
+
+    // 关注按钮
     actionBtn.textContent = isFollowing ? '正在关注' : '关注';
     actionBtn.className = `profile-edit-btn ${isFollowing ? 'following' : ''}`;
     actionBtn.onclick = async () => {
       await toggleFollow(userId, roche);
       showProfile(userId, roche);
+    };
+
+    // 添加发私信按钮
+    let messageBtn = document.getElementById('profile-message-btn');
+    if (!messageBtn) {
+      messageBtn = document.createElement('button');
+      messageBtn.id = 'profile-message-btn';
+      messageBtn.className = 'profile-edit-btn';
+      messageBtn.style.cssText = 'margin-left: 8px;';
+      messageBtn.innerHTML = `
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" style="margin-right: 4px;">
+          <path d="M1.998 5.5c0-1.381 1.119-2.5 2.5-2.5h15c1.381 0 2.5 1.119 2.5 2.5v13c0 1.381-1.119 2.5-2.5 2.5h-15c-1.381 0-2.5-1.119-2.5-2.5v-13zm2.5-.5c-.276 0-.5.224-.5.5v.511l8 3.848 8-3.848v-.511c0-.276-.224-.5-.5-.5h-15zm15.5 5.149l-8 3.848-8-3.848v8.351c0 .276.224.5.5.5h15c.276 0 .5-.224.5-.5v-8.351z"></path>
+        </svg>
+        私信
+      `;
+      buttonContainer.appendChild(messageBtn);
+    }
+
+    messageBtn.onclick = async () => {
+      // 检查是否为 Char（有对应的 conversation）
+      try {
+        const conversations = await roche.conversation.list();
+        const charConv = conversations.find(c => c.id === userId);
+
+        if (charConv) {
+          // 是 Char，打开对话
+          switchView('messages');
+          setTimeout(() => {
+            openChatWithConv(roche, userId);
+          }, 100);
+        } else {
+          // 不是 Char，提示用户
+          showToast('此用户不是 AI 角色，暂不支持私信', 'info');
+        }
+      } catch (error) {
+        console.error('打开私信失败:', error);
+        showToast('无法发送私信', 'error');
+      }
     };
   }
 
