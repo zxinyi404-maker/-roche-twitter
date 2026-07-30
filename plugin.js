@@ -67,7 +67,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '3.0.1',
+    version: '3.0.2',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -5788,7 +5788,7 @@ async function showNewMessageDialog(roche) {
   // 获取对话角色列表（char）
   const conversations = await roche.conversation.list();
 
-  // 为每个对话获取记忆摘要
+  // 为每个对话获取记忆摘要和头像
   const conversationsWithInfo = await Promise.all(conversations.map(async (conv) => {
     try {
       // 获取长期记忆
@@ -5798,16 +5798,42 @@ async function showNewMessageDialog(roche) {
         ? (memories[0].summaryText || memories[0].text || '').substring(0, 50)
         : '暂无记忆';
 
+      // 获取 Char 头像
+      let avatarUrl = null;
+
+      // 1. 尝试通过 persona API 获取
+      if (conv.id) {
+        try {
+          const persona = await roche.persona.get(conv.id);
+          if (persona?.avatar) {
+            avatarUrl = persona.avatar;
+          }
+        } catch (e) {
+          // persona API 失败
+        }
+      }
+
+      // 2. 检查 conversation 本身的字段
+      if (!avatarUrl) {
+        const possibleFields = ['avatar', 'avatarUrl', 'image', 'imageUrl', 'icon', 'picture'];
+        for (const field of possibleFields) {
+          if (conv[field]) {
+            avatarUrl = conv[field];
+            break;
+          }
+        }
+      }
+
       return {
         ...conv,
         memorySummary,
-        avatar: null // 先设为 null，后续可以从记忆中提取
+        avatarUrl
       };
     } catch (e) {
       return {
         ...conv,
         memorySummary: '暂无记忆',
-        avatar: null
+        avatarUrl: null
       };
     }
   }));
@@ -5860,11 +5886,16 @@ async function showNewMessageDialog(roche) {
     <div style="flex: 1; overflow-y: auto;" id="contact-list">
       ${conversationsWithInfo.map(conv => {
         const initial = conv.title ? conv.title.charAt(0).toUpperCase() : '?';
+        const avatarGradient = `linear-gradient(135deg, #667eea 0%, #764ba2 100%)`;
+
+        // 如果有真实头像，显示图片；否则显示首字母
+        const avatarHtml = conv.avatarUrl
+          ? `<img src="${conv.avatarUrl}" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; flex-shrink: 0;" alt="${conv.title || '头像'}">`
+          : `<div style="width: 48px; height: 48px; border-radius: 50%; background: ${avatarGradient}; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; font-weight: 700;">${initial}</div>`;
+
         return `
         <div class="contact-item" data-conv-id="${conv.id}" style="padding: 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: background 0.2s;">
-          <div style="width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; font-weight: 700;">
-            ${initial}
-          </div>
+          ${avatarHtml}
           <div style="flex: 1; min-width: 0;">
             <div style="font-size: 15px; font-weight: 700; color: #0f1419;">${conv.title || '未命名对话'}</div>
             <div style="font-size: 13px; color: #536471; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${conv.memorySummary}</div>
