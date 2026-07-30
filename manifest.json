@@ -1,11 +1,11 @@
 {
   "id": "twitter-x-2026",
   "name": "𝕏 (Twitter)",
-  "version": "3.9.2",
-  "description": "🐦 完全还原推特 | 多面具系统 | 记忆集成 | iOS 适配 | 智能搜索 | AI 聊天 | 完美适配",
+  "version": "4.0.0",
+  "description": "🐦 完全还原推特 | AI NPC 生态系统 | 智能推荐 | 多面具系统 | 记忆集成 | iOS 适配",
   "author": "zxinyi404",
   "icon": "𝕏",
-  "entry": "https://raw.githubusercontent.com/zxinyi404-maker/-roche-twitter/main/plugin.js?v=20260731310000",
+  "entry": "https://raw.githubusercontent.com/zxinyi404-maker/-roche-twitter/main/plugin.js?v=20260731400000",
   "hash": "",
   "permissions": [
     "persona:read",

@@ -9,13 +9,30 @@
 const PLUGIN_ID = 'twitter-x-2026';
 const STORAGE_KEY = 'twitter_data';
 
+// NPC 生态系统配置
+const NPC_CONFIG = {
+  dailyNewNPCs: 3,           // 每天生成新 NPC 数量
+  maxNPCs: 50,               // NPC 总数上限
+  cleanupDays: 7,            // 清理无互动 NPC 的天数
+  postsPerNPCPerDay: 2,      // 每个 NPC 每天发帖数
+  postIntervalMin: 2,        // 最小发帖间隔（小时）
+  postIntervalMax: 4,        // 最大发帖间隔（小时）
+  interestDecayRate: 0.95,   // 兴趣度每天衰减率
+  minInterestForRecommend: 0.3  // 推荐的最小兴趣度
+};
+
 // 初始化数据结构
 let twitterData = {
   tweets: [],
   users: {},
   follows: {},
   bookmarks: {},
-  nextTweetId: 1
+  nextTweetId: 1,
+  // NPC 系统
+  npcs: {},                  // NPC 数据 { npcId: { ...persona, lastPostTime, postCount, ... } }
+  npcInterests: {},          // 用户对 NPC 的兴趣度 { userId: { npcId: score } }
+  lastNPCCleanup: Date.now(), // 上次清理时间
+  lastNPCGeneration: Date.now() // 上次生成时间
 };
 
 // 插件设置
@@ -23,7 +40,11 @@ let settings = {
   enableMemory: true,        // 启用记忆
   autoSummary: true,         // 自动总结
   memoryTarget: 'current',   // 保存到当前会话
-  notificationSound: true
+  notificationSound: true,
+  // NPC 系统设置
+  enableNPC: true,           // 启用 NPC 系统
+  npcAutoPostAPI: '',        // NPC 自动发帖 API（如果不使用 noir）
+  useNoirAPI: true           // 优先使用 roche.noir.autoPost
 };
 
 // 当前登录用户
@@ -68,7 +89,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '3.9.2',
+    version: '4.0.0',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -83,6 +104,9 @@ function showToast(message, type = 'success') {
 
           // 初始化用户
           await initializeUsers(roche);
+
+          // 初始化 NPC 系统
+          await initNPCSystem(roche);
 
           // 渲染界面
           renderUI(container, roche);
@@ -3871,11 +3895,35 @@ async function renderTweets(roche, filter = 'recommended') {
       following.includes(tweet.userId) || tweet.userId === currentUser
     );
   } else if (filter === 'recommended') {
-    // "为你推荐" 标签：混合显示用户推文和新闻推文
+    // "为你推荐" 标签：基于兴趣度的智能推荐
     const newsTweets = await fetchNewsTweets(roche);
 
-    // 将新闻推文与普通推文混合（新闻推文插入到列表中）
-    filteredTweets = [...twitterData.tweets];
+    // 对推文进行智能排序
+    filteredTweets = [...twitterData.tweets].map(tweet => {
+      let score = 0;
+
+      // 如果是 NPC 的推文，根据兴趣度加权
+      if (twitterData.npcs[tweet.userId]) {
+        const interest = twitterData.npcInterests[currentUser]?.[tweet.userId] || 0.5;
+        score = interest;
+      } else {
+        // 普通用户推文默认权重
+        score = 0.3;
+      }
+
+      // 如果是关注的用户，提高权重
+      const following = twitterData.follows[currentUser] || [];
+      if (following.includes(tweet.userId)) {
+        score += 0.4;
+      }
+
+      // 时间衰减（越新的推文权重越高）
+      const ageInHours = (Date.now() - tweet.timestamp) / (1000 * 60 * 60);
+      const timeFactor = Math.exp(-ageInHours / 24); // 24小时衰减
+      score *= timeFactor;
+
+      return { tweet, score };
+    }).sort((a, b) => b.score - a.score).map(item => item.tweet);
 
     // 每隔几条推文插入一条新闻
     const mergedTweets = [];
@@ -4130,6 +4178,12 @@ function showTweetDetail(tweetId, roche) {
 
   console.log('[Twitter] Found tweet:', tweet);
   currentTweetId = tweetId;
+
+  // 如果是 NPC 的推文，更新查看兴趣度
+  if (twitterData.npcs[tweet.userId]) {
+    updateNPCInterest(currentUser, tweet.userId, 'view');
+  }
+
   const user = twitterData.users[tweet.userId];
   const currentUserData = twitterData.users[currentUser];
   const isLiked = tweet.likes.includes(currentUser);
@@ -5289,6 +5343,11 @@ async function shareTweetToConversation(tweet, convId, roche) {
 async function handleTweetAction(action, tweetId, roche) {
   const tweet = twitterData.tweets.find(t => t.id === tweetId);
   if (!tweet) return;
+
+  // 如果是 NPC 的推文，更新兴趣度
+  if (twitterData.npcs[tweet.userId]) {
+    updateNPCInterest(currentUser, tweet.userId, action);
+  }
 
   switch (action) {
     case 'like':
@@ -8297,6 +8356,394 @@ async function handleSearchResultAction(action, searchResult, roche) {
     // 分享：显示分享选项
     showToast('分享功能开发中...', 'info');
   }
+}
+
+// ============================================================
+// NPC 生态系统
+// ============================================================
+
+/**
+ * 生成随机 NPC 人设
+ */
+async function generateNPC(roche) {
+  try {
+    // 尝试使用 noir API
+    if (settings.useNoirAPI && roche.noir?.autoPost) {
+      console.log('[NPC] 使用 roche.noir.autoPost 生成 NPC');
+      const response = await roche.noir.autoPost({
+        type: 'generate_persona',
+        prompt: '生成一个随机的社交媒体用户人设'
+      });
+      return response;
+    }
+
+    // 如果有自定义 API
+    if (settings.npcAutoPostAPI) {
+      console.log('[NPC] 使用自定义 API 生成 NPC');
+      // TODO: 调用自定义 API
+    }
+
+    // 降级方案：使用 roche.ai.chat
+    console.log('[NPC] 使用 roche.ai.chat 生成 NPC');
+    const prompt = `请生成一个随机的社交媒体用户人设。要求：
+
+性格随机多样化（外向/内向/幽默/严肃/温柔/冷酷等）
+职业随机（程序员/艺术家/学生/医生/创业者/自由职业/设计师等）
+兴趣爱好随机（游戏/动漫/旅行/美食/音乐/科技/运动/阅读等）
+年龄：18-35 岁
+地区：中国各大城市
+
+请以 JSON 格式返回，包含以下字段：
+{
+  "name": "姓名（2-3个字）",
+  "username": "用户名（英文）",
+  "bio": "个人简介（20字以内）",
+  "personality": "性格描述",
+  "occupation": "职业",
+  "interests": ["兴趣1", "兴趣2", "兴趣3"],
+  "age": 25,
+  "location": "城市",
+  "talkStyle": "说话风格描述"
+}
+
+只返回 JSON，不要其他内容。`;
+
+    const response = await roche.ai.chat({
+      messages: [{ role: 'user', content: prompt }]
+    });
+
+    // 解析 JSON
+    const jsonMatch = response.content.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const npcData = JSON.parse(jsonMatch[0]);
+      return npcData;
+    }
+
+    throw new Error('无法解析 NPC 数据');
+
+  } catch (error) {
+    console.error('[NPC] 生成 NPC 失败:', error);
+    return null;
+  }
+}
+
+/**
+ * 创建 NPC
+ */
+async function createNPC(roche) {
+  const npcData = await generateNPC(roche);
+  if (!npcData) return null;
+
+  const npcId = `npc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+  // 创建用户数据
+  twitterData.users[npcId] = {
+    id: npcId,
+    name: npcData.name,
+    username: `@${npcData.username}`,
+    avatar: generateAvatar(npcData.name),
+    bio: npcData.bio,
+    followers: Math.floor(Math.random() * 1000),
+    following: Math.floor(Math.random() * 500),
+    isPersona: false,
+    isNPC: true
+  };
+
+  // 保存 NPC 详细信息
+  twitterData.npcs[npcId] = {
+    ...npcData,
+    id: npcId,
+    createdAt: Date.now(),
+    lastPostTime: 0,
+    postCount: 0,
+    totalInteractions: 0,  // 总互动数
+    lastInteractionTime: Date.now()
+  };
+
+  console.log('[NPC] 创建成功:', npcData.name, npcId);
+  return npcId;
+}
+
+/**
+ * NPC 自动发帖
+ */
+async function npcAutoPost(npcId, roche) {
+  const npc = twitterData.npcs[npcId];
+  if (!npc) return;
+
+  try {
+    // 尝试使用 noir API
+    if (settings.useNoirAPI && roche.noir?.autoPost) {
+      console.log('[NPC] 使用 roche.noir.autoPost 发帖');
+      const response = await roche.noir.autoPost({
+        type: 'generate_post',
+        persona: npc,
+        prompt: '发一条符合人设的推文'
+      });
+
+      if (response.content) {
+        createNPCTweet(npcId, response.content, roche);
+        return;
+      }
+    }
+
+    // 降级方案：使用 roche.ai.chat
+    console.log('[NPC] 使用 roche.ai.chat 发帖');
+    const prompt = `你是 ${npc.name}，${npc.bio}
+
+性格：${npc.personality}
+职业：${npc.occupation}
+兴趣：${npc.interests.join('、')}
+说话风格：${npc.talkStyle}
+
+请发一条符合你人设的推文（50字以内），内容可以是：
+- 分享日常生活
+- 表达观点看法
+- 吐槽有趣的事
+- 分享专业知识
+- 晒照片/美食/旅行（用文字描述）
+
+只返回推文内容，不要其他说明。`;
+
+    const response = await roche.ai.chat({
+      messages: [{ role: 'user', content: prompt }]
+    });
+
+    const content = response.content.trim().replace(/^["']|["']$/g, '');
+    createNPCTweet(npcId, content, roche);
+
+  } catch (error) {
+    console.error('[NPC] 发帖失败:', error);
+  }
+}
+
+/**
+ * 创建 NPC 推文
+ */
+function createNPCTweet(npcId, content, roche) {
+  const tweet = {
+    id: twitterData.nextTweetId++,
+    userId: npcId,
+    content: content,
+    timestamp: Date.now(),
+    likes: [],
+    retweets: [],
+    replies: [],
+    isNPC: true
+  };
+
+  twitterData.tweets.unshift(tweet);
+  twitterData.npcs[npcId].lastPostTime = Date.now();
+  twitterData.npcs[npcId].postCount++;
+
+  console.log('[NPC] 发帖成功:', twitterData.users[npcId].name, content.substring(0, 20));
+  saveData(roche);
+}
+
+/**
+ * 更新用户对 NPC 的兴趣度
+ */
+function updateNPCInterest(userId, npcId, action) {
+  if (!twitterData.npcInterests[userId]) {
+    twitterData.npcInterests[userId] = {};
+  }
+
+  if (!twitterData.npcInterests[userId][npcId]) {
+    twitterData.npcInterests[userId][npcId] = 0.5; // 初始兴趣度
+  }
+
+  // 根据操作类型增加兴趣度
+  const interestBoost = {
+    'like': 0.05,
+    'retweet': 0.1,
+    'reply': 0.15,
+    'follow': 0.3,
+    'view': 0.01
+  };
+
+  twitterData.npcInterests[userId][npcId] += (interestBoost[action] || 0);
+
+  // 限制在 0-1 之间
+  twitterData.npcInterests[userId][npcId] = Math.min(1, twitterData.npcInterests[userId][npcId]);
+
+  // 更新 NPC 互动统计
+  if (twitterData.npcs[npcId]) {
+    twitterData.npcs[npcId].totalInteractions++;
+    twitterData.npcs[npcId].lastInteractionTime = Date.now();
+  }
+
+  console.log('[NPC] 兴趣度更新:', npcId, action, twitterData.npcInterests[userId][npcId]);
+}
+
+/**
+ * 每日兴趣度衰减
+ */
+function decayNPCInterests() {
+  for (const userId in twitterData.npcInterests) {
+    for (const npcId in twitterData.npcInterests[userId]) {
+      twitterData.npcInterests[userId][npcId] *= NPC_CONFIG.interestDecayRate;
+
+      // 低于阈值则删除
+      if (twitterData.npcInterests[userId][npcId] < 0.01) {
+        delete twitterData.npcInterests[userId][npcId];
+      }
+    }
+  }
+  console.log('[NPC] 兴趣度衰减完成');
+}
+
+/**
+ * 清理无互动的 NPC
+ */
+async function cleanupInactiveNPCs(roche) {
+  const now = Date.now();
+  const cleanupThreshold = NPC_CONFIG.cleanupDays * 24 * 60 * 60 * 1000;
+  const npcIds = Object.keys(twitterData.npcs);
+
+  let cleanedCount = 0;
+
+  for (const npcId of npcIds) {
+    const npc = twitterData.npcs[npcId];
+    const timeSinceInteraction = now - npc.lastInteractionTime;
+
+    // 7 天无互动 + 总互动数很少
+    if (timeSinceInteraction > cleanupThreshold && npc.totalInteractions < 5) {
+      // 删除 NPC 的推文
+      twitterData.tweets = twitterData.tweets.filter(t => t.userId !== npcId);
+
+      // 删除用户数据
+      delete twitterData.users[npcId];
+      delete twitterData.npcs[npcId];
+
+      // 删除兴趣度记录
+      for (const userId in twitterData.npcInterests) {
+        delete twitterData.npcInterests[userId][npcId];
+      }
+
+      cleanedCount++;
+      console.log('[NPC] 清理无互动 NPC:', npc.name, npcId);
+    }
+  }
+
+  if (cleanedCount > 0) {
+    twitterData.lastNPCCleanup = now;
+    await saveData(roche);
+    console.log('[NPC] 清理完成，共清理', cleanedCount, '个 NPC');
+  }
+}
+
+/**
+ * 每日生成新 NPC
+ */
+async function dailyGenerateNPCs(roche) {
+  if (!settings.enableNPC) return;
+
+  const now = Date.now();
+  const dayInMs = 24 * 60 * 60 * 1000;
+
+  // 检查是否需要生成
+  if (now - twitterData.lastNPCGeneration < dayInMs) {
+    return;
+  }
+
+  const currentNPCCount = Object.keys(twitterData.npcs).length;
+
+  // 达到上限则不生成
+  if (currentNPCCount >= NPC_CONFIG.maxNPCs) {
+    console.log('[NPC] 已达到上限，不生成新 NPC');
+    return;
+  }
+
+  // 生成新 NPC
+  const generateCount = Math.min(
+    NPC_CONFIG.dailyNewNPCs,
+    NPC_CONFIG.maxNPCs - currentNPCCount
+  );
+
+  console.log('[NPC] 开始生成', generateCount, '个新 NPC');
+
+  for (let i = 0; i < generateCount; i++) {
+    const npcId = await createNPC(roche);
+    if (npcId) {
+      // 新 NPC 发第一条推文
+      await npcAutoPost(npcId, roche);
+      // 延迟避免 API 限流
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    }
+  }
+
+  twitterData.lastNPCGeneration = now;
+  await saveData(roche);
+  console.log('[NPC] 每日生成完成');
+}
+
+/**
+ * NPC 定时发帖系统
+ */
+function startNPCPostingSystem(roche) {
+  if (!settings.enableNPC) return;
+
+  // 每小时检查一次
+  setInterval(async () => {
+    const npcIds = Object.keys(twitterData.npcs);
+    const now = Date.now();
+
+    for (const npcId of npcIds) {
+      const npc = twitterData.npcs[npcId];
+
+      // 计算随机发帖间隔
+      const minInterval = NPC_CONFIG.postIntervalMin * 60 * 60 * 1000;
+      const maxInterval = NPC_CONFIG.postIntervalMax * 60 * 60 * 1000;
+      const randomInterval = minInterval + Math.random() * (maxInterval - minInterval);
+
+      // 检查是否该发帖了
+      if (now - npc.lastPostTime > randomInterval) {
+        // 检查今天是否已经发够了
+        const today = new Date().toDateString();
+        const lastPostDate = new Date(npc.lastPostTime).toDateString();
+
+        if (today !== lastPostDate) {
+          // 新的一天，重置计数
+          npc.postCount = 0;
+        }
+
+        if (npc.postCount < NPC_CONFIG.postsPerNPCPerDay) {
+          console.log('[NPC] 定时发帖:', twitterData.users[npcId].name);
+          await npcAutoPost(npcId, roche);
+          await new Promise(resolve => setTimeout(resolve, 3000));
+        }
+      }
+    }
+  }, 60 * 60 * 1000); // 每小时检查
+
+  console.log('[NPC] 定时发帖系统已启动');
+}
+
+/**
+ * 初始化 NPC 系统
+ */
+async function initNPCSystem(roche) {
+  if (!settings.enableNPC) return;
+
+  console.log('[NPC] 初始化 NPC 系统');
+
+  // 每日任务
+  await dailyGenerateNPCs(roche);
+  await cleanupInactiveNPCs(roche);
+  decayNPCInterests();
+
+  // 启动定时发帖
+  startNPCPostingSystem(roche);
+
+  // 每天执行一次清理和生成
+  setInterval(async () => {
+    await dailyGenerateNPCs(roche);
+    await cleanupInactiveNPCs(roche);
+    decayNPCInterests();
+    await saveData(roche);
+  }, 24 * 60 * 60 * 1000);
+
+  console.log('[NPC] NPC 系统初始化完成');
 }
 
 })(); // 立即执行函数结束
