@@ -9166,9 +9166,14 @@ async function fetchAvailableModels(roche) {
       modelsEndpoint = modelsEndpoint.replace('/chat/completions', '/models');
     } else if (modelsEndpoint.includes('/v1/')) {
       // 确保以 /models 结尾
-      modelsEndpoint = modelsEndpoint.split('/v1/')[0] + '/v1/models';
+      const baseUrl = modelsEndpoint.split('/v1/')[0];
+      modelsEndpoint = baseUrl + '/v1/models';
+    } else if (!modelsEndpoint.includes('/models')) {
+      // 如果没有 /models，尝试添加
+      modelsEndpoint = modelsEndpoint.replace(/\/$/, '') + '/models';
     }
 
+    console.log('[API] 拉取模型接口:', modelsEndpoint);
     showToast('正在拉取模型列表...', 'success');
 
     const response = await fetch(modelsEndpoint, {
@@ -9180,7 +9185,8 @@ async function fetchAvailableModels(roche) {
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      console.warn(`[API] 模型接口返回 ${response.status}，使用预设模型列表`);
+      return null;
     }
 
     const data = await response.json();
@@ -9200,7 +9206,7 @@ async function fetchAvailableModels(roche) {
     }
 
     if (models.length === 0) {
-      showToast('未找到可用模型', 'error');
+      console.warn('[API] 响应中未找到模型数据，使用预设列表');
       return null;
     }
 
@@ -9208,8 +9214,7 @@ async function fetchAvailableModels(roche) {
     return models;
 
   } catch (error) {
-    console.error('[API] 拉取模型列表失败:', error);
-    showToast('拉取模型失败: ' + error.message, 'error');
+    console.warn('[API] 拉取模型列表失败，使用预设列表:', error.message);
     return null;
   }
 }
@@ -9219,6 +9224,21 @@ async function fetchAvailableModels(roche) {
  */
 function showAPIModelSettings(roche) {
   const currentModel = settings.apiConfig.model || 'gpt-3.5-turbo';
+
+  // 预设常用模型
+  const predefinedModels = [
+    'gpt-4',
+    'gpt-4-turbo',
+    'gpt-4o',
+    'gpt-3.5-turbo',
+    'claude-3-opus-20240229',
+    'claude-3-sonnet-20240229',
+    'claude-3-haiku-20240307',
+    'deepseek-chat',
+    'deepseek-coder',
+    'qwen-plus',
+    'qwen-turbo'
+  ];
 
   // 创建模型选择对话框
   const dialog = document.createElement('div');
@@ -9251,13 +9271,11 @@ function showAPIModelSettings(roche) {
     <div style="padding: 20px; border-bottom: 1px solid #eff3f4; display: flex; align-items: center; justify-content: space-between;">
       <div style="font-size: 20px; font-weight: 700; color: #0f1419;">选择模型</div>
       <button id="refresh-models-btn" style="background: #1d9bf0; color: white; border: none; border-radius: 20px; padding: 8px 16px; font-size: 14px; font-weight: 600; cursor: pointer;">
-        🔄 刷新
+        🔄 从 API 拉取
       </button>
     </div>
     <div id="models-list" style="flex: 1; overflow-y: auto; padding: 12px;">
-      <div style="text-align: center; padding: 40px; color: #536471;">
-        点击"刷新"从 API 拉取模型列表
-      </div>
+      <!-- 默认显示预设模型 -->
     </div>
     <div style="padding: 12px; border-top: 1px solid #eff3f4;">
       <button id="close-model-dialog" style="width: 100%; background: #0f1419; color: white; border: none; border-radius: 24px; padding: 12px; font-size: 15px; font-weight: 600; cursor: pointer;">
@@ -9268,6 +9286,53 @@ function showAPIModelSettings(roche) {
 
   dialog.appendChild(dialogContent);
   document.body.appendChild(dialog);
+
+  // 渲染模型列表
+  const renderModels = (models, title = '常用模型') => {
+    const modelsList = document.getElementById('models-list');
+    modelsList.innerHTML = `
+      <div style="font-size: 13px; color: #536471; padding: 8px 4px; font-weight: 600;">${title}</div>
+      ${models.map(model => `
+        <div class="model-item" data-model="${model}" style="
+          padding: 16px;
+          border-radius: 8px;
+          margin-bottom: 8px;
+          cursor: pointer;
+          background: ${model === currentModel ? '#eff3f4' : 'transparent'};
+          border: 1px solid ${model === currentModel ? '#1d9bf0' : '#eff3f4'};
+          transition: all 0.2s;
+        ">
+          <div style="font-size: 15px; font-weight: 600; color: #0f1419;">${model}</div>
+          ${model === currentModel ? '<div style="font-size: 13px; color: #1d9bf0; margin-top: 4px;">✓ 当前使用</div>' : ''}
+        </div>
+      `).join('')}
+    `;
+
+    // 绑定点击事件
+    modelsList.querySelectorAll('.model-item').forEach(item => {
+      item.addEventListener('mouseenter', () => {
+        if (item.dataset.model !== currentModel) {
+          item.style.background = '#f7f9f9';
+        }
+      });
+      item.addEventListener('mouseleave', () => {
+        if (item.dataset.model !== currentModel) {
+          item.style.background = 'transparent';
+        }
+      });
+      item.addEventListener('click', () => {
+        const selectedModel = item.dataset.model;
+        settings.apiConfig.model = selectedModel;
+        saveSettings(roche);
+        showToast(`已切换到模型：${selectedModel}`, 'success');
+        updateAPIConfigDisplay();
+        closeDialog();
+      });
+    });
+  };
+
+  // 默认显示预设模型
+  renderModels(predefinedModels);
 
   // 关闭对话框
   const closeDialog = () => {
@@ -9290,45 +9355,12 @@ function showAPIModelSettings(roche) {
     const models = await fetchAvailableModels(roche);
 
     if (models && models.length > 0) {
-      // 显示模型列表
-      modelsList.innerHTML = models.map(model => `
-        <div class="model-item" data-model="${model}" style="
-          padding: 16px;
-          border-radius: 8px;
-          margin-bottom: 8px;
-          cursor: pointer;
-          background: ${model === currentModel ? '#eff3f4' : 'transparent'};
-          border: 1px solid ${model === currentModel ? '#1d9bf0' : '#eff3f4'};
-          transition: all 0.2s;
-        ">
-          <div style="font-size: 15px; font-weight: 600; color: #0f1419;">${model}</div>
-          ${model === currentModel ? '<div style="font-size: 13px; color: #1d9bf0; margin-top: 4px;">✓ 当前使用</div>' : ''}
-        </div>
-      `).join('');
-
-      // 绑定点击事件
-      modelsList.querySelectorAll('.model-item').forEach(item => {
-        item.addEventListener('mouseenter', () => {
-          if (item.dataset.model !== currentModel) {
-            item.style.background = '#f7f9f9';
-          }
-        });
-        item.addEventListener('mouseleave', () => {
-          if (item.dataset.model !== currentModel) {
-            item.style.background = 'transparent';
-          }
-        });
-        item.addEventListener('click', () => {
-          const selectedModel = item.dataset.model;
-          settings.apiConfig.model = selectedModel;
-          saveSettings(roche);
-          showToast(`已切换到模型：${selectedModel}`, 'success');
-          updateAPIConfigDisplay();
-          closeDialog();
-        });
-      });
+      // 显示拉取到的模型
+      renderModels(models, `从 API 拉取的模型 (${models.length} 个)`);
     } else {
-      modelsList.innerHTML = '<div style="text-align: center; padding: 40px; color: #f4212e;">拉取失败，请检查 API 配置</div>';
+      // 拉取失败，显示预设模型
+      showToast('API 不支持模型列表接口，显示预设模型', 'error');
+      renderModels(predefinedModels, '常用模型（预设）');
     }
   });
 }
