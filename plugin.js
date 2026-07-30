@@ -90,7 +90,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '4.3.0',
+    version: '4.3.1',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -8551,7 +8551,24 @@ async function npcAutoPost(npcId, roche) {
   try {
     // 优先使用 roche.noir.autoPost（后台运行）
     if (settings.useNoirAPI && roche.noir?.autoPost) {
-      console.log('[NPC] 使用 roche.noir.autoPost 发帖（后台运行）');
+      console.log('[NPC] ✅ 检测到 roche.noir.autoPost，使用后台 API');
+      console.log('[NPC] 调用 URL: roche.noir.autoPost');
+      console.log('[NPC] 发送参数:', {
+        type: 'generate_post',
+        persona: {
+          name: npc.name,
+          bio: npc.bio,
+          personality: npc.personality,
+          occupation: npc.occupation,
+          interests: npc.interests,
+          talkStyle: npc.talkStyle
+        },
+        context: {
+          platform: 'twitter',
+          previousPostsCount: twitterData.tweets.filter(t => t.userId === npcId).slice(0, 5).length
+        }
+      });
+
       const response = await roche.noir.autoPost({
         type: 'generate_post',
         persona: {
@@ -8572,28 +8589,43 @@ async function npcAutoPost(npcId, roche) {
         prompt: '发一条符合人设的推文（50字以内）'
       });
 
+      console.log('[NPC] noir API 响应:', response);
+
       if (response && response.content) {
+        console.log('[NPC] ✅ 使用 noir API 发帖成功');
         createNPCTweet(npcId, response.content, roche);
         return;
+      } else {
+        console.log('[NPC] ⚠️ noir API 返回无效，降级到 roche.ai.chat');
       }
+    } else {
+      console.log('[NPC] ⚠️ roche.noir.autoPost 不可用');
+      console.log('[NPC] useNoirAPI:', settings.useNoirAPI);
+      console.log('[NPC] roche.noir:', roche.noir);
     }
 
     // 使用 roche.ai.chat（需要会话ID，适合后台运行）
-    console.log('[NPC] 使用 roche.ai.chat 发帖');
+    console.log('[NPC] 📞 使用 roche.ai.chat 发帖');
 
     // 为每个 NPC 创建独立的会话ID
     if (!npc.conversationId) {
+      console.log('[NPC] 创建新会话...');
       // 尝试创建会话
       if (roche.conversation?.create) {
+        console.log('[NPC] 使用 roche.conversation.create');
         const conv = await roche.conversation.create({
           name: `Twitter NPC: ${npc.name}`,
           metadata: { type: 'twitter_npc', npcId: npcId }
         });
         npc.conversationId = conv.id;
+        console.log('[NPC] 会话创建成功:', conv.id);
       } else {
         // 使用固定的会话ID格式
         npc.conversationId = `twitter_npc_${npcId}`;
+        console.log('[NPC] 使用固定会话ID:', npc.conversationId);
       }
+    } else {
+      console.log('[NPC] 使用现有会话ID:', npc.conversationId);
     }
 
     const prompt = `你是 ${npc.name}，${npc.bio}
@@ -8612,17 +8644,28 @@ async function npcAutoPost(npcId, roche) {
 
 只返回推文内容，不要其他说明。`;
 
+    console.log('[NPC] 调用 roche.ai.chat');
+    console.log('[NPC] conversationId:', npc.conversationId);
+    console.log('[NPC] message 长度:', prompt.length);
+
     const response = await roche.ai.chat({
       conversationId: npc.conversationId,
       message: prompt,
       stream: false
     });
 
+    console.log('[NPC] roche.ai.chat 响应:', response);
+
     const content = response.content.trim().replace(/^["']|["']$/g, '');
+    console.log('[NPC] ✅ 推文内容:', content);
+
     createNPCTweet(npcId, content, roche);
 
   } catch (error) {
-    console.error('[NPC] 发帖失败:', error);
+    console.error('[NPC] ❌ 发帖失败:', error);
+    console.error('[NPC] 错误详情:', error.message);
+    console.error('[NPC] 错误堆栈:', error.stack);
+    throw error;
   }
 }
 
@@ -9016,17 +9059,50 @@ function showNPCManagement(roche) {
   const npcs = Object.values(twitterData.npcs || {});
 
   if (npcs.length === 0) {
-    showToast('当前没有 NPC', 'info');
+    showToast('当前没有 NPC，正在生成...', 'info');
+    // 生成一个测试 NPC
+    createNPC(roche).then(() => {
+      showToast('NPC 创建成功！', 'success');
+      showNPCManagement(roche);
+    }).catch(error => {
+      showToast('NPC 创建失败: ' + error.message, 'error');
+    });
     return;
   }
 
-  const npcList = npcs.map((npc, i) => {
-    const user = twitterData.users[npc.userId];
-    return `${i + 1}. ${user.name} (@${user.username}) - 发帖 ${npc.postCount} 次`;
-  }).join('\n');
+  // 选择第一个 NPC 进行测试
+  const firstNPC = npcs[0];
+  const user = twitterData.users[firstNPC.id];
 
-  const message = `当前 NPC 列表：\n\n${npcList}\n\n功能开发中，敬请期待！`;
-  showToast(message, 'info');
+  const confirmTest = confirm(`📢 测试 NPC 发帖\n\nNPC: ${user.name} (@${user.username})\n发帖次数: ${firstNPC.postCount}\n\n点击"确定"让这个 NPC 立即发一条推文测试`);
+
+  if (confirmTest) {
+    showToast('正在测试 NPC 发帖...', 'info');
+    console.log('========== NPC 发帖测试开始 ==========');
+    console.log('[测试] NPC ID:', firstNPC.id);
+    console.log('[测试] NPC 名字:', user.name);
+    console.log('[测试] settings.useNoirAPI:', settings.useNoirAPI);
+    console.log('[测试] roche.noir 是否存在:', !!roche.noir);
+    console.log('[测试] roche.noir.autoPost 是否存在:', !!roche.noir?.autoPost);
+    console.log('[测试] roche.ai.chat 是否存在:', !!roche.ai?.chat);
+    console.log('[测试] roche.conversation.create 是否存在:', !!roche.conversation?.create);
+
+    npcAutoPost(firstNPC.id, roche).then(() => {
+      console.log('========== NPC 发帖测试完成 ==========');
+      showToast('测试完成！请查看控制台日志', 'success');
+
+      // 刷新时间线
+      setTimeout(() => {
+        if (currentView === 'timeline') {
+          renderTimeline(roche);
+        }
+      }, 1000);
+    }).catch(error => {
+      console.error('========== NPC 发帖测试失败 ==========');
+      console.error('[测试错误]', error);
+      showToast('测试失败: ' + error.message, 'error');
+    });
+  }
 }
 
 })(); // 立即执行函数结束
