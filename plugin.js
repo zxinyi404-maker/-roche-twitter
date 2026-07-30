@@ -68,7 +68,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '3.7.0',
+    version: '3.7.1',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -1068,7 +1068,7 @@ function renderUI(container, roche) {
       }
 
       .detail-tweet {
-        padding: 0;
+        padding: 0 16px;
       }
 
       .detail-tweet-header {
@@ -1443,9 +1443,11 @@ function renderUI(container, roche) {
         border-radius: 20px;
         padding: 8px 16px;
         font-weight: 700;
-        font-size: 14px;
+        font-size: 15px;
         cursor: pointer;
         transition: background 0.2s;
+        min-width: 70px;
+        white-space: nowrap;
       }
 
       .detail-reply-btn:hover:not(:disabled) {
