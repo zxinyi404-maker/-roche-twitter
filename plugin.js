@@ -67,7 +67,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '2.9.6',
+    version: '2.9.7',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -2162,11 +2162,18 @@ function renderUI(container, roche) {
         border-radius: 50%;
       }
 
-      /* 聊天视图 */
+      /* 聊天视图 - 改为独立页面 */
       .chat-view {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: #ffffff;
         display: none;
         flex-direction: column;
-        height: 100vh;
+        z-index: 200;
+        overflow: hidden;
       }
 
       .chat-view.active {
@@ -2175,7 +2182,7 @@ function renderUI(container, roche) {
 
       .chat-header {
         position: fixed;
-        top: calc(60px + env(safe-area-inset-top));
+        top: env(safe-area-inset-top);
         left: 0;
         right: 0;
         height: 53px;
@@ -2235,7 +2242,7 @@ function renderUI(container, roche) {
         flex: 1;
         overflow-y: auto;
         padding: 16px;
-        padding-top: calc(60px + env(safe-area-inset-top) + 53px + 16px);
+        padding-top: calc(env(safe-area-inset-top) + 53px + 16px);
         padding-bottom: calc(80px + env(safe-area-inset-bottom));
       }
 
