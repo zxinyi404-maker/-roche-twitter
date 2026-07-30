@@ -90,7 +90,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '4.0.4',
+    version: '4.1.0',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -631,17 +631,13 @@ function renderUI(container, roche) {
 
       /* 主内容区 */
       .mobile-main {
-        padding-top: calc(60px + env(safe-area-inset-top));
         padding-bottom: calc(60px + env(safe-area-inset-bottom));
         min-height: 100vh;
       }
 
       /* 主页标签 */
       .timeline-tabs {
-        position: sticky;
-        top: calc(60px + env(safe-area-inset-top));
-        left: 0;
-        right: 0;
+        position: relative;
         display: flex;
         background: rgba(255, 255, 255, 0.85);
         backdrop-filter: blur(12px);
@@ -649,7 +645,6 @@ function renderUI(container, roche) {
         z-index: 99;
         max-width: 768px;
         margin: 0 auto;
-        margin-top: -1px; /* 紧贴顶栏，消除空隙 */
       }
 
       .timeline-tab {
@@ -1587,10 +1582,7 @@ function renderUI(container, roche) {
       }
 
       .search-tabs-bar {
-        position: fixed;
-        top: calc(60px + env(safe-area-inset-top));
-        left: 0;
-        right: 0;
+        position: relative;
         background: rgba(255, 255, 255, 0.85);
         backdrop-filter: blur(12px);
         border-bottom: 1px solid #eff3f4;
@@ -1599,7 +1591,6 @@ function renderUI(container, roche) {
         z-index: 99;
         max-width: 768px;
         margin: 0 auto;
-        margin-top: -1px; /* 紧贴顶栏 */
         scrollbar-width: none;
       }
 
@@ -1641,7 +1632,6 @@ function renderUI(container, roche) {
       }
 
       .search-content {
-        padding-top: calc(110px + env(safe-area-inset-top)); /* 60px顶栏 + 50px标签栏 */
         padding-bottom: calc(60px + env(safe-area-inset-bottom));
         overflow-y: auto;
         height: 100vh;
@@ -1649,17 +1639,13 @@ function renderUI(container, roche) {
       }
 
       .search-header {
-        position: sticky;
-        top: calc(60px + env(safe-area-inset-top));
-        left: 0;
-        right: 0;
+        position: relative;
         padding: 12px 16px;
         background: #ffffff;
         border-bottom: 1px solid #eff3f4;
         z-index: 99;
         max-width: 768px;
         margin: 0 auto;
-        margin-top: -1px; /* 紧贴顶栏 */
       }
 
       .section-title {
@@ -1851,17 +1837,13 @@ function renderUI(container, roche) {
       }
 
       .notifications-header {
-        position: sticky;
-        top: calc(60px + env(safe-area-inset-top));
-        left: 0;
-        right: 0;
+        position: relative;
         background: rgba(255, 255, 255, 0.85);
         backdrop-filter: blur(12px);
         border-bottom: 1px solid #eff3f4;
         z-index: 99;
         max-width: 768px;
         margin: 0 auto;
-        margin-top: -1px; /* 紧贴顶栏 */
       }
 
       .notifications-tabs {
@@ -2056,10 +2038,7 @@ function renderUI(container, roche) {
       }
 
       .messages-search-bar {
-        position: sticky;
-        top: calc(60px + env(safe-area-inset-top));
-        left: 0;
-        right: 0;
+        position: relative;
         padding: 12px 16px;
         background: rgba(255, 255, 255, 0.85);
         backdrop-filter: blur(12px);
@@ -2067,7 +2046,6 @@ function renderUI(container, roche) {
         z-index: 99;
         max-width: 768px;
         margin: 0 auto;
-        margin-top: -1px; /* 紧贴顶栏 */
       }
 
       .messages-search-wrapper {
