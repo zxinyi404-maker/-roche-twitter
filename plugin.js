@@ -11152,35 +11152,6 @@ async function showCharTweetSettings(roche, character) {
     showToast(`🎉 ${character.name} 已开通推特！\n账号：${accountInfo}\n频率：每天 ${frequency} 条`, 'success');
     document.body.removeChild(overlay);
   });
-          name: character.name,
-          username: `@${character.name}`,
-          avatar: character.avatar || generateAvatar(character.name),
-          bio: character.description.substring(0, 100) || '',
-          following: 0,
-          followers: 0,
-          isChar: true,
-          charId: character.id
-        };
-      }
-    }
-
-    // 保存配置
-    if (!twitterData.charTweets) {
-      twitterData.charTweets = {};
-    }
-
-    twitterData.charTweets[character.id] = {
-      enabled: true,
-      accountType: accountType,
-      userId: userId,
-      frequency: frequency,
-      lastTweetTime: 0
-    };
-
-    await saveData(roche);
-    showToast(`${character.name} 已开始发推文！`, 'success');
-    document.body.removeChild(overlay);
-  });
 
   // 停止发推
   if (existingConfig) {
