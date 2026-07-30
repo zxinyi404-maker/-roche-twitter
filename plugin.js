@@ -97,7 +97,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '4.4.0',
+    version: '4.5.0',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -9148,10 +9148,77 @@ function showAPIKeySettings(roche) {
 }
 
 /**
+ * 从 API 拉取可用模型列表
+ */
+async function fetchAvailableModels(roche) {
+  if (!settings.apiConfig.url || !settings.apiConfig.apiKey) {
+    showToast('请先配置 API 地址和密钥', 'error');
+    return null;
+  }
+
+  try {
+    // 尝试从 API 获取模型列表
+    // OpenAI 格式: https://api.openai.com/v1/models
+    let modelsEndpoint = settings.apiConfig.url;
+
+    // 如果是聊天接口，尝试转换为模型列表接口
+    if (modelsEndpoint.includes('/chat/completions')) {
+      modelsEndpoint = modelsEndpoint.replace('/chat/completions', '/models');
+    } else if (modelsEndpoint.includes('/v1/')) {
+      // 确保以 /models 结尾
+      modelsEndpoint = modelsEndpoint.split('/v1/')[0] + '/v1/models';
+    }
+
+    showToast('正在拉取模型列表...', 'success');
+
+    const response = await fetch(modelsEndpoint, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${settings.apiConfig.apiKey}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+
+    // 解析不同格式的响应
+    let models = [];
+
+    if (data.data && Array.isArray(data.data)) {
+      // OpenAI 格式: { data: [{id: "gpt-4", ...}, ...] }
+      models = data.data.map(m => m.id || m.name || m.model).filter(Boolean);
+    } else if (Array.isArray(data.models)) {
+      // 其他格式: { models: ["model1", "model2", ...] }
+      models = data.models;
+    } else if (Array.isArray(data)) {
+      // 直接数组: ["model1", "model2", ...]
+      models = data;
+    }
+
+    if (models.length === 0) {
+      showToast('未找到可用模型', 'error');
+      return null;
+    }
+
+    showToast(`成功拉取 ${models.length} 个模型`, 'success');
+    return models;
+
+  } catch (error) {
+    console.error('[API] 拉取模型列表失败:', error);
+    showToast('拉取模型失败: ' + error.message, 'error');
+    return null;
+  }
+}
+
+/**
  * API Model 设置
  */
 function showAPIModelSettings(roche) {
-  const models = [
+  const predefinedModels = [
     'gpt-4',
     'gpt-4-turbo',
     'gpt-3.5-turbo',
@@ -9164,35 +9231,90 @@ function showAPIModelSettings(roche) {
   ];
 
   const currentModel = settings.apiConfig.model || 'gpt-3.5-turbo';
-  const currentIndex = models.indexOf(currentModel);
 
+  // 显示选择对话框
   const choice = prompt(
     '选择模型：\n\n' +
-    models.map((m, i) => `${i + 1}. ${m}${m === currentModel ? ' (当前)' : ''}`).join('\n') +
-    '\n\n请输入序号（1-' + models.length + '）或自定义模型名称：',
-    currentIndex >= 0 ? (currentIndex + 1).toString() : currentModel
+    '0. 🔄 从 API 拉取模型列表\n' +
+    predefinedModels.map((m, i) => `${i + 1}. ${m}${m === currentModel ? ' (当前)' : ''}`).join('\n') +
+    `\n${predefinedModels.length + 1}. 手动输入模型名称\n\n` +
+    '请输入序号：',
+    '0'
   );
 
-  if (choice !== null && choice.trim() !== '') {
-    let selectedModel;
+  if (choice === null || choice.trim() === '') {
+    return;
+  }
 
-    if (!isNaN(choice)) {
-      const index = parseInt(choice) - 1;
-      if (index >= 0 && index < models.length) {
-        selectedModel = models[index];
-      } else {
-        showToast('无效的序号', 'error');
-        return;
+  const choiceNum = parseInt(choice);
+
+  // 选项 0: 从 API 拉取
+  if (choiceNum === 0) {
+    fetchAvailableModels(roche).then(models => {
+      if (models && models.length > 0) {
+        // 显示拉取到的模型
+        const modelChoice = prompt(
+          '从 API 拉取的模型：\n\n' +
+          models.slice(0, 20).map((m, i) => `${i + 1}. ${m}`).join('\n') +
+          (models.length > 20 ? `\n... (共 ${models.length} 个模型，仅显示前 20 个)` : '') +
+          '\n\n请输入序号或直接输入模型名称：',
+          '1'
+        );
+
+        if (modelChoice !== null && modelChoice.trim() !== '') {
+          let selectedModel;
+
+          if (!isNaN(modelChoice)) {
+            const index = parseInt(modelChoice) - 1;
+            if (index >= 0 && index < models.length) {
+              selectedModel = models[index];
+            } else {
+              showToast('无效的序号', 'error');
+              return;
+            }
+          } else {
+            selectedModel = modelChoice.trim();
+          }
+
+          settings.apiConfig.model = selectedModel;
+          saveSettings(roche);
+          showToast(`已设置模型为：${selectedModel}`, 'success');
+          updateAPIConfigDisplay();
+        }
       }
-    } else {
-      selectedModel = choice.trim();
-    }
+    });
+    return;
+  }
 
+  // 选项 1-9: 预定义模型
+  if (choiceNum >= 1 && choiceNum <= predefinedModels.length) {
+    const selectedModel = predefinedModels[choiceNum - 1];
     settings.apiConfig.model = selectedModel;
     saveSettings(roche);
     showToast(`已设置模型为：${selectedModel}`, 'success');
     updateAPIConfigDisplay();
+    return;
   }
+
+  // 选项 10: 手动输入
+  if (choiceNum === predefinedModels.length + 1) {
+    const customModel = prompt(
+      '手动输入模型名称：\n\n' +
+      '例如: gpt-4, claude-3-opus, deepseek-chat\n\n' +
+      '请输入模型名称：',
+      currentModel
+    );
+
+    if (customModel !== null && customModel.trim() !== '') {
+      settings.apiConfig.model = customModel.trim();
+      saveSettings(roche);
+      showToast(`已设置模型为：${customModel.trim()}`, 'success');
+      updateAPIConfigDisplay();
+    }
+    return;
+  }
+
+  showToast('无效的选项', 'error');
 }
 
 /**
