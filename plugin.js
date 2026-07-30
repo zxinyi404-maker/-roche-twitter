@@ -97,7 +97,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '4.8.0',
+    version: '4.8.1',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -6204,21 +6204,29 @@ async function renderMessages(roche) {
     // 为每个对话获取最后一条消息和头像
     const conversationsWithMessages = await Promise.all(conversations.map(async (conv) => {
       try {
-        // 获取最近的记忆作为最后一条消息
-        const longTerm = await roche.memory.getLongTerm({
-          conversationId: conv.id,
-          limit: 1
-        });
+        // 获取对话历史
+        let lastMessage = '开始新对话...';
+        let lastTimestamp = conv.updatedAt || Date.now();
 
-        const memories = [...(longTerm.facts || []), ...(longTerm.vectors || [])];
+        try {
+          const history = await roche.conversation.getHistory({
+            conversationId: conv.id,
+            limit: 10
+          });
 
-        // 只返回有消息记录的对话
-        if (memories.length === 0) {
-          return null; // 没有消息记录，不显示
+          if (history && history.length > 0) {
+            // 找到最后一条用户或助手消息
+            const messages = history.reverse();
+            const lastMsg = messages.find(m => m.role === 'user' || m.role === 'assistant');
+            if (lastMsg) {
+              lastMessage = lastMsg.content || lastMsg.text || '开始新对话...';
+              lastTimestamp = lastMsg.timestamp || lastTimestamp;
+            }
+          }
+        } catch (e) {
+          console.log('[Twitter] 获取对话历史失败:', e);
+          // 保持默认值
         }
-
-        const lastMessage = memories[0].summaryText || memories[0].text || '开始新对话...';
-        const lastTimestamp = memories[0].timestamp || Date.now();
 
         // 获取 Char 头像
         let avatarUrl = null;
@@ -6227,10 +6235,8 @@ async function renderMessages(roche) {
         if (conv.id) {
           try {
             const persona = await roche.persona.get(conv.id);
-            console.log('[Twitter] 尝试获取 persona 头像:', conv.title, persona);
             if (persona?.avatar) {
               avatarUrl = persona.avatar;
-              console.log('[Twitter] 通过 persona 获取头像成功:', avatarUrl);
             }
           } catch (e) {
             console.log('[Twitter] persona API 调用失败:', e);
@@ -6243,14 +6249,9 @@ async function renderMessages(roche) {
           for (const field of possibleFields) {
             if (conv[field]) {
               avatarUrl = conv[field];
-              console.log(`[Twitter] 在 conversation.${field} 找到头像:`, avatarUrl);
               break;
             }
           }
-        }
-
-        if (!avatarUrl) {
-          console.log('[Twitter] 未找到头像，将使用首字母:', conv.title);
         }
 
         return {
@@ -6261,6 +6262,7 @@ async function renderMessages(roche) {
           unread: false // 可以后续添加未读逻辑
         };
       } catch (e) {
+        console.error('[Twitter] 处理对话失败:', e);
         return null;
       }
     }));
@@ -7335,30 +7337,14 @@ async function sendMessageToConv(roche, content) {
     chatMessages.insertAdjacentHTML('beforeend', userMessageHtml);
     chatMessages.scrollTop = chatMessages.scrollHeight;
 
-    // 2. 保存用户消息到记忆（带角色标记）
-    await roche.memory.saveLongTerm({
-      conversationId: currentConversationId,
-      text: content,
-      metadata: { role: 'user', timestamp: Date.now() },
-      importance: 3
-    });
-
-    // 3. 调用 Roche AI API
+    // 2. 调用 Roche AI API
     const response = await roche.ai.chat({
       conversationId: currentConversationId,
       message: content,
       stream: false
     });
 
-    // 4. 保存 AI 回复到记忆（带角色标记）
-    await roche.memory.saveLongTerm({
-      conversationId: currentConversationId,
-      text: response.text || response.message || '',
-      metadata: { role: 'assistant', timestamp: Date.now() },
-      importance: 3
-    });
-
-    // 5. 显示 AI 回复
+    // 3. 显示 AI 回复
     const conv = (await roche.conversation.list()).find(c => c.id === currentConversationId);
     let charAvatar = null;
 
