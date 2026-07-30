@@ -97,7 +97,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '4.6.0',
+    version: '4.6.1',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -9531,7 +9531,20 @@ async function testNPCPostAPI(roche) {
     console.log('[测试] 模型:', settings.apiConfig.model);
     console.log('[测试] 温度:', settings.apiConfig.temperature);
 
-    const response = await fetch(settings.apiConfig.url, {
+    // 确保 URL 是聊天接口
+    let apiUrl = settings.apiConfig.url;
+    if (!apiUrl.includes('/chat/completions') && !apiUrl.includes('/completions')) {
+      console.warn('[测试] URL 可能不正确，尝试添加 /chat/completions');
+      // 如果是基础 URL，尝试添加标准路径
+      if (apiUrl.includes('/v1')) {
+        apiUrl = apiUrl.replace(/\/v1\/?.*$/, '/v1/chat/completions');
+      } else {
+        apiUrl = apiUrl.replace(/\/$/, '') + '/v1/chat/completions';
+      }
+      console.log('[测试] 修正后的 URL:', apiUrl);
+    }
+
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -9547,8 +9560,19 @@ async function testNPCPostAPI(roche) {
       })
     });
 
+    console.log('[测试] HTTP 状态:', response.status, response.statusText);
+
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      // 尝试读取错误详情
+      let errorDetail = '';
+      try {
+        const errorData = await response.json();
+        errorDetail = errorData.error?.message || errorData.message || JSON.stringify(errorData);
+      } catch (e) {
+        errorDetail = await response.text();
+      }
+      console.error('[测试] 错误详情:', errorDetail);
+      throw new Error(`HTTP ${response.status}: ${response.statusText}\n详情: ${errorDetail}`);
     }
 
     const data = await response.json();
@@ -9674,7 +9698,20 @@ async function testNPCPostAPI(roche) {
       <div style="font-size: 20px; font-weight: 700; color: #f4212e; margin-bottom: 16px;">❌ API 测试失败</div>
       <div style="background: #fff1f0; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
         <div style="font-size: 13px; color: #536471; font-weight: 600; margin-bottom: 8px;">错误信息</div>
-        <div style="font-size: 14px; color: #f4212e; word-break: break-word;">${error.message}</div>
+        <div style="font-size: 14px; color: #f4212e; word-break: break-word; white-space: pre-wrap;">${error.message}</div>
+      </div>
+      <div style="background: #f7f9f9; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 13px;">
+        <div style="font-weight: 600; margin-bottom: 8px; color: #0f1419;">当前配置</div>
+        <div style="color: #536471; margin-bottom: 4px;">API: ${settings.apiConfig.url || '未配置'}</div>
+        <div style="color: #536471; margin-bottom: 4px;">模型: ${settings.apiConfig.model || '未配置'}</div>
+        <div style="color: #536471;">密钥: ${settings.apiConfig.apiKey ? '已配置' : '未配置'}</div>
+      </div>
+      <div style="font-size: 12px; color: #536471; margin-bottom: 16px;">
+        💡 提示：<br>
+        1. 确保 API 地址以 /v1/chat/completions 结尾<br>
+        2. 检查 API 密钥是否正确<br>
+        3. 确认模型名称是否支持<br>
+        4. 查看浏览器控制台了解详细错误
       </div>
       <button id="close-error-dialog" style="width: 100%; background: #0f1419; color: white; border: none; border-radius: 24px; padding: 12px; font-size: 15px; font-weight: 600; cursor: pointer;">
         关闭
