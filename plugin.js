@@ -68,7 +68,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '3.6.1',
+    version: '3.6.2',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -4742,13 +4742,15 @@ async function showSendViaDMDialog(tweet, roche) {
       transition: background 0.2s;
     `;
 
-    // 生成头像
+    // 获取真实 Char 头像
+    const charAvatar = conv.avatar || conv.avatarUrl || conv.image || conv.imageUrl || conv.icon || conv.picture;
     const firstChar = (conv.name || conv.title || 'C')[0].toUpperCase();
-    const avatar = `
-      <div style="width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 20px; flex-shrink: 0;">
-        ${firstChar}
-      </div>
-    `;
+
+    const avatar = charAvatar
+      ? `<img src="${charAvatar}" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; flex-shrink: 0;" alt="">`
+      : `<div style="width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 20px; flex-shrink: 0;">
+          ${firstChar}
+        </div>`;
 
     item.innerHTML = `
       ${avatar}
@@ -5221,12 +5223,18 @@ async function showShareDialog(tweet, roche) {
       <div style="flex: 1; overflow-y: auto; padding: 12px;" id="share-conversation-list">
         <div style="font-size: 15px; font-weight: 700; color: #0f1419; margin-bottom: 12px; padding: 0 8px;">选择对话</div>
         ${conversations.map(conv => {
+          const charAvatar = conv.avatar || conv.avatarUrl || conv.image || conv.imageUrl || conv.icon || conv.picture;
           const initial = conv.title ? conv.title.charAt(0).toUpperCase() : '?';
+
+          const avatarHtml = charAvatar
+            ? `<img src="${charAvatar}" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; flex-shrink: 0;" alt="">`
+            : `<div style="width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; font-weight: 700; flex-shrink: 0;">
+                ${initial}
+              </div>`;
+
           return `
             <div class="share-conversation-item" data-conv-id="${conv.id}" style="padding: 12px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: background 0.2s; border-radius: 8px;">
-              <div style="width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; font-weight: 700; flex-shrink: 0;">
-                ${initial}
-              </div>
+              ${avatarHtml}
               <div style="flex: 1; min-width: 0;">
                 <div style="font-size: 15px; font-weight: 700; color: #0f1419;">${conv.title || '未命名对话'}</div>
               </div>
