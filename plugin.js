@@ -68,7 +68,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '3.7.2',
+    version: '3.7.3',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -645,6 +645,10 @@ function renderUI(container, roche) {
 
       .timeline-content {
         padding-top: 53px;
+        padding-bottom: calc(60px + env(safe-area-inset-bottom));
+        overflow-y: auto;
+        height: 100vh;
+        box-sizing: border-box;
       }
 
       /* 推文列表 */
@@ -1622,6 +1626,10 @@ function renderUI(container, roche) {
 
       .search-content {
         padding-top: calc(60px + 53px); /* 顶部栏 + 标签栏 */
+        padding-bottom: calc(60px + env(safe-area-inset-bottom));
+        overflow-y: auto;
+        height: 100vh;
+        box-sizing: border-box;
       }
 
       .search-header {
@@ -1878,6 +1886,10 @@ function renderUI(container, roche) {
       .notifications-content {
         width: 100%;
         padding-top: calc(60px + 53px); /* 顶部栏 + 标签栏 */
+        padding-bottom: calc(60px + env(safe-area-inset-bottom));
+        overflow-y: auto;
+        height: 100vh;
+        box-sizing: border-box;
       }
 
       .notification-item {
@@ -2064,6 +2076,10 @@ function renderUI(container, roche) {
 
       .messages-content {
         padding-top: calc(60px + 60px); /* 顶部栏 + 搜索栏 */
+        padding-bottom: calc(60px + env(safe-area-inset-bottom));
+        overflow-y: auto;
+        height: 100vh;
+        box-sizing: border-box;
       }
 
       .messages-welcome {
@@ -2418,9 +2434,10 @@ function renderUI(container, roche) {
 
       .profile-content {
         padding-top: calc(53px + env(safe-area-inset-top));
-        padding-bottom: calc(20px + env(safe-area-inset-bottom));
+        padding-bottom: calc(80px + env(safe-area-inset-bottom));
         overflow-y: auto;
         height: 100vh;
+        box-sizing: border-box;
       }
 
       .profile-banner {
@@ -7238,14 +7255,71 @@ function showBookmarks(roche) {
   }
 
   // 显示书签推文列表
-  bookmarksList.innerHTML = '';
-  userBookmarks.forEach(tweetId => {
-    const tweet = twitterData.tweets.find(t => t.id === tweetId);
-    if (!tweet) return;
+  const bookmarkedTweets = userBookmarks
+    .map(tweetId => twitterData.tweets.find(t => t.id === tweetId))
+    .filter(tweet => tweet); // 过滤掉不存在的推文
 
+  bookmarksList.innerHTML = bookmarkedTweets.map(tweet => {
     const user = twitterData.users[tweet.userId];
-    const tweetEl = createTweetElement(tweet, user, roche);
-    bookmarksList.appendChild(tweetEl);
+    const isLiked = tweet.likes.includes(currentUser);
+    const isRetweeted = tweet.retweets.includes(currentUser);
+    const isBookmarked = true; // 在书签页面，肯定是已收藏的
+    const timeAgo = getTimeAgo(tweet.timestamp);
+
+    return `
+      <div class="tweet-item" data-tweet-id="${tweet.id}">
+        <div class="tweet-header">
+          <img class="tweet-avatar" src="${user.avatar}" alt="">
+          <div class="tweet-content">
+            <div class="tweet-author">
+              <span class="tweet-author-name">${user.name}</span>
+              <span class="tweet-author-username">${user.username}</span>
+              <span class="tweet-time">· ${timeAgo}</span>
+            </div>
+            <div class="tweet-text">${escapeHtml(tweet.content)}</div>
+            <div class="tweet-actions">
+              <div class="tweet-action" data-action="reply">
+                <span class="action-icon">${icons.comment}</span>
+                <span>${tweet.replies.length || ''}</span>
+              </div>
+              <div class="tweet-action ${isRetweeted ? 'retweeted' : ''}" data-action="retweet">
+                <span class="action-icon">${icons.retweet}</span>
+                <span>${tweet.retweets.length || ''}</span>
+              </div>
+              <div class="tweet-action ${isLiked ? 'liked' : ''}" data-action="like">
+                <span class="action-icon">${isLiked ? icons.likeFilled : icons.like}</span>
+                <span>${tweet.likes.length || ''}</span>
+              </div>
+              <div class="tweet-action bookmarked" data-action="bookmark">
+                <span class="action-icon">${icons.bookmarkFilled}</span>
+              </div>
+              <div class="tweet-action" data-action="share">
+                <span class="action-icon">${icons.share}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // 绑定推文点击事件
+  bookmarksList.querySelectorAll('.tweet-item').forEach(el => {
+    el.addEventListener('click', (e) => {
+      if (e.target.closest('.tweet-action')) return;
+      const tweetId = parseInt(el.dataset.tweetId);
+      showTweetDetail(tweetId, roche);
+    });
+  });
+
+  // 绑定操作按钮
+  bookmarksList.querySelectorAll('.tweet-action').forEach(el => {
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const action = el.dataset.action;
+      const tweetId = parseInt(el.closest('.tweet-item').dataset.tweetId);
+      handleTweetAction(action, tweetId, roche);
+    });
   });
 }
 
