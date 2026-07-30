@@ -67,7 +67,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '2.9.4',
+    version: '2.9.5',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -1732,7 +1732,6 @@ function renderUI(container, roche) {
         z-index: 100;
         max-width: 768px;
         margin: 0 auto;
-        position: relative;
       }
 
       .notifications-top-left {
