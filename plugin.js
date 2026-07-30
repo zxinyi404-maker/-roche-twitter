@@ -97,7 +97,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '4.7.0',
+    version: '4.8.0',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -4283,17 +4283,31 @@ async function renderTweets(roche, filter = 'recommended') {
     const newsLabel = tweet.isNews ? `<span style="display: inline-block; background: #1d9bf0; color: white; font-size: 11px; padding: 2px 6px; border-radius: 4px; margin-left: 4px; font-weight: 700;">新闻</span>` : '';
     const sourceLabel = tweet.source ? `<span style="color: #536471; font-size: 13px; margin-left: 4px;">· 来源: ${tweet.source}</span>` : '';
 
+    // 如果是当前用户的推文，显示菜单按钮
+    const menuButton = tweet.userId === currentUser ? `
+      <div class="tweet-menu-btn" data-action="menu" style="margin-left: auto; padding: 4px; cursor: pointer; border-radius: 50%; transition: background 0.2s;">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="#536471">
+          <circle cx="5" cy="12" r="2"></circle>
+          <circle cx="12" cy="12" r="2"></circle>
+          <circle cx="19" cy="12" r="2"></circle>
+        </svg>
+      </div>
+    ` : '';
+
     return `
       <div class="tweet-item" data-tweet-id="${tweet.id}" ${tweet.isNews ? 'data-is-news="true"' : ''}>
         ${retweetHeader}
         <div class="tweet-header">
           <img class="tweet-avatar" src="${user.avatar}" alt="">
           <div class="tweet-content">
-            <div class="tweet-author">
-              <span class="tweet-author-name">${user.name}${newsLabel}</span>
-              <span class="tweet-author-username">${user.username}</span>
-              <span class="tweet-time">· ${timeAgo}</span>
-              ${sourceLabel}
+            <div class="tweet-author" style="display: flex; align-items: center;">
+              <div style="flex: 1; display: flex; align-items: center; flex-wrap: wrap;">
+                <span class="tweet-author-name">${user.name}${newsLabel}</span>
+                <span class="tweet-author-username">${user.username}</span>
+                <span class="tweet-time">· ${timeAgo}</span>
+                ${sourceLabel}
+              </div>
+              ${menuButton}
             </div>
             <div class="tweet-text">${escapeHtml(tweet.content)}</div>
             <div class="tweet-actions">
@@ -4352,6 +4366,24 @@ async function renderTweets(roche, filter = 'recommended') {
       } else {
         handleTweetAction(action, parseInt(tweetId), roche);
       }
+    });
+  });
+
+  // 绑定推文菜单按钮
+  listEl.querySelectorAll('.tweet-menu-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const tweetItem = btn.closest('.tweet-item');
+      const tweetId = parseInt(tweetItem.dataset.tweetId);
+      showTweetMenu(tweetId, btn, roche);
+    });
+
+    // 悬停效果
+    btn.addEventListener('mouseenter', () => {
+      btn.style.background = 'rgba(29, 155, 240, 0.1)';
+    });
+    btn.addEventListener('mouseleave', () => {
+      btn.style.background = 'transparent';
     });
   });
 }
@@ -7796,7 +7828,7 @@ function showProfile(userId, roche) {
   const actionBtn = document.getElementById('profile-action-btn');
   if (isOwnProfile) {
     actionBtn.textContent = '编辑资料';
-    actionBtn.onclick = () => showToast('编辑功能开发中...', 'info');
+    actionBtn.onclick = () => showEditProfileDialog(roche);
   } else {
     const isFollowing = twitterData.follows[currentUser]?.includes(userId);
     actionBtn.textContent = isFollowing ? '正在关注' : '关注';
@@ -8883,20 +8915,11 @@ async function npcAutoPost(npcId, roche) {
   if (!npc) return;
 
   try {
-    // 使用自定义后端 API 发帖
-    if (settings.npcBackendAPI) {
-      console.log('[NPC] ✅ 使用自定义后端 API 发帖');
-      console.log('[NPC] API 地址:', settings.npcBackendAPI);
-      console.log('[NPC] 发送参数:', {
-        npcId: npcId,
-        name: npc.name,
-        bio: npc.bio,
-        personality: npc.personality,
-        occupation: npc.occupation,
-        interests: npc.interests,
-        talkStyle: npc.talkStyle
-      });
+    let content = '';
 
+    // 优先使用自定义后端 API
+    if (settings.npcBackendAPI) {
+      console.log('[NPC] 使用自定义后端 API 发帖');
       const response = await fetch(settings.npcBackendAPI, {
         method: 'POST',
         headers: {
@@ -8922,32 +8945,81 @@ async function npcAutoPost(npcId, roche) {
         })
       });
 
-      console.log('[NPC] 后端响应状态:', response.status);
-
       if (!response.ok) {
-        throw new Error(`后端 API 错误: ${response.status} ${response.statusText}`);
+        throw new Error(`后端 API 错误: ${response.status}`);
       }
 
       const data = await response.json();
-      console.log('[NPC] 后端响应数据:', data);
-
       if (data && data.content) {
-        console.log('[NPC] ✅ 使用后端 API 发帖成功');
-        createNPCTweet(npcId, data.content, roche);
-        return;
+        content = data.content;
       } else {
         throw new Error('后端返回无效数据');
       }
+    }
+    // 使用通用 API 配置
+    else if (settings.apiConfig.url && settings.apiConfig.apiKey) {
+      console.log('[NPC] 使用通用 API 配置发帖');
+
+      // 构造 NPC 人设提示词
+      const prompt = `你是 ${npc.name}，${npc.bio}。
+性格：${npc.personality}
+职业：${npc.occupation}
+兴趣：${npc.interests.join('、')}
+说话风格：${npc.talkStyle}
+
+请以这个角色的口吻，用中文发一条推文（不超过280字），内容可以是：
+- 分享今天的心情或想法
+- 讨论你的兴趣爱好
+- 发表对某个话题的看法
+- 日常生活的小事
+
+只返回推文内容，不要有其他说明。`;
+
+      const response = await fetch(settings.apiConfig.url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${settings.apiConfig.apiKey}`
+        },
+        body: JSON.stringify({
+          model: settings.apiConfig.model,
+          messages: [
+            { role: 'user', content: prompt }
+          ],
+          temperature: settings.apiConfig.temperature || 0.7,
+          max_tokens: 200
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`API 错误: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data.choices && data.choices[0]) {
+        content = data.choices[0].message?.content || data.choices[0].text || '';
+      } else if (data.content) {
+        content = data.content;
+      } else if (data.response) {
+        content = data.response;
+      }
+
+      if (!content) {
+        throw new Error('API 返回空内容');
+      }
     } else {
-      console.log('[NPC] ⚠️ 未配置后端 API 地址');
-      showToast('请在设置中配置 NPC 后端 API 地址', 'error');
-      throw new Error('未配置 npcBackendAPI');
+      console.error('[NPC] 未配置 API');
+      return;
+    }
+
+    // 创建推文
+    if (content) {
+      createNPCTweet(npcId, content.trim(), roche);
     }
 
   } catch (error) {
-    console.error('[NPC] ❌ 发帖失败:', error);
-    console.error('[NPC] 错误详情:', error.message);
-    console.error('[NPC] 错误堆栈:', error.stack);
+    console.error('[NPC] 发帖失败:', error);
     throw error;
   }
 }
@@ -9096,6 +9168,21 @@ async function cleanupInactiveNPCs(roche) {
   for (const npcId of npcIds) {
     const npc = twitterData.npcs[npcId];
     const timeSinceInteraction = now - npc.lastInteractionTime;
+
+    // 检查是否有用户关注了这个 NPC
+    let isFollowedByAnyUser = false;
+    for (const userId in twitterData.follows) {
+      if (twitterData.follows[userId].includes(npcId)) {
+        isFollowedByAnyUser = true;
+        break;
+      }
+    }
+
+    // 如果被关注，跳过清理
+    if (isFollowedByAnyUser) {
+      console.log('[NPC] 保留被关注的 NPC:', npc.name, npcId);
+      continue;
+    }
 
     // 7 天无互动 + 总互动数很少
     if (timeSinceInteraction > cleanupThreshold && npc.totalInteractions < 5) {
@@ -9955,6 +10042,241 @@ function showNPCManagement(roche) {
 
   // TODO: 显示 NPC 管理界面
   showToast('NPC 管理功能开发中...', 'info');
+}
+
+/**
+ * 显示编辑资料对话框
+ */
+function showEditProfileDialog(roche) {
+  const user = twitterData.users[currentUser];
+  if (!user) return;
+
+  const dialog = document.createElement('div');
+  dialog.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+  `;
+
+  const dialogContent = document.createElement('div');
+  dialogContent.style.cssText = `
+    background: white;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 500px;
+    max-height: 80vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  `;
+
+  dialogContent.innerHTML = `
+    <div style="padding: 20px; border-bottom: 1px solid #eff3f4; display: flex; align-items: center; justify-content: space-between;">
+      <div style="font-size: 20px; font-weight: 700; color: #0f1419;">编辑资料</div>
+      <button id="close-edit-dialog" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #536471;">×</button>
+    </div>
+    <div style="flex: 1; overflow-y: auto; padding: 20px;">
+      <div style="margin-bottom: 20px;">
+        <label style="display: block; font-size: 13px; color: #536471; margin-bottom: 8px; font-weight: 600;">用户名</label>
+        <input type="text" id="edit-name" value="${user.name}" style="width: 100%; padding: 12px; border: 1px solid #cfd9de; border-radius: 8px; font-size: 15px; outline: none;" placeholder="输入用户名">
+      </div>
+      <div style="margin-bottom: 20px;">
+        <label style="display: block; font-size: 13px; color: #536471; margin-bottom: 8px; font-weight: 600;">账号 (用户名)</label>
+        <input type="text" id="edit-username" value="${user.username}" style="width: 100%; padding: 12px; border: 1px solid #cfd9de; border-radius: 8px; font-size: 15px; outline: none;" placeholder="@username">
+      </div>
+      <div style="margin-bottom: 20px;">
+        <label style="display: block; font-size: 13px; color: #536471; margin-bottom: 8px; font-weight: 600;">简介</label>
+        <textarea id="edit-bio" rows="3" style="width: 100%; padding: 12px; border: 1px solid #cfd9de; border-radius: 8px; font-size: 15px; outline: none; resize: vertical;" placeholder="介绍一下你自己">${user.bio || ''}</textarea>
+      </div>
+      <div style="margin-bottom: 20px;">
+        <label style="display: block; font-size: 13px; color: #536471; margin-bottom: 8px; font-weight: 600;">头像 URL</label>
+        <input type="text" id="edit-avatar" value="${user.avatar}" style="width: 100%; padding: 12px; border: 1px solid #cfd9de; border-radius: 8px; font-size: 15px; outline: none;" placeholder="https://...">
+        <div style="margin-top: 12px; display: flex; align-items: center; gap: 12px;">
+          <img src="${user.avatar}" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover;" id="avatar-preview">
+          <span style="font-size: 13px; color: #536471;">当前头像预览</span>
+        </div>
+      </div>
+      <div>
+        <label style="display: block; font-size: 13px; color: #536471; margin-bottom: 8px; font-weight: 600;">背景图 URL</label>
+        <input type="text" id="edit-banner" value="${user.banner || ''}" style="width: 100%; padding: 12px; border: 1px solid #cfd9de; border-radius: 8px; font-size: 15px; outline: none;" placeholder="https://...">
+      </div>
+    </div>
+    <div style="padding: 12px; border-top: 1px solid #eff3f4; display: flex; gap: 12px;">
+      <button id="cancel-edit" style="flex: 1; background: white; color: #0f1419; border: 1px solid #cfd9de; border-radius: 24px; padding: 12px; font-size: 15px; font-weight: 600; cursor: pointer;">
+        取消
+      </button>
+      <button id="save-edit" style="flex: 1; background: #1d9bf0; color: white; border: none; border-radius: 24px; padding: 12px; font-size: 15px; font-weight: 600; cursor: pointer;">
+        保存
+      </button>
+    </div>
+  `;
+
+  dialog.appendChild(dialogContent);
+  document.body.appendChild(dialog);
+
+  // 头像预览实时更新
+  const avatarInput = document.getElementById('edit-avatar');
+  const avatarPreview = document.getElementById('avatar-preview');
+  avatarInput.addEventListener('input', () => {
+    avatarPreview.src = avatarInput.value || user.avatar;
+  });
+
+  // 关闭对话框
+  const closeDialog = () => {
+    if (document.body.contains(dialog)) {
+      document.body.removeChild(dialog);
+    }
+  };
+
+  dialog.addEventListener('click', (e) => {
+    if (e.target === dialog) closeDialog();
+  });
+
+  document.getElementById('close-edit-dialog').addEventListener('click', closeDialog);
+  document.getElementById('cancel-edit').addEventListener('click', closeDialog);
+
+  // 保存修改
+  document.getElementById('save-edit').addEventListener('click', async () => {
+    const name = document.getElementById('edit-name').value.trim();
+    const username = document.getElementById('edit-username').value.trim();
+    const bio = document.getElementById('edit-bio').value.trim();
+    const avatar = document.getElementById('edit-avatar').value.trim();
+    const banner = document.getElementById('edit-banner').value.trim();
+
+    if (!name) {
+      showToast('用户名不能为空', 'error');
+      return;
+    }
+
+    if (!username) {
+      showToast('账号不能为空', 'error');
+      return;
+    }
+
+    // 确保 username 以 @ 开头
+    const formattedUsername = username.startsWith('@') ? username : '@' + username;
+
+    // 更新用户信息
+    twitterData.users[currentUser].name = name;
+    twitterData.users[currentUser].username = formattedUsername;
+    twitterData.users[currentUser].bio = bio;
+    if (avatar) twitterData.users[currentUser].avatar = avatar;
+    if (banner) twitterData.users[currentUser].banner = banner;
+
+    await saveData(roche);
+    showToast('资料已更新', 'success');
+    closeDialog();
+
+    // 刷新个人资料页
+    showProfile(currentUser, roche);
+  });
+}
+
+/**
+ * 显示推文菜单
+ */
+function showTweetMenu(tweetId, btnElement, roche) {
+  // 移除已存在的菜单
+  const existingMenu = document.querySelector('.tweet-menu-popup');
+  if (existingMenu) {
+    existingMenu.remove();
+  }
+
+  const menu = document.createElement('div');
+  menu.className = 'tweet-menu-popup';
+  menu.style.cssText = `
+    position: fixed;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 1000;
+    overflow: hidden;
+    min-width: 180px;
+  `;
+
+  menu.innerHTML = `
+    <div class="tweet-menu-item" data-action="delete" style="padding: 16px; cursor: pointer; display: flex; align-items: center; gap: 12px; transition: background 0.2s;">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="#f4212e">
+        <path d="M16 6V4.5C16 3.12 14.88 2 13.5 2h-3C9.11 2 8 3.12 8 4.5V6H3v2h1.06l.81 11.21C4.98 20.78 6.28 22 7.86 22h8.27c1.58 0 2.88-1.22 3-2.79L19.93 8H21V6h-5zm-6-1.5c0-.28.22-.5.5-.5h3c.27 0 .5.22.5.5V6h-4V4.5zm7.13 14.57c-.04.52-.47.93-1 .93H7.86c-.53 0-.96-.41-1-.93L6.07 8h11.85l-.79 11.07z"></path>
+      </svg>
+      <span style="color: #f4212e; font-weight: 600;">删除</span>
+    </div>
+  `;
+
+  // 定位菜单
+  const rect = btnElement.getBoundingClientRect();
+  menu.style.top = `${rect.bottom + 8}px`;
+  menu.style.right = `${window.innerWidth - rect.right}px`;
+
+  document.body.appendChild(menu);
+
+  // 菜单项事件
+  menu.querySelector('[data-action="delete"]').addEventListener('click', async () => {
+    menu.remove();
+    await deleteTweet(tweetId, roche);
+  });
+
+  // 悬停效果
+  menu.querySelectorAll('.tweet-menu-item').forEach(item => {
+    item.addEventListener('mouseenter', () => {
+      item.style.background = '#f7f9f9';
+    });
+    item.addEventListener('mouseleave', () => {
+      item.style.background = 'white';
+    });
+  });
+
+  // 点击外部关闭菜单
+  setTimeout(() => {
+    const closeMenu = (e) => {
+      if (!menu.contains(e.target) && e.target !== btnElement) {
+        menu.remove();
+        document.removeEventListener('click', closeMenu);
+      }
+    };
+    document.addEventListener('click', closeMenu);
+  }, 100);
+}
+
+/**
+ * 删除推文
+ */
+async function deleteTweet(tweetId, roche) {
+  const tweet = twitterData.tweets.find(t => t.id === tweetId);
+  if (!tweet) return;
+
+  if (tweet.userId !== currentUser) {
+    showToast('你只能删除自己的推文', 'error');
+    return;
+  }
+
+  const confirmed = confirm('确定要删除这条推文吗？此操作无法撤销。');
+  if (!confirmed) return;
+
+  // 从数组中删除
+  twitterData.tweets = twitterData.tweets.filter(t => t.id !== tweetId);
+
+  // 同时删除所有相关的回复和转发
+  twitterData.tweets = twitterData.tweets.filter(t => t.replyTo !== tweetId);
+
+  await saveData(roche);
+  showToast('推文已删除', 'success');
+
+  // 刷新当前视图
+  if (currentView === 'timeline') {
+    const activeTab = document.querySelector('.timeline-tab.active');
+    const tabType = activeTab ? activeTab.dataset.tab : 'recommended';
+    renderTweets(roche, tabType);
+  } else if (currentView === 'profile') {
+    showProfile(currentUser, roche);
+  }
 }
 
 })(); // 立即执行函数结束
