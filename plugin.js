@@ -67,7 +67,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '3.0.2',
+    version: '3.1.0',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -6105,10 +6105,11 @@ async function openChatWithConv(convId, roche) {
       const currentUserData = twitterData.users[currentUser];
       const userAvatar = currentUserData?.avatar || generateAvatar(currentUserData?.name || 'User');
 
-      // 从记忆中构建消息列表
-      chatMessages.innerHTML = memories.map((mem, idx) => {
+      // 从记忆中构建消息列表，根据 metadata.role 区分
+      chatMessages.innerHTML = memories.map(mem => {
         const text = mem.summaryText || mem.text || '';
-        const isOwn = idx % 2 === 0; // 简化处理：交替显示
+        const role = mem.metadata?.role || 'assistant'; // 默认是 assistant
+        const isOwn = role === 'user';
 
         return `
           <div class="chat-message ${isOwn ? 'own' : ''}" style="display: flex; gap: 8px; margin-bottom: 16px; ${isOwn ? 'flex-direction: row-reverse;' : ''}">
@@ -6184,33 +6185,101 @@ async function openChatWithConv(convId, roche) {
 /**
  * 发送消息到 Roche 对话
  */
+/**
+ * 发送消息到对话（使用 Roche AI API）
+ */
 async function sendMessageToConv(roche, content) {
   if (!content || !currentConversationId) return;
 
   try {
-    // 使用 Roche 的 AI 聊天 API 发送消息
+    const chatMessages = document.getElementById('chat-messages');
+
+    // 1. 立即显示用户消息
+    const currentUserData = twitterData.users[currentUser];
+    const userAvatar = currentUserData?.avatar || generateAvatar(currentUserData?.name || 'User');
+
+    const userMessageHtml = `
+      <div class="chat-message own" style="display: flex; gap: 8px; margin-bottom: 16px; flex-direction: row-reverse;">
+        <img class="chat-message-avatar" src="${userAvatar}" alt="" style="width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; object-fit: cover;">
+        <div class="chat-message-bubble" style="
+          background: #1d9bf0;
+          color: white;
+          padding: 12px 16px;
+          border-radius: 18px;
+          max-width: 70%;
+          word-wrap: break-word;
+        ">${escapeHtml(content)}</div>
+      </div>
+    `;
+    chatMessages.insertAdjacentHTML('beforeend', userMessageHtml);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+
+    // 2. 保存用户消息到记忆（带角色标记）
+    await roche.memory.saveLongTerm({
+      conversationId: currentConversationId,
+      text: content,
+      metadata: { role: 'user', timestamp: Date.now() },
+      importance: 3
+    });
+
+    // 3. 调用 Roche AI API
     const response = await roche.ai.chat({
       conversationId: currentConversationId,
       message: content,
       stream: false
     });
 
-    // 保存到记忆
-    if (settings.enableMemory) {
-      await roche.memory.saveLongTerm({
-        conversationId: currentConversationId,
-        text: `用户: ${content}\nAI: ${response.text || ''}`,
-        importance: 5
-      });
+    // 4. 保存 AI 回复到记忆（带角色标记）
+    await roche.memory.saveLongTerm({
+      conversationId: currentConversationId,
+      text: response.text || response.message || '',
+      metadata: { role: 'assistant', timestamp: Date.now() },
+      importance: 3
+    });
+
+    // 5. 显示 AI 回复
+    const conv = (await roche.conversation.list()).find(c => c.id === currentConversationId);
+    let charAvatar = null;
+
+    // 获取 Char 头像
+    try {
+      const persona = await roche.persona.get(currentConversationId);
+      if (persona?.avatar) {
+        charAvatar = persona.avatar;
+      }
+    } catch (e) {}
+
+    if (!charAvatar) {
+      const initial = (conv?.title || '?').charAt(0).toUpperCase();
+      charAvatar = `data:image/svg+xml,${encodeURIComponent(`
+        <svg width="48" height="48" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="24" cy="24" r="24" fill="#667eea"/>
+          <text x="24" y="32" font-size="20" fill="white" text-anchor="middle" font-family="Arial">${initial}</text>
+        </svg>
+      `)}`;
     }
 
-    // 重新加载聊天界面
-    await openChatWithConv(currentConversationId, roche);
+    const aiMessageHtml = `
+      <div class="chat-message" style="display: flex; gap: 8px; margin-bottom: 16px;">
+        <img class="chat-message-avatar" src="${charAvatar}" alt="" style="width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; object-fit: cover;">
+        <div class="chat-message-bubble" style="
+          background: #eff3f4;
+          color: #0f1419;
+          padding: 12px 16px;
+          border-radius: 18px;
+          max-width: 70%;
+          word-wrap: break-word;
+        ">${escapeHtml(response.text || response.message || '')}</div>
+      </div>
+    `;
+    chatMessages.insertAdjacentHTML('beforeend', aiMessageHtml);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
 
-    showToast('消息已发送', 'success');
+    console.log('[Twitter] 消息发送成功，AI 回复:', response.text);
+
   } catch (error) {
-    console.error('发送消息失败:', error);
-    showToast('发送失败', 'error');
+    console.error('[Twitter] 发送消息失败:', error);
+    showToast('发送失败: ' + error.message, 'error');
   }
 }
 
