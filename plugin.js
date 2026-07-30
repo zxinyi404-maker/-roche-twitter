@@ -97,7 +97,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '5.1.1',
+    version: '5.2.0',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -3185,6 +3185,17 @@ function renderUI(container, roche) {
             <div class="setting-info">
               <div class="setting-label">温度</div>
               <div class="setting-description" id="api-temperature-value">0.7</div>
+            </div>
+            <div class="setting-arrow">›</div>
+          </div>
+        </div>
+
+        <h2 class="section-title" style="margin-top: 20px;">AI 角色</h2>
+        <div class="settings-section">
+          <div class="setting-item" id="setting-char-tweets">
+            <div class="setting-info">
+              <div class="setting-label">Char 发推文管理</div>
+              <div class="setting-description">让你的 Char 角色发推文</div>
             </div>
             <div class="setting-arrow">›</div>
           </div>
@@ -8308,6 +8319,15 @@ function showSettings(roche) {
     });
   }
 
+  // 绑定 Char 发推文管理
+  const settingCharTweets = document.getElementById('setting-char-tweets');
+  if (settingCharTweets) {
+    settingCharTweets.replaceWith(settingCharTweets.cloneNode(true));
+    document.getElementById('setting-char-tweets').addEventListener('click', () => {
+      showCharTweetsManagement(roche);
+    });
+  }
+
   // 绑定 NPC 后端 API 设置
   const settingNPCAPI = document.getElementById('setting-npc-api');
   if (settingNPCAPI) {
@@ -10517,6 +10537,303 @@ async function deleteTweet(tweetId, roche) {
   } else if (currentView === 'profile') {
     showProfile(currentUser, roche);
   }
+}
+
+/**
+ * 显示 Char 发推文管理页面
+ */
+async function showCharTweetsManagement(roche) {
+  // 获取所有 Char
+  let characters = [];
+  try {
+    const conversations = await roche.conversation.list();
+
+    // 获取每个对话的角色信息
+    for (const conv of conversations) {
+      try {
+        const character = await roche.character.get(conv.id);
+        if (character) {
+          characters.push({
+            id: conv.id,
+            name: character.name || conv.title,
+            avatar: character.avatar || conv.avatar,
+            description: character.description || character.persona || ''
+          });
+        }
+      } catch (e) {
+        console.log('[Twitter] 获取角色信息失败:', conv.id, e);
+      }
+    }
+  } catch (error) {
+    console.error('[Twitter] 获取 Char 列表失败:', error);
+    showToast('获取 Char 列表失败', 'error');
+    return;
+  }
+
+  if (characters.length === 0) {
+    showToast('没有可用的 Char，请先在 Roche 中创建角色', 'info');
+    return;
+  }
+
+  // 创建对话框
+  const overlay = document.createElement('div');
+  overlay.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    animation: fadeIn 0.2s;
+  `;
+
+  const dialog = document.createElement('div');
+  dialog.style.cssText = `
+    background: white;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 80vh;
+    overflow-y: auto;
+    animation: slideUp 0.3s;
+  `;
+
+  dialog.innerHTML = `
+    <div style="padding: 20px; border-bottom: 1px solid #eff3f4;">
+      <div style="display: flex; align-items: center; justify-content: space-between;">
+        <h2 style="font-size: 20px; font-weight: 700; margin: 0;">Char 发推文管理</h2>
+        <button id="close-char-dialog" style="background: none; border: none; font-size: 20px; cursor: pointer; padding: 8px; border-radius: 50%; transition: background 0.2s;">✕</button>
+      </div>
+      <p style="color: #536471; font-size: 14px; margin-top: 8px;">选择一个 Char，让 TA 在推特上发帖</p>
+    </div>
+    <div style="padding: 16px;">
+      ${characters.map(char => {
+        const initial = char.name.charAt(0).toUpperCase();
+        const avatarHtml = char.avatar
+          ? `<img src="${char.avatar}" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover;">`
+          : `<div style="width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; font-weight: 700;">${initial}</div>`;
+
+        return `
+          <div class="char-item" data-char-id="${char.id}" style="display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 8px; cursor: pointer; transition: background 0.2s; margin-bottom: 8px;">
+            ${avatarHtml}
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-size: 15px; font-weight: 700; color: #0f1419;">${escapeHtml(char.name)}</div>
+              <div style="font-size: 13px; color: #536471; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(char.description.substring(0, 60)) || '暂无描述'}</div>
+            </div>
+            <div style="color: #1d9bf0; font-size: 20px;">›</div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+
+  overlay.appendChild(dialog);
+  document.body.appendChild(overlay);
+
+  // 关闭按钮
+  document.getElementById('close-char-dialog').addEventListener('click', () => {
+    document.body.removeChild(overlay);
+  });
+
+  // 点击背景关闭
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) {
+      document.body.removeChild(overlay);
+    }
+  });
+
+  // 绑定 Char 点击事件
+  dialog.querySelectorAll('.char-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const charId = item.dataset.charId;
+      const character = characters.find(c => c.id === charId);
+      document.body.removeChild(overlay);
+      showCharTweetSettings(roche, character);
+    });
+
+    item.addEventListener('mouseenter', () => {
+      item.style.background = '#f7f9f9';
+    });
+
+    item.addEventListener('mouseleave', () => {
+      item.style.background = 'transparent';
+    });
+  });
+}
+
+/**
+ * 显示 Char 发推文设置
+ */
+async function showCharTweetSettings(roche, character) {
+  // 检查是否已经配置过
+  const charTweetConfig = twitterData.charTweets || {};
+  const existingConfig = charTweetConfig[character.id];
+
+  const overlay = document.createElement('div');
+  overlay.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+  `;
+
+  const dialog = document.createElement('div');
+  dialog.style.cssText = `
+    background: white;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 500px;
+    animation: slideUp 0.3s;
+  `;
+
+  const initial = character.name.charAt(0).toUpperCase();
+  const avatarHtml = character.avatar
+    ? `<img src="${character.avatar}" style="width: 64px; height: 64px; border-radius: 50%; object-fit: cover;">`
+    : `<div style="width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-size: 28px; font-weight: 700;">${initial}</div>`;
+
+  dialog.innerHTML = `
+    <div style="padding: 20px; border-bottom: 1px solid #eff3f4;">
+      <button id="back-char-settings" style="background: none; border: none; font-size: 20px; cursor: pointer; padding: 8px; margin-right: 12px;">←</button>
+      <span style="font-size: 20px; font-weight: 700;">配置发推文</span>
+    </div>
+    <div style="padding: 20px;">
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
+        ${avatarHtml}
+        <div>
+          <div style="font-size: 17px; font-weight: 700;">${escapeHtml(character.name)}</div>
+          <div style="font-size: 14px; color: #536471;">${escapeHtml(character.description.substring(0, 50)) || '暂无描述'}</div>
+        </div>
+      </div>
+
+      <div style="margin-bottom: 20px;">
+        <label style="display: block; font-weight: 600; margin-bottom: 8px; font-size: 15px;">使用账号</label>
+        <select id="char-account-type" style="width: 100%; padding: 12px; border: 1px solid #cfd9de; border-radius: 8px; font-size: 15px;">
+          <option value="original" ${!existingConfig || existingConfig.accountType === 'original' ? 'selected' : ''}>使用原名和头像</option>
+          <option value="alias" ${existingConfig?.accountType === 'alias' ? 'selected' : ''}>创建小号</option>
+        </select>
+      </div>
+
+      <div style="margin-bottom: 20px;">
+        <label style="display: block; font-weight: 600; margin-bottom: 8px; font-size: 15px;">发推频率</label>
+        <select id="char-tweet-frequency" style="width: 100%; padding: 12px; border: 1px solid #cfd9de; border-radius: 8px; font-size: 15px;">
+          <option value="1" ${existingConfig?.frequency === 1 ? 'selected' : ''}>每天 1 条</option>
+          <option value="2" ${existingConfig?.frequency === 2 ? 'selected' : ''}>每天 2 条</option>
+          <option value="3" ${!existingConfig || existingConfig?.frequency === 3 ? 'selected' : ''}>每天 3 条</option>
+          <option value="5" ${existingConfig?.frequency === 5 ? 'selected' : ''}>每天 5 条</option>
+        </select>
+      </div>
+
+      <div style="display: flex; gap: 12px;">
+        <button id="save-char-settings" style="flex: 1; background: #1d9bf0; color: white; border: none; padding: 14px; border-radius: 24px; font-weight: 700; font-size: 15px; cursor: pointer;">
+          ${existingConfig ? '更新设置' : '开始发推'}
+        </button>
+        ${existingConfig ? `
+          <button id="stop-char-tweets" style="flex: 1; background: #f4212e; color: white; border: none; padding: 14px; border-radius: 24px; font-weight: 700; font-size: 15px; cursor: pointer;">
+            停止发推
+          </button>
+        ` : ''}
+      </div>
+    </div>
+  `;
+
+  overlay.appendChild(dialog);
+  document.body.appendChild(overlay);
+
+  // 返回按钮
+  document.getElementById('back-char-settings').addEventListener('click', () => {
+    document.body.removeChild(overlay);
+    showCharTweetsManagement(roche);
+  });
+
+  // 保存设置
+  document.getElementById('save-char-settings').addEventListener('click', async () => {
+    const accountType = document.getElementById('char-account-type').value;
+    const frequency = parseInt(document.getElementById('char-tweet-frequency').value);
+
+    // 如果是小号模式，生成用户名
+    let username = character.name;
+    let userId = character.id;
+
+    if (accountType === 'alias') {
+      // 生成小号用户名
+      const randomNum = Math.floor(Math.random() * 9999);
+      username = `${character.name}_${randomNum}`;
+      userId = `char_alias_${character.id}_${Date.now()}`;
+
+      // 创建小号用户
+      if (!twitterData.users[userId]) {
+        twitterData.users[userId] = {
+          name: username,
+          username: `@${username}`,
+          avatar: character.avatar || generateAvatar(username),
+          bio: character.description.substring(0, 100) || `${character.name}的小号`,
+          following: 0,
+          followers: 0,
+          isChar: true,
+          charId: character.id
+        };
+      }
+    } else {
+      // 使用原名，更新或创建用户
+      userId = character.id;
+      if (!twitterData.users[userId]) {
+        twitterData.users[userId] = {
+          name: character.name,
+          username: `@${character.name}`,
+          avatar: character.avatar || generateAvatar(character.name),
+          bio: character.description.substring(0, 100) || '',
+          following: 0,
+          followers: 0,
+          isChar: true,
+          charId: character.id
+        };
+      }
+    }
+
+    // 保存配置
+    if (!twitterData.charTweets) {
+      twitterData.charTweets = {};
+    }
+
+    twitterData.charTweets[character.id] = {
+      enabled: true,
+      accountType: accountType,
+      userId: userId,
+      frequency: frequency,
+      lastTweetTime: 0
+    };
+
+    await saveData(roche);
+    showToast(`${character.name} 已开始发推文！`, 'success');
+    document.body.removeChild(overlay);
+  });
+
+  // 停止发推
+  if (existingConfig) {
+    document.getElementById('stop-char-tweets').addEventListener('click', async () => {
+      delete twitterData.charTweets[character.id];
+      await saveData(roche);
+      showToast(`${character.name} 已停止发推文`, 'success');
+      document.body.removeChild(overlay);
+    });
+  }
+
+  // 点击背景关闭
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) {
+      document.body.removeChild(overlay);
+    }
+  });
 }
 
 })(); // 立即执行函数结束
