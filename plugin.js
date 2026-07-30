@@ -90,7 +90,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '4.2.1',
+    version: '4.2.2',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -1059,9 +1059,7 @@ function renderUI(container, roche) {
         top: 0;
         left: 0;
         right: 0;
-        /* iOS 安全区域适配 */
-        padding-top: env(safe-area-inset-top);
-        height: calc(60px + env(safe-area-inset-top));
+        height: 60px;
         background: rgba(255, 255, 255, 0.85);
         backdrop-filter: blur(12px);
         border-bottom: 1px solid #eff3f4;
@@ -2387,7 +2385,6 @@ function renderUI(container, roche) {
         left: 0;
         right: 0;
         height: 53px;
-        padding-top: env(safe-area-inset-top);
         background: rgba(255, 255, 255, 0.85);
         backdrop-filter: blur(12px);
         border-bottom: 1px solid #eff3f4;
@@ -7290,9 +7287,9 @@ function showSidebar(roche) {
       if (action === 'profile') {
         showProfile(currentUser, roche);
       } else if (action === 'bookmarks') {
-        showToast('书签功能开发中...', 'info');
+        showBookmarks(roche);
       } else if (action === 'lists') {
-        showToast('列表功能开发中...', 'info');
+        showLists(roche);
       } else if (action === 'settings') {
         switchView('settings');
       } else if (userId) {
