@@ -90,7 +90,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '4.0.3',
+    version: '4.0.4',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -649,6 +649,7 @@ function renderUI(container, roche) {
         z-index: 99;
         max-width: 768px;
         margin: 0 auto;
+        margin-top: -1px; /* 紧贴顶栏，消除空隙 */
       }
 
       .timeline-tab {
@@ -1598,6 +1599,7 @@ function renderUI(container, roche) {
         z-index: 99;
         max-width: 768px;
         margin: 0 auto;
+        margin-top: -1px; /* 紧贴顶栏 */
         scrollbar-width: none;
       }
 
@@ -1639,7 +1641,7 @@ function renderUI(container, roche) {
       }
 
       .search-content {
-        padding-top: 0; /* 顶部栏不再固定，不需要 padding */
+        padding-top: calc(110px + env(safe-area-inset-top)); /* 60px顶栏 + 50px标签栏 */
         padding-bottom: calc(60px + env(safe-area-inset-bottom));
         overflow-y: auto;
         height: 100vh;
@@ -1657,6 +1659,7 @@ function renderUI(container, roche) {
         z-index: 99;
         max-width: 768px;
         margin: 0 auto;
+        margin-top: -1px; /* 紧贴顶栏 */
       }
 
       .section-title {
@@ -1858,6 +1861,7 @@ function renderUI(container, roche) {
         z-index: 99;
         max-width: 768px;
         margin: 0 auto;
+        margin-top: -1px; /* 紧贴顶栏 */
       }
 
       .notifications-tabs {
@@ -2063,6 +2067,7 @@ function renderUI(container, roche) {
         z-index: 99;
         max-width: 768px;
         margin: 0 auto;
+        margin-top: -1px; /* 紧贴顶栏 */
       }
 
       .messages-search-wrapper {
