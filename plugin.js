@@ -90,7 +90,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '4.0.2',
+    version: '4.0.3',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -132,6 +132,20 @@ async function loadData(roche) {
   const stored = await roche.storage.get(STORAGE_KEY);
   if (stored) {
     twitterData = JSON.parse(stored);
+
+    // 兼容旧版本数据：添加 NPC 相关字段
+    if (!twitterData.npcs) {
+      twitterData.npcs = {};
+    }
+    if (!twitterData.npcInterests) {
+      twitterData.npcInterests = {};
+    }
+    if (!twitterData.lastNPCCleanup) {
+      twitterData.lastNPCCleanup = Date.now();
+    }
+    if (!twitterData.lastNPCGeneration) {
+      twitterData.lastNPCGeneration = Date.now();
+    }
   }
 }
 
@@ -3901,12 +3915,17 @@ async function renderTweets(roche, filter = 'recommended') {
     // "为你推荐" 标签：基于兴趣度的智能推荐
     const newsTweets = await fetchNewsTweets(roche);
 
+    // 确保 npcs 和 npcInterests 已初始化
+    if (!twitterData.npcs) twitterData.npcs = {};
+    if (!twitterData.npcInterests) twitterData.npcInterests = {};
+    if (!twitterData.npcInterests[currentUser]) twitterData.npcInterests[currentUser] = {};
+
     // 对推文进行智能排序
     filteredTweets = [...twitterData.tweets].map(tweet => {
       let score = 0;
 
       // 如果是 NPC 的推文，根据兴趣度加权
-      if (twitterData.npcs[tweet.userId]) {
+      if (twitterData.npcs && twitterData.npcs[tweet.userId]) {
         const interest = twitterData.npcInterests[currentUser]?.[tweet.userId] || 0.5;
         score = interest;
       } else {
