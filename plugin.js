@@ -97,7 +97,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '4.9.2',
+    version: '5.0.0',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -3847,11 +3847,17 @@ function bindEvents(container, roche) {
   document.getElementById('chat-back-btn').addEventListener('click', () => {
     const chatView = document.getElementById('chat-view');
     const messagesListView = document.getElementById('messages-list-view');
+    const bottomNav = document.querySelector('.mobile-bottom-nav');
+
     if (chatView) {
       chatView.classList.remove('active');
     }
     if (messagesListView) {
       messagesListView.classList.remove('hidden');
+    }
+    // 显示底部导航栏
+    if (bottomNav) {
+      bottomNav.style.display = 'flex';
     }
   });
 
@@ -6292,16 +6298,21 @@ async function renderMessages(roche) {
         : `<div style="width: 48px; height: 48px; border-radius: 50%; background: ${avatarGradient}; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; font-weight: 700; flex-shrink: 0;">${initial}</div>`;
 
       return `
-        <div class="message-item" data-conv-id="${conv.id}" style="padding: 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: background 0.2s; border-bottom: 1px solid #eff3f4;">
-          ${avatarHtml}
-          <div class="message-info" style="flex: 1; min-width: 0;">
-            <div class="message-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-              <div class="message-name" style="font-size: 15px; font-weight: 700; color: #0f1419;">${conv.title || '未命名对话'}</div>
-              <div class="message-time" style="font-size: 13px; color: #536471;">${getTimeAgo(conv.lastTimestamp)}</div>
-            </div>
-            <div class="message-preview" style="font-size: 15px; color: #536471; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(conv.lastMessage.substring(0, 80))}</div>
+        <div class="message-item-wrapper" style="position: relative; overflow: hidden;" data-conv-id="${conv.id}">
+          <div class="message-item-delete" style="position: absolute; right: 0; top: 0; bottom: 0; width: 80px; background: #f4212e; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 15px;">
+            删除
           </div>
-          ${conv.unread ? '<div class="message-unread-dot" style="width: 8px; height: 8px; border-radius: 50%; background: #1d9bf0; flex-shrink: 0;"></div>' : ''}
+          <div class="message-item" data-conv-id="${conv.id}" style="position: relative; padding: 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: transform 0.3s, background 0.2s; border-bottom: 1px solid #eff3f4; background: white;">
+            ${avatarHtml}
+            <div class="message-info" style="flex: 1; min-width: 0;">
+              <div class="message-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <div class="message-name" style="font-size: 15px; font-weight: 700; color: #0f1419;">${conv.title || '未命名对话'}</div>
+                <div class="message-time" style="font-size: 13px; color: #536471;">${getTimeAgo(conv.lastTimestamp)}</div>
+              </div>
+              <div class="message-preview" style="font-size: 15px; color: #536471; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(conv.lastMessage.substring(0, 80))}</div>
+            </div>
+            ${conv.unread ? '<div class="message-unread-dot" style="width: 8px; height: 8px; border-radius: 50%; background: #1d9bf0; flex-shrink: 0;"></div>' : ''}
+          </div>
         </div>
       `;
     }).join('');
@@ -6311,6 +6322,70 @@ async function renderMessages(roche) {
       item.addEventListener('click', () => {
         const convId = item.dataset.convId;
         openChatWithConv(convId, roche);
+      });
+    });
+
+    // 添加左滑删除功能
+    messagesEl.querySelectorAll('.message-item-wrapper').forEach(wrapper => {
+      const messageItem = wrapper.querySelector('.message-item');
+      const deleteBtn = wrapper.querySelector('.message-item-delete');
+      let startX = 0;
+      let currentX = 0;
+      let isDragging = false;
+
+      // 触摸开始
+      messageItem.addEventListener('touchstart', (e) => {
+        startX = e.touches[0].clientX;
+        isDragging = true;
+        messageItem.style.transition = 'none';
+      });
+
+      // 触摸移动
+      messageItem.addEventListener('touchmove', (e) => {
+        if (!isDragging) return;
+        currentX = e.touches[0].clientX;
+        const deltaX = currentX - startX;
+
+        // 只允许向左滑动
+        if (deltaX < 0) {
+          const translateX = Math.max(deltaX, -80);
+          messageItem.style.transform = `translateX(${translateX}px)`;
+        }
+      });
+
+      // 触摸结束
+      messageItem.addEventListener('touchend', () => {
+        if (!isDragging) return;
+        isDragging = false;
+
+        const deltaX = currentX - startX;
+        messageItem.style.transition = 'transform 0.3s';
+
+        // 如果滑动超过40px，显示删除按钮
+        if (deltaX < -40) {
+          messageItem.style.transform = 'translateX(-80px)';
+        } else {
+          messageItem.style.transform = 'translateX(0)';
+        }
+      });
+
+      // 点击删除按钮
+      deleteBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const convId = wrapper.dataset.convId;
+
+        if (confirm('确定要删除这个对话吗？')) {
+          try {
+            // 从 Roche 删除对话
+            await roche.conversation.delete({ conversationId: convId });
+            showToast('对话已删除', 'success');
+            // 刷新列表
+            renderMessages(roche);
+          } catch (error) {
+            console.error('删除对话失败:', error);
+            showToast('删除失败', 'error');
+          }
+        }
       });
     });
 
@@ -6923,11 +6998,17 @@ function openChat(userId, roche) {
   // 显示聊天界面
   const messagesListView = document.getElementById('messages-list-view');
   const chatView = document.getElementById('chat-view');
+  const bottomNav = document.querySelector('.mobile-bottom-nav');
+
   if (messagesListView) {
     messagesListView.classList.add('hidden');
   }
   if (chatView) {
     chatView.classList.add('active');
+  }
+  // 隐藏底部导航栏
+  if (bottomNav) {
+    bottomNav.style.display = 'none';
   }
 }
 
@@ -7045,11 +7126,17 @@ async function openChatWithConv(convId, roche) {
     // 显示聊天界面
     const messagesListView = document.getElementById('messages-list-view');
     const chatView = document.getElementById('chat-view');
+    const bottomNav = document.querySelector('.mobile-bottom-nav');
+
     if (messagesListView) {
       messagesListView.classList.add('hidden');
     }
     if (chatView) {
       chatView.classList.add('active');
+    }
+    // 隐藏底部导航栏
+    if (bottomNav) {
+      bottomNav.style.display = 'none';
     }
 
     // 绑定发送按钮（如果还没绑定）
@@ -7381,37 +7468,26 @@ async function sendMessageToConv(roche, content) {
     chatMessages.insertAdjacentHTML('beforeend', userMessageHtml);
     chatMessages.scrollTop = chatMessages.scrollHeight;
 
-    // 2. 获取 Char 的 persona 信息
-    let persona = null;
-    try {
-      persona = await roche.persona.get(currentConversationId);
-      console.log('[Twitter] 获取到的 Persona:', persona);
-    } catch (e) {
-      console.log('[Twitter] 获取 Persona 失败:', e);
-    }
-
-    // 3. 调用 Roche AI API，传入 persona
-    const chatOptions = {
+    // 2. 调用 Roche AI API（完全使用原生 API，不做任何修改）
+    // Roche 会自动处理 persona、记忆、上下文等
+    const response = await roche.ai.chat({
       conversationId: currentConversationId,
       message: content,
       stream: false
-    };
+    });
 
-    // 如果有 persona，添加到请求中
-    if (persona) {
-      chatOptions.persona = persona;
-      console.log('[Twitter] 使用 Persona 发送消息');
-    }
-
-    const response = await roche.ai.chat(chatOptions);
-
-    // 4. 显示 AI 回复
+    // 3. 显示 AI 回复
     const conv = (await roche.conversation.list()).find(c => c.id === currentConversationId);
     let charAvatar = null;
 
     // 获取 Char 头像
-    if (persona?.avatar) {
-      charAvatar = persona.avatar;
+    try {
+      const persona = await roche.persona.get(currentConversationId);
+      if (persona?.avatar) {
+        charAvatar = persona.avatar;
+      }
+    } catch (e) {
+      console.log('[Twitter] 获取 Persona 头像失败:', e);
     }
 
     if (!charAvatar) {
