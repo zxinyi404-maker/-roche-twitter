@@ -97,7 +97,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '4.9.1',
+    version: '4.9.2',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -7381,24 +7381,38 @@ async function sendMessageToConv(roche, content) {
     chatMessages.insertAdjacentHTML('beforeend', userMessageHtml);
     chatMessages.scrollTop = chatMessages.scrollHeight;
 
-    // 2. 调用 Roche AI API
-    const response = await roche.ai.chat({
+    // 2. 获取 Char 的 persona 信息
+    let persona = null;
+    try {
+      persona = await roche.persona.get(currentConversationId);
+      console.log('[Twitter] 获取到的 Persona:', persona);
+    } catch (e) {
+      console.log('[Twitter] 获取 Persona 失败:', e);
+    }
+
+    // 3. 调用 Roche AI API，传入 persona
+    const chatOptions = {
       conversationId: currentConversationId,
       message: content,
       stream: false
-    });
+    };
 
-    // 3. 显示 AI 回复
+    // 如果有 persona，添加到请求中
+    if (persona) {
+      chatOptions.persona = persona;
+      console.log('[Twitter] 使用 Persona 发送消息');
+    }
+
+    const response = await roche.ai.chat(chatOptions);
+
+    // 4. 显示 AI 回复
     const conv = (await roche.conversation.list()).find(c => c.id === currentConversationId);
     let charAvatar = null;
 
     // 获取 Char 头像
-    try {
-      const persona = await roche.persona.get(currentConversationId);
-      if (persona?.avatar) {
-        charAvatar = persona.avatar;
-      }
-    } catch (e) {}
+    if (persona?.avatar) {
+      charAvatar = persona.avatar;
+    }
 
     if (!charAvatar) {
       const initial = (conv?.title || '?').charAt(0).toUpperCase();
