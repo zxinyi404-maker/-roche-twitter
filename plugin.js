@@ -97,7 +97,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '4.9.0',
+    version: '4.9.1',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -6983,15 +6983,59 @@ async function openChatWithConv(convId, roche) {
     // 更新聊天头部
     document.getElementById('chat-user-name').textContent = conv.title || '未命名对话';
 
-    // 获取聊天历史（通过 Roche 的对话记忆）
-    // 注意：不显示历史消息，聊天界面默认为空
+    // 获取聊天历史
     const chatMessages = document.getElementById('chat-messages');
-    chatMessages.innerHTML = `
-      <div style="text-align: center; padding: 40px 20px; color: #536471;">
-        <div style="font-size: 15px; margin-bottom: 8px;">开始新对话</div>
-        <div style="font-size: 13px;">发送消息与 ${conv.title || 'AI'} 聊天</div>
-      </div>
-    `;
+
+    try {
+      const history = await roche.conversation.getHistory({
+        conversationId: convId,
+        limit: 50
+      });
+
+      console.log('[Twitter] 获取到的聊天历史:', history);
+
+      if (history && history.length > 0) {
+        // 渲染聊天历史
+        const currentUserData = twitterData.users[currentUser];
+        const userAvatar = currentUserData?.avatar || generateAvatar(currentUserData?.name || 'User');
+
+        chatMessages.innerHTML = history.map(msg => {
+          const isOwn = msg.role === 'user';
+          const avatar = isOwn ? userAvatar : charAvatar;
+          const content = msg.content || msg.text || '';
+
+          return `
+            <div class="chat-message ${isOwn ? 'own' : ''}" style="display: flex; gap: 8px; margin-bottom: 16px; ${isOwn ? 'flex-direction: row-reverse;' : ''}">
+              <img class="chat-message-avatar" src="${avatar}" alt="" style="width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; object-fit: cover;">
+              <div class="chat-message-bubble" style="
+                background: ${isOwn ? '#1d9bf0' : '#eff3f4'};
+                color: ${isOwn ? 'white' : '#0f1419'};
+                padding: 12px 16px;
+                border-radius: 18px;
+                max-width: 70%;
+                word-wrap: break-word;
+              ">${escapeHtml(content)}</div>
+            </div>
+          `;
+        }).join('');
+      } else {
+        // 没有历史消息
+        chatMessages.innerHTML = `
+          <div style="text-align: center; padding: 40px 20px; color: #536471;">
+            <div style="font-size: 15px; margin-bottom: 8px;">开始新对话</div>
+            <div style="font-size: 13px;">发送消息与 ${conv.title || 'AI'} 聊天</div>
+          </div>
+        `;
+      }
+    } catch (error) {
+      console.error('[Twitter] 获取聊天历史失败:', error);
+      chatMessages.innerHTML = `
+        <div style="text-align: center; padding: 40px 20px; color: #536471;">
+          <div style="font-size: 15px; margin-bottom: 8px;">开始新对话</div>
+          <div style="font-size: 13px;">发送消息与 ${conv.title || 'AI'} 聊天</div>
+        </div>
+      `;
+    }
 
     // 滚动到底部
     setTimeout(() => {
