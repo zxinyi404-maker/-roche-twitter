@@ -14,6 +14,7 @@ let twitterData = {
   tweets: [],
   users: {},
   follows: {},
+  bookmarks: {},
   nextTweetId: 1
 };
 
@@ -67,7 +68,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '3.5.5',
+    version: '3.6.0',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -1418,12 +1419,13 @@ function renderUI(container, roche) {
         border-radius: 20px;
         color: #0f1419;
         font-size: 15px;
-        padding: 8px 16px;
+        padding: 10px 16px;
         resize: none;
         outline: none;
         font-family: inherit;
         min-height: 40px;
         max-height: 120px;
+        line-height: 20px;
       }
 
       .detail-reply-textarea::placeholder {
@@ -1462,9 +1464,14 @@ function renderUI(container, roche) {
       /* 页面视图 */
       .page-view {
         display: none;
-        padding-top: calc(60px + env(safe-area-inset-top));
-        padding-bottom: calc(60px + env(safe-area-inset-bottom));
-        min-height: 100vh;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: #ffffff;
+        z-index: 200;
+        overflow-y: auto;
       }
 
       .page-view.active {
@@ -2361,20 +2368,20 @@ function renderUI(container, roche) {
       /* 个人资料页 */
       .profile-header {
         position: fixed;
-        top: calc(60px + env(safe-area-inset-top));
+        top: 0;
         left: 0;
         right: 0;
         height: 53px;
+        padding-top: env(safe-area-inset-top);
         background: rgba(255, 255, 255, 0.85);
         backdrop-filter: blur(12px);
         border-bottom: 1px solid #eff3f4;
         display: flex;
         align-items: center;
-        padding: 0 16px;
+        padding-left: 16px;
+        padding-right: 16px;
         gap: 24px;
         z-index: 100;
-        max-width: 768px;
-        margin: 0 auto;
       }
 
       .profile-back-btn {
@@ -2408,13 +2415,14 @@ function renderUI(container, roche) {
       }
 
       .profile-content {
-        padding-top: 53px;
+        padding-top: calc(53px + env(safe-area-inset-top));
       }
 
       .profile-banner {
         width: 100%;
         height: 200px;
-        background: #cfd9de;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        position: relative;
       }
 
       .profile-info {
@@ -3185,6 +3193,36 @@ function renderUI(container, roche) {
       </div>
     </div>
 
+    <!-- 书签页 -->
+    <div class="page-view" id="bookmarks-view">
+      <div class="profile-header">
+        <div class="profile-back-btn" id="bookmarks-back-btn">${icons.back}</div>
+        <div class="profile-header-info">
+          <div class="profile-header-name">书签</div>
+        </div>
+      </div>
+      <div class="profile-content">
+        <div id="bookmarks-tweets-list">
+          <!-- 动态加载书签推文 -->
+        </div>
+      </div>
+    </div>
+
+    <!-- 列表页 -->
+    <div class="page-view" id="lists-view">
+      <div class="profile-header">
+        <div class="profile-back-btn" id="lists-back-btn">${icons.back}</div>
+        <div class="profile-header-info">
+          <div class="profile-header-name">好友列表</div>
+        </div>
+      </div>
+      <div class="profile-content">
+        <div id="lists-content">
+          <!-- 动态加载好友列表 -->
+        </div>
+      </div>
+    </div>
+
     <!-- 设置和隐私页 -->
     <div class="page-view" id="privacy-settings-view">
       <div class="profile-header">
@@ -3457,6 +3495,16 @@ function bindEvents(container, roche) {
     switchView('timeline');
   });
 
+  // 书签页返回按钮
+  document.getElementById('bookmarks-back-btn').addEventListener('click', () => {
+    switchView('timeline');
+  });
+
+  // 列表页返回按钮
+  document.getElementById('lists-back-btn').addEventListener('click', () => {
+    switchView('timeline');
+  });
+
   // 通知页标签切换
   document.querySelectorAll('.notifications-tab').forEach(tab => {
     tab.addEventListener('click', () => {
@@ -3666,10 +3714,14 @@ function handleSidebarMenu(menu, roche) {
       // 侧边栏的"设置和隐私"直接进入切换账号页面
       showSwitchAccount(roche);
       break;
+    case 'bookmarks':
+      showBookmarks(roche);
+      break;
+    case 'lists':
+      showLists(roche);
+      break;
     case 'premium':
     case 'communities':
-    case 'bookmarks':
-    case 'lists':
     case 'spaces':
     case 'creator':
     case 'help':
@@ -4002,6 +4054,8 @@ function switchView(view) {
   const switchAccountView = document.getElementById('switch-account-view');
   const followingListView = document.getElementById('following-list-view');
   const followersListView = document.getElementById('followers-list-view');
+  const bookmarksView = document.getElementById('bookmarks-view');
+  const listsView = document.getElementById('lists-view');
   const topBar = document.querySelector('.mobile-top-bar');
 
   // 隐藏所有视图
@@ -4017,6 +4071,8 @@ function switchView(view) {
   if (switchAccountView) switchAccountView.classList.remove('active');
   if (followingListView) followingListView.classList.remove('active');
   if (followersListView) followersListView.classList.remove('active');
+  if (bookmarksView) bookmarksView.classList.remove('active');
+  if (listsView) listsView.classList.remove('active');
 
   if (view === 'timeline') {
     // 显示时间线
@@ -4067,6 +4123,14 @@ function switchView(view) {
   } else if (view === 'followersList') {
     // 显示粉丝列表页
     if (followersListView) followersListView.classList.add('active');
+    if (topBar) topBar.style.display = 'none'; // 隐藏全局顶部栏
+  } else if (view === 'bookmarks') {
+    // 显示书签页
+    if (bookmarksView) bookmarksView.classList.add('active');
+    if (topBar) topBar.style.display = 'none'; // 隐藏全局顶部栏
+  } else if (view === 'lists') {
+    // 显示列表页
+    if (listsView) listsView.classList.add('active');
     if (topBar) topBar.style.display = 'none'; // 隐藏全局顶部栏
   }
 }
@@ -4537,8 +4601,9 @@ function showShareMenu(tweet, roche) {
         }
         document.body.removeChild(overlay);
       } else if (action === 'send-via-dm') {
-        showToast('私信分享功能开发中...', 'info');
+        // 通过私信发送
         document.body.removeChild(overlay);
+        await showSendViaDMDialog(tweet, roche);
       } else if (action === 'bookmark') {
         // 添加书签
         if (!twitterData.bookmarks) {
@@ -4562,6 +4627,143 @@ function showShareMenu(tweet, roche) {
 
   // 取消按钮
   menu.querySelector('.share-cancel-btn').addEventListener('click', () => {
+    document.body.removeChild(overlay);
+  });
+
+  // 点击遮罩层关闭
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) {
+      document.body.removeChild(overlay);
+    }
+  });
+}
+
+/**
+ * 显示通过私信发送对话框
+ */
+async function showSendViaDMDialog(tweet, roche) {
+  const user = twitterData.users[tweet.userId];
+
+  // 创建遮罩层
+  const overlay = document.createElement('div');
+  overlay.className = 'select-dialog';
+  overlay.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10001;
+    padding: 20px;
+  `;
+
+  // 获取对话列表
+  const conversations = await roche.conversation.list();
+
+  // 创建对话框
+  const dialog = document.createElement('div');
+  dialog.style.cssText = `
+    background: white;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 400px;
+    max-height: 600px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  `;
+
+  dialog.innerHTML = `
+    <div style="padding: 20px; border-bottom: 1px solid #eff3f4;">
+      <h3 style="margin: 0; font-size: 20px; font-weight: 700; color: #0f1419;">发送给</h3>
+      <div style="margin-top: 8px; font-size: 13px; color: #536471;">
+        ${user.name}：${tweet.content.substring(0, 50)}${tweet.content.length > 50 ? '...' : ''}
+      </div>
+    </div>
+    <div style="overflow-y: auto; flex: 1;">
+      ${conversations.length === 0 ? '<div style="padding: 40px 20px; text-align: center; color: #536471;">暂无对话</div>' : ''}
+    </div>
+    <div style="padding: 16px; border-top: 1px solid #eff3f4;">
+      <button class="select-dialog-cancel" style="width: 100%; padding: 12px; border: none; background: #eff3f4; color: #0f1419; font-weight: 700; border-radius: 20px; cursor: pointer;">取消</button>
+    </div>
+  `;
+
+  // 添加对话列表
+  const listContainer = dialog.querySelector('div[style*="overflow-y"]');
+  conversations.forEach(conv => {
+    const item = document.createElement('div');
+    item.className = 'select-dialog-item';
+    item.style.cssText = `
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 20px;
+      cursor: pointer;
+      transition: background 0.2s;
+    `;
+
+    // 生成头像
+    const firstChar = (conv.name || conv.title || 'C')[0].toUpperCase();
+    const avatar = `
+      <div style="width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 20px; flex-shrink: 0;">
+        ${firstChar}
+      </div>
+    `;
+
+    item.innerHTML = `
+      ${avatar}
+      <div style="flex: 1; min-width: 0;">
+        <div style="font-weight: 700; font-size: 15px; color: #0f1419;">${conv.name || conv.title || '未命名对话'}</div>
+      </div>
+    `;
+
+    item.addEventListener('click', async () => {
+      // 发送推文到私信
+      try {
+        const message = `分享了 ${user.name} 的推文：\n\n${tweet.content}\n\nhttps://twitter.com/${user.username}/status/${tweet.id}`;
+
+        await roche.ai.chat({
+          conversationId: conv.id,
+          message: message,
+          stream: false
+        });
+
+        // 保存到记忆
+        await roche.memory.saveLongTerm({
+          conversationId: conv.id,
+          text: message,
+          metadata: { role: 'user', timestamp: Date.now(), type: 'tweet_share' },
+          importance: 3
+        });
+
+        showToast('已发送到私信', 'success');
+        document.body.removeChild(overlay);
+      } catch (error) {
+        console.error('[Twitter] 发送私信失败:', error);
+        showToast('发送失败', 'error');
+      }
+    });
+
+    item.addEventListener('mouseenter', () => {
+      item.style.background = 'rgba(0, 0, 0, 0.03)';
+    });
+
+    item.addEventListener('mouseleave', () => {
+      item.style.background = 'transparent';
+    });
+
+    listContainer.appendChild(item);
+  });
+
+  overlay.appendChild(dialog);
+  document.body.appendChild(overlay);
+
+  // 取消按钮
+  dialog.querySelector('.select-dialog-cancel').addEventListener('click', () => {
     document.body.removeChild(overlay);
   });
 
@@ -6906,6 +7108,130 @@ function showSidebar(roche) {
     if (e.target === overlay) {
       document.body.removeChild(overlay);
     }
+  });
+}
+
+/**
+ * 显示个人资料页
+ */
+/**
+ * 显示书签页面
+ */
+function showBookmarks(roche) {
+  switchView('bookmarks');
+
+  const bookmarksList = document.getElementById('bookmarks-tweets-list');
+  if (!bookmarksList) return;
+
+  // 获取当前用户的书签
+  const userBookmarks = twitterData.bookmarks?.[currentUser] || [];
+
+  if (userBookmarks.length === 0) {
+    bookmarksList.innerHTML = `
+      <div style="padding: 60px 20px; text-align: center;">
+        <div style="font-size: 31px; font-weight: 800; color: #0f1419; margin-bottom: 8px;">保存你的书签</div>
+        <div style="font-size: 15px; color: #536471; max-width: 400px; margin: 0 auto;">
+          将推文加入书签，以便日后轻松查找。
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  // 显示书签推文列表
+  bookmarksList.innerHTML = '';
+  userBookmarks.forEach(tweetId => {
+    const tweet = twitterData.tweets.find(t => t.id === tweetId);
+    if (!tweet) return;
+
+    const user = twitterData.users[tweet.userId];
+    const tweetEl = createTweetElement(tweet, user, roche);
+    bookmarksList.appendChild(tweetEl);
+  });
+}
+
+/**
+ * 显示好友列表页面
+ */
+function showLists(roche) {
+  switchView('lists');
+
+  const listsList = document.getElementById('lists-content');
+  if (!listsList) return;
+
+  // 获取关注列表（好友列表）
+  const following = twitterData.follows[currentUser] || [];
+
+  if (following.length === 0) {
+    listsList.innerHTML = `
+      <div style="padding: 60px 20px; text-align: center;">
+        <div style="font-size: 31px; font-weight: 800; color: #0f1419; margin-bottom: 8px;">关注一些人</div>
+        <div style="font-size: 15px; color: #536471; max-width: 400px; margin: 0 auto;">
+          关注你感兴趣的人，在这里查看他们。
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  // 显示好友列表
+  listsList.innerHTML = '';
+  following.forEach(userId => {
+    const user = twitterData.users[userId];
+    if (!user) return;
+
+    const userItem = document.createElement('div');
+    userItem.style.cssText = `
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      cursor: pointer;
+      transition: background 0.2s;
+      border-bottom: 1px solid #eff3f4;
+    `;
+
+    userItem.innerHTML = `
+      <img src="${user.avatar}" style="width: 48px; height: 48px; border-radius: 50%;" alt="">
+      <div style="flex: 1; min-width: 0;">
+        <div style="font-weight: 700; font-size: 15px; color: #0f1419;">${user.name}</div>
+        <div style="font-size: 15px; color: #536471;">${user.username}</div>
+      </div>
+      <button class="detail-follow-btn following" style="padding: 6px 16px; border-radius: 20px; border: 1px solid #cfd9de; background: transparent; color: #0f1419; font-weight: 700; font-size: 14px; cursor: pointer; transition: all 0.2s; min-width: 100px;">
+        <span>正在关注</span>
+      </button>
+    `;
+
+    // 点击用户查看资料
+    userItem.addEventListener('click', (e) => {
+      if (!e.target.closest('button')) {
+        showProfile(userId, roche);
+      }
+    });
+
+    // 取消关注按钮
+    const followBtn = userItem.querySelector('button');
+    followBtn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      await toggleFollow(userId, roche);
+      showLists(roche); // 刷新列表
+    });
+
+    followBtn.addEventListener('mouseenter', () => {
+      followBtn.style.background = 'rgba(244, 33, 46, 0.1)';
+      followBtn.style.borderColor = 'rgba(244, 33, 46, 0.4)';
+      followBtn.style.color = '#f4212e';
+      followBtn.querySelector('span').textContent = '取消关注';
+    });
+
+    followBtn.addEventListener('mouseleave', () => {
+      followBtn.style.background = 'transparent';
+      followBtn.style.borderColor = '#cfd9de';
+      followBtn.style.color = '#0f1419';
+      followBtn.querySelector('span').textContent = '正在关注';
+    });
+
+    listsList.appendChild(userItem);
   });
 }
 
