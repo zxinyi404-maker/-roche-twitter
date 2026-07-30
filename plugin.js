@@ -44,8 +44,8 @@ let settings = {
   notificationSound: true,
   // NPC 系统设置
   enableNPC: true,           // 启用 NPC 系统
-  npcAutoPostAPI: '',        // NPC 自动发帖 API（如果不使用 noir）
-  useNoirAPI: true           // 优先使用 roche.noir.autoPost
+  npcBackendAPI: '',         // NPC 后端 API 地址（用于发帖）
+  useSystemChatForDM: true   // 私信使用系统 roche.ai.chat
 };
 
 // 当前登录用户
@@ -90,7 +90,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '4.3.3',
+    version: '4.4.0',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -3174,6 +3174,13 @@ function renderUI(container, roche) {
             <div class="setting-info">
               <div class="setting-label">发帖频率</div>
               <div class="setting-description">当前: <span id="npc-frequency-value">30-120 分钟</span></div>
+            </div>
+            <div class="setting-arrow">›</div>
+          </div>
+          <div class="setting-item" id="setting-npc-api">
+            <div class="setting-info">
+              <div class="setting-label">后端 API 地址</div>
+              <div class="setting-description" id="npc-api-status">未配置</div>
             </div>
             <div class="setting-arrow">›</div>
           </div>
@@ -7735,6 +7742,21 @@ function showSettings(roche) {
     });
   }
 
+  // 绑定 NPC 后端 API 设置
+  const settingNPCAPI = document.getElementById('setting-npc-api');
+  if (settingNPCAPI) {
+    settingNPCAPI.replaceWith(settingNPCAPI.cloneNode(true));
+    document.getElementById('setting-npc-api').addEventListener('click', () => {
+      showNPCAPISettings(roche);
+    });
+  }
+
+  // 更新 API 状态显示
+  const apiStatus = document.getElementById('npc-api-status');
+  if (apiStatus) {
+    apiStatus.textContent = settings.npcBackendAPI ? '已配置' : '未配置';
+  }
+
   // 绑定管理 NPC
   const settingNPCManage = document.getElementById('setting-npc-manage');
   if (settingNPCManage) {
@@ -8558,117 +8580,66 @@ async function npcAutoPost(npcId, roche) {
   if (!npc) return;
 
   try {
-    // 优先使用 roche.noir.autoPost（后台运行）
-    if (settings.useNoirAPI && roche.noir?.autoPost) {
-      console.log('[NPC] ✅ 检测到 roche.noir.autoPost，使用后台 API');
-      console.log('[NPC] 调用 URL: roche.noir.autoPost');
+    // 使用自定义后端 API 发帖
+    if (settings.npcBackendAPI) {
+      console.log('[NPC] ✅ 使用自定义后端 API 发帖');
+      console.log('[NPC] API 地址:', settings.npcBackendAPI);
       console.log('[NPC] 发送参数:', {
-        type: 'generate_post',
-        persona: {
-          name: npc.name,
-          bio: npc.bio,
-          personality: npc.personality,
-          occupation: npc.occupation,
-          interests: npc.interests,
-          talkStyle: npc.talkStyle
-        },
-        context: {
-          platform: 'twitter',
-          previousPostsCount: twitterData.tweets.filter(t => t.userId === npcId).slice(0, 5).length
-        }
+        npcId: npcId,
+        name: npc.name,
+        bio: npc.bio,
+        personality: npc.personality,
+        occupation: npc.occupation,
+        interests: npc.interests,
+        talkStyle: npc.talkStyle
       });
 
-      const response = await roche.noir.autoPost({
-        type: 'generate_post',
-        persona: {
-          name: npc.name,
-          bio: npc.bio,
-          personality: npc.personality,
-          occupation: npc.occupation,
-          interests: npc.interests,
-          talkStyle: npc.talkStyle
+      const response = await fetch(settings.npcBackendAPI, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
         },
-        context: {
-          platform: 'twitter',
-          previousPosts: twitterData.tweets
-            .filter(t => t.userId === npcId)
-            .slice(0, 5)
-            .map(t => t.content)
-        },
-        prompt: '发一条符合人设的推文（50字以内）'
+        body: JSON.stringify({
+          npcId: npcId,
+          persona: {
+            name: npc.name,
+            bio: npc.bio,
+            personality: npc.personality,
+            occupation: npc.occupation,
+            interests: npc.interests,
+            talkStyle: npc.talkStyle
+          },
+          context: {
+            platform: 'twitter',
+            previousPosts: twitterData.tweets
+              .filter(t => t.userId === npcId)
+              .slice(0, 5)
+              .map(t => t.content)
+          }
+        })
       });
 
-      console.log('[NPC] noir API 响应:', response);
+      console.log('[NPC] 后端响应状态:', response.status);
 
-      if (response && response.content) {
-        console.log('[NPC] ✅ 使用 noir API 发帖成功');
-        createNPCTweet(npcId, response.content, roche);
+      if (!response.ok) {
+        throw new Error(`后端 API 错误: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log('[NPC] 后端响应数据:', data);
+
+      if (data && data.content) {
+        console.log('[NPC] ✅ 使用后端 API 发帖成功');
+        createNPCTweet(npcId, data.content, roche);
         return;
       } else {
-        console.log('[NPC] ⚠️ noir API 返回无效，降级到 roche.ai.chat');
+        throw new Error('后端返回无效数据');
       }
     } else {
-      console.log('[NPC] ⚠️ roche.noir.autoPost 不可用');
-      console.log('[NPC] useNoirAPI:', settings.useNoirAPI);
-      console.log('[NPC] roche.noir:', roche.noir);
+      console.log('[NPC] ⚠️ 未配置后端 API 地址');
+      showToast('请在设置中配置 NPC 后端 API 地址', 'error');
+      throw new Error('未配置 npcBackendAPI');
     }
-
-    // 使用 roche.ai.chat（需要会话ID，适合后台运行）
-    console.log('[NPC] 📞 使用 roche.ai.chat 发帖');
-
-    // 为每个 NPC 创建独立的会话ID
-    if (!npc.conversationId) {
-      console.log('[NPC] 创建新会话...');
-      // 尝试创建会话
-      if (roche.conversation?.create) {
-        console.log('[NPC] 使用 roche.conversation.create');
-        const conv = await roche.conversation.create({
-          name: `Twitter NPC: ${npc.name}`,
-          metadata: { type: 'twitter_npc', npcId: npcId }
-        });
-        npc.conversationId = conv.id;
-        console.log('[NPC] 会话创建成功:', conv.id);
-      } else {
-        // 使用固定的会话ID格式
-        npc.conversationId = `twitter_npc_${npcId}`;
-        console.log('[NPC] 使用固定会话ID:', npc.conversationId);
-      }
-    } else {
-      console.log('[NPC] 使用现有会话ID:', npc.conversationId);
-    }
-
-    const prompt = `你是 ${npc.name}，${npc.bio}
-
-性格：${npc.personality}
-职业：${npc.occupation}
-兴趣：${npc.interests.join('、')}
-说话风格：${npc.talkStyle}
-
-请发一条符合你人设的推文（50字以内），内容可以是：
-- 分享日常生活
-- 表达观点看法
-- 吐槽有趣的事
-- 分享专业知识
-- 晒照片/美食/旅行（用文字描述）
-
-只返回推文内容，不要其他说明。`;
-
-    console.log('[NPC] 调用 roche.ai.chat');
-    console.log('[NPC] conversationId:', npc.conversationId);
-    console.log('[NPC] message 长度:', prompt.length);
-
-    const response = await roche.ai.chat({
-      conversationId: npc.conversationId,
-      message: prompt,
-      stream: false
-    });
-
-    console.log('[NPC] roche.ai.chat 响应:', response);
-
-    const content = response.content.trim().replace(/^["']|["']$/g, '');
-    console.log('[NPC] ✅ 推文内容:', content);
-
-    createNPCTweet(npcId, content, roche);
 
   } catch (error) {
     console.error('[NPC] ❌ 发帖失败:', error);
@@ -9021,6 +8992,40 @@ function showNPCCountSettings(roche) {
       initNPCSystem(roche);
     } else {
       showToast('请输入 1-20 之间的数字', 'error');
+    }
+  }
+}
+
+/**
+ * NPC 后端 API 设置
+ */
+function showNPCAPISettings(roche) {
+  const currentAPI = settings.npcBackendAPI || '';
+
+  const newAPI = prompt(
+    'NPC 后端 API 地址：\n\n' +
+    '用于 NPC 自动发帖的后端接口\n' +
+    '例如: https://your-backend.com/api/npc/post\n\n' +
+    '当前地址：' + (currentAPI || '未配置') + '\n\n' +
+    '请输入新的 API 地址（留空则清除）：',
+    currentAPI
+  );
+
+  if (newAPI !== null) {
+    settings.npcBackendAPI = newAPI.trim();
+    saveSettings(roche);
+
+    if (settings.npcBackendAPI) {
+      showToast('NPC 后端 API 已设置', 'success');
+      console.log('[设置] NPC 后端 API:', settings.npcBackendAPI);
+    } else {
+      showToast('NPC 后端 API 已清除', 'success');
+    }
+
+    // 更新显示
+    const apiStatus = document.getElementById('npc-api-status');
+    if (apiStatus) {
+      apiStatus.textContent = settings.npcBackendAPI ? '已配置' : '未配置';
     }
   }
 }
