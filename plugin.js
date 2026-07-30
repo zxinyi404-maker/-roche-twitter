@@ -68,7 +68,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '3.6.3',
+    version: '3.7.0',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -2416,6 +2416,9 @@ function renderUI(container, roche) {
 
       .profile-content {
         padding-top: calc(53px + env(safe-area-inset-top));
+        padding-bottom: calc(20px + env(safe-area-inset-bottom));
+        overflow-y: auto;
+        height: 100vh;
       }
 
       .profile-banner {
@@ -3435,8 +3438,36 @@ function bindEvents(container, roche) {
   });
 
   // 详情页返回按钮
-  document.getElementById('detail-back-btn').addEventListener('click', () => {
-    switchView('timeline');
+  // ============================================
+  // 统一绑定所有返回按钮
+  // ============================================
+  const backButtons = {
+    'detail-back-btn': 'timeline',
+    'chat-back-btn': 'messages',
+    'settings-back-btn': 'timeline',
+    'profile-back-btn': 'timeline',
+    'bookmarks-back-btn': 'timeline',
+    'lists-back-btn': 'timeline',
+    'privacy-settings-back-btn': 'settings',
+    'switch-account-back-btn': 'settings',
+    'following-list-back-btn': 'profile',
+    'followers-list-back-btn': 'profile'
+  };
+
+  Object.keys(backButtons).forEach(btnId => {
+    const btn = document.getElementById(btnId);
+    if (btn) {
+      btn.addEventListener('click', () => {
+        const targetView = backButtons[btnId];
+        if (targetView === 'settings') {
+          showSettings(roche);
+        } else if (targetView === 'profile' && currentUser) {
+          showProfile(currentUser, roche);
+        } else {
+          switchView(targetView);
+        }
+      });
+    }
   });
 
   // 详情页回复功能
@@ -3488,21 +3519,6 @@ function bindEvents(container, roche) {
         renderMessages(roche);
       }
     });
-  });
-
-  // 个人资料页返回按钮
-  document.getElementById('profile-back-btn').addEventListener('click', () => {
-    switchView('timeline');
-  });
-
-  // 书签页返回按钮
-  document.getElementById('bookmarks-back-btn').addEventListener('click', () => {
-    switchView('timeline');
-  });
-
-  // 列表页返回按钮
-  document.getElementById('lists-back-btn').addEventListener('click', () => {
-    switchView('timeline');
   });
 
   // 通知页标签切换
@@ -4764,12 +4780,6 @@ async function showSendViaDMDialog(tweet, roche) {
       try {
         const message = `分享了 ${user.name} 的推文：\n\n${tweet.content}\n\nhttps://twitter.com/${user.username}/status/${tweet.id}`;
 
-        await roche.ai.chat({
-          conversationId: conv.id,
-          message: message,
-          stream: false
-        });
-
         // 保存到记忆
         await roche.memory.saveLongTerm({
           conversationId: conv.id,
@@ -4780,6 +4790,15 @@ async function showSendViaDMDialog(tweet, roche) {
 
         showToast('已发送到私信', 'success');
         document.body.removeChild(overlay);
+
+        // 切换到私信页面并打开对话
+        setTimeout(() => {
+          switchView('messages');
+          // 加载消息列表后打开对话
+          setTimeout(() => {
+            showChatWithConversation(conv.id, roche);
+          }, 100);
+        }, 300);
       } catch (error) {
         console.error('[Twitter] 发送私信失败:', error);
         showToast('发送失败', 'error');
@@ -5292,14 +5311,7 @@ async function shareTweetToConversation(tweet, convId, roche) {
 
     const shareMessage = `【分享推文】\n\n@${tweetUser.username}: ${tweet.content}\n\n—— 来自 Twitter`;
 
-    // 使用 AI 聊天 API 发送分享消息
-    await roche.ai.chat({
-      conversationId: convId,
-      message: shareMessage,
-      stream: false
-    });
-
-    // 保存到记忆（带角色标记）
+    // 保存用户消息到记忆（带角色标记）
     await roche.memory.saveLongTerm({
       conversationId: convId,
       text: shareMessage,
@@ -5308,6 +5320,15 @@ async function shareTweetToConversation(tweet, convId, roche) {
     });
 
     showToast('已分享到私信', 'success');
+
+    // 切换到私信页面并打开对话
+    setTimeout(() => {
+      switchView('messages');
+      // 加载消息列表后打开对话
+      setTimeout(() => {
+        showChatWithConversation(convId, roche);
+      }, 100);
+    }, 300);
   } catch (error) {
     console.error('分享失败:', error);
     showToast('分享失败', 'error');
@@ -7432,15 +7453,6 @@ function showProfile(userId, roche) {
  * 显示设置页面
  */
 function showSettings(roche) {
-  // 绑定设置页返回按钮
-  const backBtn = document.getElementById('settings-back-btn');
-  if (backBtn) {
-    backBtn.replaceWith(backBtn.cloneNode(true));
-    document.getElementById('settings-back-btn').addEventListener('click', () => {
-      switchView('timeline');
-    });
-  }
-
   // 加载当前设置
   const toggleMemory = document.getElementById('toggle-memory');
   const toggleSummary = document.getElementById('toggle-summary');
@@ -7517,15 +7529,6 @@ function showSettings(roche) {
  * 显示设置和隐私页面
  */
 function showPrivacySettings(roche) {
-  // 绑定返回按钮
-  const backBtn = document.getElementById('privacy-settings-back-btn');
-  if (backBtn) {
-    backBtn.replaceWith(backBtn.cloneNode(true)); // 移除旧事件
-    document.getElementById('privacy-settings-back-btn').addEventListener('click', () => {
-      switchView('settings');
-    });
-  }
-
   // 绑定账号信息
   const accountInfo = document.getElementById('setting-account-info');
   if (accountInfo) {
