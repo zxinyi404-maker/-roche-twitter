@@ -3176,7 +3176,7 @@ function renderUI(container, roche) {
           </div>
           <div class="setting-item" id="setting-api-model">
             <div class="setting-info">
-              <div class="setting-label">模型</div>
+              <div class="setting-label">智能模型</div>
               <div class="setting-description" id="api-model-value">gpt-3.5-turbo</div>
             </div>
             <div class="setting-arrow">›</div>
@@ -9215,106 +9215,122 @@ async function fetchAvailableModels(roche) {
 }
 
 /**
- * API Model 设置
+ * API Model 设置 - 弹出对话框选择
  */
 function showAPIModelSettings(roche) {
-  const predefinedModels = [
-    'gpt-4',
-    'gpt-4-turbo',
-    'gpt-3.5-turbo',
-    'gpt-3.5-turbo-16k',
-    'claude-3-opus',
-    'claude-3-sonnet',
-    'claude-3-haiku',
-    'deepseek-chat',
-    'deepseek-coder'
-  ];
-
   const currentModel = settings.apiConfig.model || 'gpt-3.5-turbo';
 
-  // 显示选择对话框
-  const choice = prompt(
-    '选择模型：\n\n' +
-    '0. 🔄 从 API 拉取模型列表\n' +
-    predefinedModels.map((m, i) => `${i + 1}. ${m}${m === currentModel ? ' (当前)' : ''}`).join('\n') +
-    `\n${predefinedModels.length + 1}. 手动输入模型名称\n\n` +
-    '请输入序号：',
-    '0'
-  );
+  // 创建模型选择对话框
+  const dialog = document.createElement('div');
+  dialog.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+  `;
 
-  if (choice === null || choice.trim() === '') {
-    return;
-  }
+  const dialogContent = document.createElement('div');
+  dialogContent.style.cssText = `
+    background: white;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 500px;
+    max-height: 80vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  `;
 
-  const choiceNum = parseInt(choice);
+  dialogContent.innerHTML = `
+    <div style="padding: 20px; border-bottom: 1px solid #eff3f4; display: flex; align-items: center; justify-content: space-between;">
+      <div style="font-size: 20px; font-weight: 700; color: #0f1419;">选择模型</div>
+      <button id="refresh-models-btn" style="background: #1d9bf0; color: white; border: none; border-radius: 20px; padding: 8px 16px; font-size: 14px; font-weight: 600; cursor: pointer;">
+        🔄 刷新
+      </button>
+    </div>
+    <div id="models-list" style="flex: 1; overflow-y: auto; padding: 12px;">
+      <div style="text-align: center; padding: 40px; color: #536471;">
+        点击"刷新"从 API 拉取模型列表
+      </div>
+    </div>
+    <div style="padding: 12px; border-top: 1px solid #eff3f4;">
+      <button id="close-model-dialog" style="width: 100%; background: #0f1419; color: white; border: none; border-radius: 24px; padding: 12px; font-size: 15px; font-weight: 600; cursor: pointer;">
+        关闭
+      </button>
+    </div>
+  `;
 
-  // 选项 0: 从 API 拉取
-  if (choiceNum === 0) {
-    fetchAvailableModels(roche).then(models => {
-      if (models && models.length > 0) {
-        // 显示拉取到的模型
-        const modelChoice = prompt(
-          '从 API 拉取的模型：\n\n' +
-          models.slice(0, 20).map((m, i) => `${i + 1}. ${m}`).join('\n') +
-          (models.length > 20 ? `\n... (共 ${models.length} 个模型，仅显示前 20 个)` : '') +
-          '\n\n请输入序号或直接输入模型名称：',
-          '1'
-        );
+  dialog.appendChild(dialogContent);
+  document.body.appendChild(dialog);
 
-        if (modelChoice !== null && modelChoice.trim() !== '') {
-          let selectedModel;
+  // 关闭对话框
+  const closeDialog = () => {
+    if (document.body.contains(dialog)) {
+      document.body.removeChild(dialog);
+    }
+  };
 
-          if (!isNaN(modelChoice)) {
-            const index = parseInt(modelChoice) - 1;
-            if (index >= 0 && index < models.length) {
-              selectedModel = models[index];
-            } else {
-              showToast('无效的序号', 'error');
-              return;
-            }
-          } else {
-            selectedModel = modelChoice.trim();
+  dialog.addEventListener('click', (e) => {
+    if (e.target === dialog) closeDialog();
+  });
+
+  document.getElementById('close-model-dialog').addEventListener('click', closeDialog);
+
+  // 刷新按钮 - 拉取模型
+  document.getElementById('refresh-models-btn').addEventListener('click', async () => {
+    const modelsList = document.getElementById('models-list');
+    modelsList.innerHTML = '<div style="text-align: center; padding: 40px; color: #536471;">正在拉取模型...</div>';
+
+    const models = await fetchAvailableModels(roche);
+
+    if (models && models.length > 0) {
+      // 显示模型列表
+      modelsList.innerHTML = models.map(model => `
+        <div class="model-item" data-model="${model}" style="
+          padding: 16px;
+          border-radius: 8px;
+          margin-bottom: 8px;
+          cursor: pointer;
+          background: ${model === currentModel ? '#eff3f4' : 'transparent'};
+          border: 1px solid ${model === currentModel ? '#1d9bf0' : '#eff3f4'};
+          transition: all 0.2s;
+        ">
+          <div style="font-size: 15px; font-weight: 600; color: #0f1419;">${model}</div>
+          ${model === currentModel ? '<div style="font-size: 13px; color: #1d9bf0; margin-top: 4px;">✓ 当前使用</div>' : ''}
+        </div>
+      `).join('');
+
+      // 绑定点击事件
+      modelsList.querySelectorAll('.model-item').forEach(item => {
+        item.addEventListener('mouseenter', () => {
+          if (item.dataset.model !== currentModel) {
+            item.style.background = '#f7f9f9';
           }
-
+        });
+        item.addEventListener('mouseleave', () => {
+          if (item.dataset.model !== currentModel) {
+            item.style.background = 'transparent';
+          }
+        });
+        item.addEventListener('click', () => {
+          const selectedModel = item.dataset.model;
           settings.apiConfig.model = selectedModel;
           saveSettings(roche);
-          showToast(`已设置模型为：${selectedModel}`, 'success');
+          showToast(`已切换到模型：${selectedModel}`, 'success');
           updateAPIConfigDisplay();
-        }
-      }
-    });
-    return;
-  }
-
-  // 选项 1-9: 预定义模型
-  if (choiceNum >= 1 && choiceNum <= predefinedModels.length) {
-    const selectedModel = predefinedModels[choiceNum - 1];
-    settings.apiConfig.model = selectedModel;
-    saveSettings(roche);
-    showToast(`已设置模型为：${selectedModel}`, 'success');
-    updateAPIConfigDisplay();
-    return;
-  }
-
-  // 选项 10: 手动输入
-  if (choiceNum === predefinedModels.length + 1) {
-    const customModel = prompt(
-      '手动输入模型名称：\n\n' +
-      '例如: gpt-4, claude-3-opus, deepseek-chat\n\n' +
-      '请输入模型名称：',
-      currentModel
-    );
-
-    if (customModel !== null && customModel.trim() !== '') {
-      settings.apiConfig.model = customModel.trim();
-      saveSettings(roche);
-      showToast(`已设置模型为：${customModel.trim()}`, 'success');
-      updateAPIConfigDisplay();
+          closeDialog();
+        });
+      });
+    } else {
+      modelsList.innerHTML = '<div style="text-align: center; padding: 40px; color: #f4212e;">拉取失败，请检查 API 配置</div>';
     }
-    return;
-  }
-
-  showToast('无效的选项', 'error');
+  });
 }
 
 /**
