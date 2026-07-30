@@ -67,7 +67,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '2.9.5',
+    version: '2.9.6',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -5272,6 +5272,7 @@ async function renderMessages(roche) {
   try {
     // 从 Roche 加载真实的对话列表
     const conversations = await roche.conversation.list();
+    console.log('[Twitter] 加载的对话列表:', conversations);
 
     if (!conversations || conversations.length === 0) {
       // 显示欢迎界面
