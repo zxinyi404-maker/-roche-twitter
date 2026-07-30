@@ -90,7 +90,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '4.2.5',
+    version: '4.3.0',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -1164,7 +1164,7 @@ function renderUI(container, roche) {
       .detail-tweet-text {
         font-size: 17px;
         line-height: 24px;
-        margin: 0 0 12px 0;
+        margin: 4px 0 12px 0;
         padding: 0 16px;
         white-space: pre-wrap;
         word-wrap: break-word;
@@ -8549,23 +8549,53 @@ async function npcAutoPost(npcId, roche) {
   if (!npc) return;
 
   try {
-    // 尝试使用 noir API
+    // 优先使用 roche.noir.autoPost（后台运行）
     if (settings.useNoirAPI && roche.noir?.autoPost) {
-      console.log('[NPC] 使用 roche.noir.autoPost 发帖');
+      console.log('[NPC] 使用 roche.noir.autoPost 发帖（后台运行）');
       const response = await roche.noir.autoPost({
         type: 'generate_post',
-        persona: npc,
-        prompt: '发一条符合人设的推文'
+        persona: {
+          name: npc.name,
+          bio: npc.bio,
+          personality: npc.personality,
+          occupation: npc.occupation,
+          interests: npc.interests,
+          talkStyle: npc.talkStyle
+        },
+        context: {
+          platform: 'twitter',
+          previousPosts: twitterData.tweets
+            .filter(t => t.userId === npcId)
+            .slice(0, 5)
+            .map(t => t.content)
+        },
+        prompt: '发一条符合人设的推文（50字以内）'
       });
 
-      if (response.content) {
+      if (response && response.content) {
         createNPCTweet(npcId, response.content, roche);
         return;
       }
     }
 
-    // 降级方案：使用 roche.ai.chat
+    // 使用 roche.ai.chat（需要会话ID，适合后台运行）
     console.log('[NPC] 使用 roche.ai.chat 发帖');
+
+    // 为每个 NPC 创建独立的会话ID
+    if (!npc.conversationId) {
+      // 尝试创建会话
+      if (roche.conversation?.create) {
+        const conv = await roche.conversation.create({
+          name: `Twitter NPC: ${npc.name}`,
+          metadata: { type: 'twitter_npc', npcId: npcId }
+        });
+        npc.conversationId = conv.id;
+      } else {
+        // 使用固定的会话ID格式
+        npc.conversationId = `twitter_npc_${npcId}`;
+      }
+    }
+
     const prompt = `你是 ${npc.name}，${npc.bio}
 
 性格：${npc.personality}
@@ -8583,7 +8613,9 @@ async function npcAutoPost(npcId, roche) {
 只返回推文内容，不要其他说明。`;
 
     const response = await roche.ai.chat({
-      messages: [{ role: 'user', content: prompt }]
+      conversationId: npc.conversationId,
+      message: prompt,
+      stream: false
     });
 
     const content = response.content.trim().replace(/^["']|["']$/g, '');
@@ -8614,7 +8646,63 @@ function createNPCTweet(npcId, content, roche) {
   twitterData.npcs[npcId].postCount++;
 
   console.log('[NPC] 发帖成功:', twitterData.users[npcId].name, content.substring(0, 20));
+
+  // 发送消息推送通知
+  sendNPCPostNotification(npcId, content, tweet.id, roche);
+
   saveData(roche);
+}
+
+/**
+ * 发送 NPC 发帖通知
+ */
+async function sendNPCPostNotification(npcId, content, tweetId, roche) {
+  try {
+    const user = twitterData.users[npcId];
+    if (!user) return;
+
+    // 使用 Roche 的通知系统
+    if (roche.notification?.send) {
+      await roche.notification.send({
+        title: `${user.name} 发布了新推文`,
+        body: content.substring(0, 100) + (content.length > 100 ? '...' : ''),
+        icon: user.avatar,
+        data: {
+          type: 'npc_tweet',
+          npcId: npcId,
+          tweetId: tweetId,
+          pluginId: PLUGIN_ID
+        },
+        actions: [
+          { action: 'view', title: '查看' },
+          { action: 'dismiss', title: '忽略' }
+        ]
+      });
+      console.log('[通知] NPC 发帖通知已发送:', user.name);
+    }
+
+    // 添加到插件内的通知列表
+    if (!twitterData.notifications) {
+      twitterData.notifications = [];
+    }
+
+    twitterData.notifications.unshift({
+      id: Date.now(),
+      type: 'npc_post',
+      userId: npcId,
+      tweetId: tweetId,
+      timestamp: Date.now(),
+      read: false
+    });
+
+    // 限制通知数量
+    if (twitterData.notifications.length > 100) {
+      twitterData.notifications = twitterData.notifications.slice(0, 100);
+    }
+
+  } catch (error) {
+    console.error('[通知] 发送 NPC 通知失败:', error);
+  }
 }
 
 /**
