@@ -67,7 +67,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '2.5.1',
+    version: '2.6.0',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -5630,6 +5630,151 @@ function openChat(userId, roche) {
   }
   if (chatView) {
     chatView.classList.add('active');
+  }
+}
+
+/**
+ * 使用 conversationId 打开聊天界面（连接到 Roche Char）
+ */
+let currentConversationId = null;
+
+async function openChatWithConv(convId, roche) {
+  try {
+    currentConversationId = convId;
+
+    // 获取对话信息
+    const conversations = await roche.conversation.list();
+    const conv = conversations.find(c => c.id === convId);
+
+    if (!conv) {
+      showToast('对话不存在', 'error');
+      return;
+    }
+
+    // 更新聊天头部
+    document.getElementById('chat-user-name').textContent = conv.title || '未命名对话';
+
+    // 获取聊天历史（通过 Roche 的对话记忆）
+    const longTerm = await roche.memory.getLongTerm({ conversationId: convId, limit: 50 });
+    const memories = [...(longTerm.facts || []), ...(longTerm.vectors || [])];
+
+    // 渲染消息（从记忆中提取）
+    const chatMessages = document.getElementById('chat-messages');
+
+    if (memories.length === 0) {
+      chatMessages.innerHTML = `
+        <div style="text-align: center; padding: 40px 20px; color: #536471;">
+          <div style="font-size: 15px; margin-bottom: 8px;">还没有聊天记录</div>
+          <div style="font-size: 13px;">发送第一条消息开始对话</div>
+        </div>
+      `;
+    } else {
+      // 从记忆中构建消息列表
+      chatMessages.innerHTML = memories.map((mem, idx) => {
+        const text = mem.summaryText || mem.text || '';
+        const isOwn = idx % 2 === 0; // 简化处理：交替显示
+
+        return `
+          <div class="chat-message ${isOwn ? 'own' : ''}" style="margin-bottom: 16px;">
+            <div class="chat-message-bubble" style="
+              background: ${isOwn ? '#1d9bf0' : '#eff3f4'};
+              color: ${isOwn ? 'white' : '#0f1419'};
+              padding: 12px 16px;
+              border-radius: 18px;
+              max-width: 70%;
+              word-wrap: break-word;
+              ${isOwn ? 'margin-left: auto;' : 'margin-right: auto;'}
+            ">${escapeHtml(text)}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // 滚动到底部
+    setTimeout(() => {
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }, 100);
+
+    // 显示聊天界面
+    const messagesListView = document.getElementById('messages-list-view');
+    const chatView = document.getElementById('chat-view');
+    if (messagesListView) {
+      messagesListView.classList.add('hidden');
+    }
+    if (chatView) {
+      chatView.classList.add('active');
+    }
+
+    // 绑定发送按钮（如果还没绑定）
+    const chatInput = document.getElementById('chat-input');
+    const chatSendBtn = document.getElementById('chat-send-btn');
+
+    if (chatInput && chatSendBtn) {
+      // 移除旧的事件监听器
+      const newChatInput = chatInput.cloneNode(true);
+      chatInput.parentNode.replaceChild(newChatInput, chatInput);
+      const newChatSendBtn = chatSendBtn.cloneNode(true);
+      chatSendBtn.parentNode.replaceChild(newChatSendBtn, chatSendBtn);
+
+      // 输入框事件
+      newChatInput.addEventListener('input', () => {
+        newChatSendBtn.disabled = !newChatInput.value.trim();
+      });
+
+      newChatInput.addEventListener('keypress', async (e) => {
+        if (e.key === 'Enter' && newChatInput.value.trim()) {
+          await sendMessageToConv(roche, newChatInput.value.trim());
+          newChatInput.value = '';
+          newChatSendBtn.disabled = true;
+        }
+      });
+
+      // 发送按钮事件
+      newChatSendBtn.addEventListener('click', async () => {
+        if (newChatInput.value.trim()) {
+          await sendMessageToConv(roche, newChatInput.value.trim());
+          newChatInput.value = '';
+          newChatSendBtn.disabled = true;
+        }
+      });
+    }
+
+  } catch (error) {
+    console.error('打开聊天失败:', error);
+    showToast('加载聊天失败', 'error');
+  }
+}
+
+/**
+ * 发送消息到 Roche 对话
+ */
+async function sendMessageToConv(roche, content) {
+  if (!content || !currentConversationId) return;
+
+  try {
+    // 使用 Roche 的 AI 聊天 API 发送消息
+    const response = await roche.ai.chat({
+      conversationId: currentConversationId,
+      message: content,
+      stream: false
+    });
+
+    // 保存到记忆
+    if (settings.enableMemory) {
+      await roche.memory.saveLongTerm({
+        conversationId: currentConversationId,
+        text: `用户: ${content}\nAI: ${response.text || ''}`,
+        importance: 5
+      });
+    }
+
+    // 重新加载聊天界面
+    await openChatWithConv(currentConversationId, roche);
+
+    showToast('消息已发送', 'success');
+  } catch (error) {
+    console.error('发送消息失败:', error);
+    showToast('发送失败', 'error');
   }
 }
 
