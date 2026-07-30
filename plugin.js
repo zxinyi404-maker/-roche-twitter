@@ -97,7 +97,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '5.1.0',
+    version: '5.1.1',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -7464,15 +7464,16 @@ async function sendMessageToConv(roche, content) {
     chatMessages.insertAdjacentHTML('beforeend', userMessageHtml);
     chatMessages.scrollTop = chatMessages.scrollHeight;
 
-    // 2. 获取历史消息构建完整上下文
+    // 2. 获取短期记忆（最近的聊天历史）
     let messages = [];
 
     try {
-      // 获取短期记忆（最近的聊天消息）
       const history = await roche.memory.getShortTerm({
         conversationId: currentConversationId,
         limit: 20
       });
+
+      console.log('[Twitter] 获取到的短期记忆:', history);
 
       if (history && history.length > 0) {
         messages = history.map(msg => ({
@@ -7481,7 +7482,7 @@ async function sendMessageToConv(roche, content) {
         }));
       }
     } catch (e) {
-      console.log('[Twitter] 获取聊天历史失败，使用空上下文:', e);
+      console.log('[Twitter] 获取短期记忆失败，使用空上下文:', e);
     }
 
     // 3. 添加当前用户消息
@@ -7490,22 +7491,39 @@ async function sendMessageToConv(roche, content) {
       content: content
     });
 
-    // 4. 获取角色信息
+    console.log('[Twitter] 发送给 AI 的完整消息列表:', messages);
+
+    // 4. 获取长期记忆（向量召回测试）
+    try {
+      const longTermMemory = await roche.memory.getLongTerm({
+        conversationId: currentConversationId,
+        limit: 5
+      });
+      console.log('[Twitter] 长期记忆（向量数据）:', longTermMemory);
+    } catch (e) {
+      console.log('[Twitter] 无法访问长期记忆:', e);
+    }
+
+    // 5. 获取角色信息
     let character = null;
     try {
       character = await roche.character.get(currentConversationId);
+      console.log('[Twitter] 角色信息:', character);
     } catch (e) {
       console.log('[Twitter] 获取角色信息失败:', e);
     }
 
-    // 5. 调用 Roche AI API（使用完整的 messages 格式）
+    // 6. 调用 Roche AI API
+    console.log('[Twitter] 开始调用 roche.ai.chat...');
     const response = await roche.ai.chat({
       conversationId: currentConversationId,
       messages: messages,
       stream: false
     });
 
-    // 6. 显示 AI 回复
+    console.log('[Twitter] AI 回复:', response);
+
+    // 7. 显示 AI 回复
     let charAvatar = null;
 
     // 使用角色头像
