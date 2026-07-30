@@ -1,11 +1,11 @@
 {
   "id": "twitter-x-2026",
   "name": "𝕏 (Twitter)",
-  "version": "5.3.0",
-  "description": "🐦 完全还原推特 | Char 自动发推 | NPC 生态系统 | 完整社交功能 | iOS 适配",
+  "version": "5.3.1",
+  "description": "🐦 完全还原推特 | Char 自动发推 | 优化聊天界面 | NPC 生态系统 | iOS 适配",
   "author": "zxinyi404",
   "icon": "𝕏",
-  "entry": "https://raw.githubusercontent.com/zxinyi404-maker/-roche-twitter/main/plugin.js?v=20260731780000",
+  "entry": "https://raw.githubusercontent.com/zxinyi404-maker/-roche-twitter/main/plugin.js?v=20260731790000",
   "hash": "",
   "permissions": [
     "persona:read",

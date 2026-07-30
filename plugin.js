@@ -97,7 +97,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '5.3.0',
+    version: '5.3.1',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -2342,10 +2342,11 @@ function renderUI(container, roche) {
 
       .chat-input-area {
         position: fixed;
-        bottom: calc(60px + env(safe-area-inset-bottom));
+        bottom: env(safe-area-inset-bottom);
         left: 0;
         right: 0;
-        padding: 12px 16px;
+        padding: 8px 12px;
+        padding-bottom: calc(8px + env(safe-area-inset-bottom));
         background: rgba(255, 255, 255, 0.85);
         backdrop-filter: blur(12px);
         border-top: 1px solid #eff3f4;
@@ -2353,17 +2354,19 @@ function renderUI(container, roche) {
         gap: 8px;
         max-width: 768px;
         margin: 0 auto;
+        z-index: 1000;
       }
 
       .chat-input {
         flex: 1;
         background: #eff3f4;
         border: none;
-        border-radius: 20px;
-        padding: 10px 16px;
-        font-size: 15px;
+        border-radius: 18px;
+        padding: 8px 12px;
+        font-size: 14px;
         outline: none;
         color: #0f1419;
+        min-height: 36px;
       }
 
       .chat-input::placeholder {
@@ -2374,12 +2377,13 @@ function renderUI(container, roche) {
         background: #1d9bf0;
         color: #ffffff;
         border: none;
-        border-radius: 20px;
-        padding: 8px 20px;
-        font-weight: 700;
-        font-size: 15px;
+        border-radius: 18px;
+        padding: 8px 16px;
+        font-weight: 600;
+        font-size: 14px;
         cursor: pointer;
         transition: background 0.2s;
+        min-height: 36px;
       }
 
       .chat-send-btn:hover:not(:disabled) {
@@ -9731,29 +9735,88 @@ ${character.description || character.persona || ''}
 - 可以是日常分享、想法、观点、感受等
 - 自然真实，像普通人发推特一样`;
 
-    // 使用 Roche AI 生成推文内容
-    const response = await roche.ai.chat({
-      conversationId: charId,
-      messages: [
-        {
-          role: 'user',
-          content: prompt
-        }
-      ],
-      stream: false
-    });
-
+    // 使用插件配置的 API 生成推文内容（不是 Roche 主 API）
     let tweetContent = '';
 
-    // 提取回复内容
-    if (typeof response === 'string') {
-      tweetContent = response;
-    } else if (response?.content) {
-      tweetContent = response.content;
-    } else if (response?.text) {
-      tweetContent = response.text;
-    } else if (response?.message) {
-      tweetContent = response.message;
+    if (settings.apiConfig.url && settings.apiConfig.apiKey) {
+      // 使用插件配置的 API
+      try {
+        const response = await fetch(settings.apiConfig.url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${settings.apiConfig.apiKey}`
+          },
+          body: JSON.stringify({
+            model: settings.apiConfig.model || 'gpt-3.5-turbo',
+            messages: [
+              {
+                role: 'system',
+                content: character.description || character.persona || `你是 ${character.name}`
+              },
+              {
+                role: 'user',
+                content: prompt
+              }
+            ],
+            temperature: settings.apiConfig.temperature || 0.7,
+            max_tokens: 300
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`API 请求失败: ${response.status}`);
+        }
+
+        const data = await response.json();
+        tweetContent = data.choices?.[0]?.message?.content || '';
+      } catch (error) {
+        console.error('[Char] 使用插件 API 生成推文失败:', error);
+        // 如果插件 API 失败，回退到 Roche API
+        const response = await roche.ai.chat({
+          conversationId: charId,
+          messages: [
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          stream: false
+        });
+
+        if (typeof response === 'string') {
+          tweetContent = response;
+        } else if (response?.content) {
+          tweetContent = response.content;
+        } else if (response?.text) {
+          tweetContent = response.text;
+        } else if (response?.message) {
+          tweetContent = response.message;
+        }
+      }
+    } else {
+      // 如果没有配置插件 API，使用 Roche 主 API
+      console.log('[Char] 未配置插件 API，使用 Roche 主 API');
+      const response = await roche.ai.chat({
+        conversationId: charId,
+        messages: [
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        stream: false
+      });
+
+      if (typeof response === 'string') {
+        tweetContent = response;
+      } else if (response?.content) {
+        tweetContent = response.content;
+      } else if (response?.text) {
+        tweetContent = response.text;
+      } else if (response?.message) {
+        tweetContent = response.message;
+      }
     }
 
     // 清理内容
