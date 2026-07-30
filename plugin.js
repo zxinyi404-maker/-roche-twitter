@@ -67,7 +67,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '3.4.1',
+    version: '3.4.2',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -4915,9 +4915,9 @@ async function showShareDialog(tweet, roche) {
     `;
 
     // 获取帖子作者信息
-    const tweetUser = twitterData.users[tweet.user];
+    const tweetUser = twitterData.users[tweet.userId];
     if (!tweetUser) {
-      console.error('[Twitter] 找不到推文作者:', tweet.user);
+      console.error('[Twitter] 找不到推文作者:', tweet.userId);
       showToast('推文信息错误', 'error');
       return;
     }
@@ -5003,9 +5003,9 @@ async function showShareDialog(tweet, roche) {
  */
 async function shareTweetToConversation(tweet, convId, roche) {
   try {
-    const tweetUser = twitterData.users[tweet.user];
+    const tweetUser = twitterData.users[tweet.userId];
     if (!tweetUser) {
-      console.error('[Twitter] 找不到推文作者:', tweet.user);
+      console.error('[Twitter] 找不到推文作者:', tweet.userId);
       showToast('推文信息错误', 'error');
       return;
     }
