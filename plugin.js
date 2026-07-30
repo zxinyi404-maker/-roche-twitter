@@ -97,7 +97,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '5.4.3',
+    version: '5.4.4',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -5996,7 +5996,7 @@ function renderSearch(roche) {
 
   const recommendedEl = document.getElementById('recommended-users');
   if (!recommendedEl) {
-    console.error('[Twitter] 找不到推荐用户容器');
+    console.log('[Twitter] 推荐用户容器未找到，跳过渲染');
     return;
   }
 
@@ -10458,7 +10458,8 @@ async function testNPCPostAPI(roche) {
         ],
         temperature: settings.apiConfig.temperature,
         max_tokens: 200
-      })
+      }),
+      mode: 'cors' // 添加 CORS 模式
     });
 
     console.log('[测试] HTTP 状态:', response.status, response.statusText);
