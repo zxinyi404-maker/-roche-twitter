@@ -97,7 +97,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '5.3.1',
+    version: '5.4.0',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -6164,6 +6164,76 @@ function renderNotifications(roche) {
 }
 
 /**
+ * 显示删除对话确认对话框
+ */
+function showDeleteConversationDialog(roche, convId) {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    animation: fadeIn 0.2s;
+  `;
+
+  const dialog = document.createElement('div');
+  dialog.style.cssText = `
+    background: white;
+    border-radius: 16px;
+    width: 85%;
+    max-width: 320px;
+    overflow: hidden;
+    animation: slideUp 0.3s;
+  `;
+
+  dialog.innerHTML = `
+    <div style="padding: 24px 24px 16px;">
+      <h3 style="margin: 0 0 8px; font-size: 20px; font-weight: 700; color: #0f1419;">删除对话？</h3>
+      <p style="margin: 0; font-size: 15px; color: #536471; line-height: 20px;">此操作无法撤销，对话记录将被永久删除。</p>
+    </div>
+    <div style="padding: 12px; border-top: 1px solid #eff3f4; display: flex; gap: 12px;">
+      <button id="cancel-delete" style="flex: 1; padding: 10px; border: 1px solid #cfd9de; background: white; color: #0f1419; border-radius: 20px; font-weight: 600; font-size: 15px; cursor: pointer;">取消</button>
+      <button id="confirm-delete" style="flex: 1; padding: 10px; border: none; background: #f4212e; color: white; border-radius: 20px; font-weight: 600; font-size: 15px; cursor: pointer;">删除</button>
+    </div>
+  `;
+
+  overlay.appendChild(dialog);
+  document.body.appendChild(overlay);
+
+  // 取消按钮
+  document.getElementById('cancel-delete').addEventListener('click', () => {
+    document.body.removeChild(overlay);
+  });
+
+  // 确认删除
+  document.getElementById('confirm-delete').addEventListener('click', async () => {
+    try {
+      await roche.conversation.delete({ conversationId: convId });
+      showToast('对话已删除', 'success');
+      document.body.removeChild(overlay);
+      renderMessages(roche);
+    } catch (error) {
+      console.error('删除对话失败:', error);
+      showToast('删除失败', 'error');
+      document.body.removeChild(overlay);
+    }
+  });
+
+  // 点击背景关闭
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) {
+      document.body.removeChild(overlay);
+    }
+  });
+}
+
+/**
  * 渲染私信页
  */
 let currentChatUser = null;
@@ -6237,10 +6307,11 @@ async function renderMessages(roche) {
         try {
           const history = await roche.memory.getShortTerm({
             conversationId: conv.id,
-            limit: 1
+            limit: 10  // 获取最近10条，确保能拿到最新的
           });
 
           if (history && history.length > 0) {
+            // 取最后一条消息（最新的）
             const lastMsg = history[history.length - 1];
             lastMessage = lastMsg.text || lastMsg.content || '开始新对话...';
             lastTimestamp = lastMsg.timestamp || lastTimestamp;
@@ -6314,11 +6385,8 @@ async function renderMessages(roche) {
         : `<div style="width: 48px; height: 48px; border-radius: 50%; background: ${avatarGradient}; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; font-weight: 700; flex-shrink: 0;">${initial}</div>`;
 
       return `
-        <div class="message-item-wrapper" style="position: relative; overflow: hidden;" data-conv-id="${conv.id}">
-          <div class="message-item-delete" style="position: absolute; right: 0; top: 0; bottom: 0; width: 80px; background: #f4212e; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 15px;">
-            删除
-          </div>
-          <div class="message-item" data-conv-id="${conv.id}" style="position: relative; padding: 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: transform 0.3s, background 0.2s; border-bottom: 1px solid #eff3f4; background: white;">
+        <div class="message-item-wrapper" style="position: relative;" data-conv-id="${conv.id}">
+          <div class="message-item" data-conv-id="${conv.id}" style="padding: 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: background 0.2s; border-bottom: 1px solid #eff3f4; background: white;">
             ${avatarHtml}
             <div class="message-info" style="flex: 1; min-width: 0;">
               <div class="message-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
@@ -6341,66 +6409,34 @@ async function renderMessages(roche) {
       });
     });
 
-    // 添加左滑删除功能
+    // 添加长按删除功能
     messagesEl.querySelectorAll('.message-item-wrapper').forEach(wrapper => {
       const messageItem = wrapper.querySelector('.message-item');
-      const deleteBtn = wrapper.querySelector('.message-item-delete');
-      let startX = 0;
-      let currentX = 0;
-      let isDragging = false;
+      let pressTimer = null;
+      let longPressTriggered = false;
 
       // 触摸开始
       messageItem.addEventListener('touchstart', (e) => {
-        startX = e.touches[0].clientX;
-        isDragging = true;
-        messageItem.style.transition = 'none';
-      });
-
-      // 触摸移动
-      messageItem.addEventListener('touchmove', (e) => {
-        if (!isDragging) return;
-        currentX = e.touches[0].clientX;
-        const deltaX = currentX - startX;
-
-        // 只允许向左滑动
-        if (deltaX < 0) {
-          const translateX = Math.max(deltaX, -80);
-          messageItem.style.transform = `translateX(${translateX}px)`;
-        }
+        longPressTriggered = false;
+        pressTimer = setTimeout(() => {
+          longPressTriggered = true;
+          // 长按触发删除确认
+          const convId = wrapper.dataset.convId;
+          showDeleteConversationDialog(roche, convId);
+        }, 800); // 长按 800ms
       });
 
       // 触摸结束
       messageItem.addEventListener('touchend', () => {
-        if (!isDragging) return;
-        isDragging = false;
-
-        const deltaX = currentX - startX;
-        messageItem.style.transition = 'transform 0.3s';
-
-        // 如果滑动超过40px，显示删除按钮
-        if (deltaX < -40) {
-          messageItem.style.transform = 'translateX(-80px)';
-        } else {
-          messageItem.style.transform = 'translateX(0)';
+        if (pressTimer) {
+          clearTimeout(pressTimer);
         }
       });
 
-      // 点击删除按钮
-      deleteBtn.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        const convId = wrapper.dataset.convId;
-
-        if (confirm('确定要删除这个对话吗？')) {
-          try {
-            // 从 Roche 删除对话
-            await roche.conversation.delete({ conversationId: convId });
-            showToast('对话已删除', 'success');
-            // 刷新列表
-            renderMessages(roche);
-          } catch (error) {
-            console.error('删除对话失败:', error);
-            showToast('删除失败', 'error');
-          }
+      // 触摸移动时取消长按
+      messageItem.addEventListener('touchmove', () => {
+        if (pressTimer) {
+          clearTimeout(pressTimer);
         }
       });
     });
@@ -10936,7 +10972,7 @@ async function showCharTweetSettings(roche, character) {
     background: white;
     border-radius: 16px;
     width: 90%;
-    max-width: 500px;
+    max-width: 480px;
     animation: slideUp 0.3s;
   `;
 
@@ -10948,42 +10984,40 @@ async function showCharTweetSettings(roche, character) {
   dialog.innerHTML = `
     <div style="padding: 20px; border-bottom: 1px solid #eff3f4;">
       <button id="back-char-settings" style="background: none; border: none; font-size: 20px; cursor: pointer; padding: 8px; margin-right: 12px;">←</button>
-      <span style="font-size: 20px; font-weight: 700;">配置发推文</span>
+      <span style="font-size: 20px; font-weight: 700;">开通推特账号</span>
     </div>
     <div style="padding: 20px;">
       <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
         ${avatarHtml}
-        <div>
+        <div style="flex: 1;">
           <div style="font-size: 17px; font-weight: 700;">${escapeHtml(character.name)}</div>
-          <div style="font-size: 14px; color: #536471;">${escapeHtml(character.description.substring(0, 50)) || '暂无描述'}</div>
+          <div style="font-size: 14px; color: #536471; line-height: 1.4;">${escapeHtml(character.description.substring(0, 60)) || '暂无描述'}</div>
         </div>
       </div>
 
-      <div style="margin-bottom: 20px;">
-        <label style="display: block; font-weight: 600; margin-bottom: 8px; font-size: 15px;">使用账号</label>
-        <select id="char-account-type" style="width: 100%; padding: 12px; border: 1px solid #cfd9de; border-radius: 8px; font-size: 15px;">
-          <option value="original" ${!existingConfig || existingConfig.accountType === 'original' ? 'selected' : ''}>使用原名和头像</option>
-          <option value="alias" ${existingConfig?.accountType === 'alias' ? 'selected' : ''}>创建小号</option>
-        </select>
+      <div style="background: #f7f9f9; padding: 16px; border-radius: 12px; margin-bottom: 20px;">
+        <div style="font-size: 15px; color: #0f1419; margin-bottom: 8px; font-weight: 600;">✨ AI 完全自主</div>
+        <div style="font-size: 14px; color: #536471; line-height: 1.5;">
+          • 根据角色人设自动生成推文内容<br>
+          • AI 自己决定什么时候发推<br>
+          • 自动选择使用本名或创建小号<br>
+          • 模拟真实用户行为，完全随机
+        </div>
       </div>
 
-      <div style="margin-bottom: 20px;">
-        <label style="display: block; font-weight: 600; margin-bottom: 8px; font-size: 15px;">发推频率</label>
-        <select id="char-tweet-frequency" style="width: 100%; padding: 12px; border: 1px solid #cfd9de; border-radius: 8px; font-size: 15px;">
-          <option value="1" ${existingConfig?.frequency === 1 ? 'selected' : ''}>每天 1 条</option>
-          <option value="2" ${existingConfig?.frequency === 2 ? 'selected' : ''}>每天 2 条</option>
-          <option value="3" ${!existingConfig || existingConfig?.frequency === 3 ? 'selected' : ''}>每天 3 条</option>
-          <option value="5" ${existingConfig?.frequency === 5 ? 'selected' : ''}>每天 5 条</option>
-        </select>
+      <div style="background: #fff4e6; padding: 12px; border-radius: 8px; margin-bottom: 20px; border-left: 3px solid #ff9800;">
+        <div style="font-size: 13px; color: #e65100; line-height: 1.4;">
+          <strong>自然行为：</strong>发推频率随机，可能一天很活跃，可能几天不发，就像真人一样
+        </div>
       </div>
 
       <div style="display: flex; gap: 12px;">
         <button id="save-char-settings" style="flex: 1; background: #1d9bf0; color: white; border: none; padding: 14px; border-radius: 24px; font-weight: 700; font-size: 15px; cursor: pointer;">
-          ${existingConfig ? '更新设置' : '开始发推'}
+          ${existingConfig ? '✅ 已开通' : '🚀 开通推特'}
         </button>
         ${existingConfig ? `
           <button id="stop-char-tweets" style="flex: 1; background: #f4212e; color: white; border: none; padding: 14px; border-radius: 24px; font-weight: 700; font-size: 15px; cursor: pointer;">
-            停止发推
+            关闭推特
           </button>
         ` : ''}
       </div>
@@ -10999,39 +11033,78 @@ async function showCharTweetSettings(roche, character) {
     showCharTweetsManagement(roche);
   });
 
-  // 保存设置
+  // 保存设置（开通推特）
   document.getElementById('save-char-settings').addEventListener('click', async () => {
-    const accountType = document.getElementById('char-account-type').value;
-    const frequency = parseInt(document.getElementById('char-tweet-frequency').value);
+    if (existingConfig) {
+      // 已开通，只是确认
+      showToast(`${character.name} 的推特已在运行中`, 'info');
+      document.body.removeChild(overlay);
+      return;
+    }
 
-    // 如果是小号模式，生成用户名
-    let username = character.name;
+    // AI 自动决定参数
+    // 1. 随机决定使用本名还是小号 (70% 本名, 30% 小号)
+    const useAlias = Math.random() > 0.7;
+
+    // 2. 随机生成频率 (1-5条/天，偏向中等频率)
+    const frequencies = [1, 2, 2, 3, 3, 3, 4, 5]; // 权重分布
+    const frequency = frequencies[Math.floor(Math.random() * frequencies.length)];
+
+    // 生成用户
     let userId = character.id;
+    let username = character.name;
 
-    if (accountType === 'alias') {
-      // 生成小号用户名
+    if (useAlias) {
+      // 创建小号
       const randomNum = Math.floor(Math.random() * 9999);
       username = `${character.name}_${randomNum}`;
       userId = `char_alias_${character.id}_${Date.now()}`;
 
-      // 创建小号用户
+      twitterData.users[userId] = {
+        name: username,
+        username: `@${username}`,
+        avatar: character.avatar || generateAvatar(username),
+        bio: character.description.substring(0, 100) || `${character.name}的推特`,
+        following: 0,
+        followers: 0,
+        isChar: true,
+        charId: character.id
+      };
+    } else {
+      // 使用本名
       if (!twitterData.users[userId]) {
         twitterData.users[userId] = {
-          name: username,
-          username: `@${username}`,
-          avatar: character.avatar || generateAvatar(username),
-          bio: character.description.substring(0, 100) || `${character.name}的小号`,
+          name: character.name,
+          username: `@${character.name}`,
+          avatar: character.avatar || generateAvatar(character.name),
+          bio: character.description.substring(0, 100) || '',
           following: 0,
           followers: 0,
           isChar: true,
           charId: character.id
         };
       }
-    } else {
-      // 使用原名，更新或创建用户
-      userId = character.id;
-      if (!twitterData.users[userId]) {
-        twitterData.users[userId] = {
+    }
+
+    // 保存配置
+    if (!twitterData.charTweets) {
+      twitterData.charTweets = {};
+    }
+
+    twitterData.charTweets[character.id] = {
+      enabled: true,
+      accountType: useAlias ? 'alias' : 'original',
+      userId: userId,
+      frequency: frequency,
+      lastTweetTime: 0
+    };
+
+    await saveData(roche);
+
+    const accountInfo = useAlias ? `小号 @${username}` : `本名 @${character.name}`;
+    showToast(`🎉 ${character.name} 已开通推特！\n账号：${accountInfo}\n频率：每天 ${frequency} 条`, 'success');
+    document.body.removeChild(overlay);
+  });
           name: character.name,
           username: `@${character.name}`,
           avatar: character.avatar || generateAvatar(character.name),
