@@ -67,7 +67,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '3.5.1',
+    version: '3.5.2',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -1054,7 +1054,7 @@ function renderUI(container, roche) {
       }
 
       .detail-main {
-        padding-top: calc(60px + env(safe-area-inset-top));
+        padding-top: 60px;
         padding-bottom: calc(80px + env(safe-area-inset-bottom));
         max-width: 768px;
         margin: 0 auto;
