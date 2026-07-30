@@ -45,7 +45,14 @@ let settings = {
   // NPC 系统设置
   enableNPC: true,           // 启用 NPC 系统
   npcBackendAPI: '',         // NPC 后端 API 地址（用于发帖）
-  useSystemChatForDM: true   // 私信使用系统 roche.ai.chat
+  useSystemChatForDM: true,  // 私信使用系统 roche.ai.chat
+  // API 配置
+  apiConfig: {
+    url: '',                 // API 网址
+    apiKey: '',              // API 密钥
+    model: 'gpt-3.5-turbo',  // 模型
+    temperature: 0.7         // 温度 (0-2)
+  }
 };
 
 // 当前登录用户
@@ -3147,6 +3154,38 @@ function renderUI(container, roche) {
           </div>
           <div class="setting-item" id="setting-clear-memory">
             <div class="setting-label" style="color: #f4212e;">清除所有记忆</div>
+            <div class="setting-arrow">›</div>
+          </div>
+        </div>
+
+        <h2 class="section-title" style="margin-top: 20px;">API 配置</h2>
+        <div class="settings-section">
+          <div class="setting-item" id="setting-api-url">
+            <div class="setting-info">
+              <div class="setting-label">API 网址</div>
+              <div class="setting-description" id="api-url-status">未配置</div>
+            </div>
+            <div class="setting-arrow">›</div>
+          </div>
+          <div class="setting-item" id="setting-api-key">
+            <div class="setting-info">
+              <div class="setting-label">API 密钥</div>
+              <div class="setting-description" id="api-key-status">未配置</div>
+            </div>
+            <div class="setting-arrow">›</div>
+          </div>
+          <div class="setting-item" id="setting-api-model">
+            <div class="setting-info">
+              <div class="setting-label">模型</div>
+              <div class="setting-description" id="api-model-value">gpt-3.5-turbo</div>
+            </div>
+            <div class="setting-arrow">›</div>
+          </div>
+          <div class="setting-item" id="setting-api-temperature">
+            <div class="setting-info">
+              <div class="setting-label">温度</div>
+              <div class="setting-description" id="api-temperature-value">0.7</div>
+            </div>
             <div class="setting-arrow">›</div>
           </div>
         </div>
@@ -7709,6 +7748,45 @@ function showSettings(roche) {
     });
   }
 
+  // 绑定 API 配置 - URL
+  const settingAPIUrl = document.getElementById('setting-api-url');
+  if (settingAPIUrl) {
+    settingAPIUrl.replaceWith(settingAPIUrl.cloneNode(true));
+    document.getElementById('setting-api-url').addEventListener('click', () => {
+      showAPIUrlSettings(roche);
+    });
+  }
+
+  // 绑定 API 配置 - Key
+  const settingAPIKey = document.getElementById('setting-api-key');
+  if (settingAPIKey) {
+    settingAPIKey.replaceWith(settingAPIKey.cloneNode(true));
+    document.getElementById('setting-api-key').addEventListener('click', () => {
+      showAPIKeySettings(roche);
+    });
+  }
+
+  // 绑定 API 配置 - Model
+  const settingAPIModel = document.getElementById('setting-api-model');
+  if (settingAPIModel) {
+    settingAPIModel.replaceWith(settingAPIModel.cloneNode(true));
+    document.getElementById('setting-api-model').addEventListener('click', () => {
+      showAPIModelSettings(roche);
+    });
+  }
+
+  // 绑定 API 配置 - Temperature
+  const settingAPITemp = document.getElementById('setting-api-temperature');
+  if (settingAPITemp) {
+    settingAPITemp.replaceWith(settingAPITemp.cloneNode(true));
+    document.getElementById('setting-api-temperature').addEventListener('click', () => {
+      showAPITemperatureSettings(roche);
+    });
+  }
+
+  // 更新 API 配置状态显示
+  updateAPIConfigDisplay();
+
   // 绑定 NPC 系统开关
   const toggleNPC = document.getElementById('toggle-npc');
   if (toggleNPC) {
@@ -8970,6 +9048,187 @@ async function initNPCSystem(roche) {
   } catch (error) {
     console.error('[NPC] NPC 系统初始化失败:', error);
     throw error;
+  }
+}
+
+/**
+ * 更新 API 配置显示
+ */
+function updateAPIConfigDisplay() {
+  // URL 状态
+  const urlStatus = document.getElementById('api-url-status');
+  if (urlStatus) {
+    urlStatus.textContent = settings.apiConfig.url ? settings.apiConfig.url : '未配置';
+  }
+
+  // Key 状态
+  const keyStatus = document.getElementById('api-key-status');
+  if (keyStatus) {
+    if (settings.apiConfig.apiKey) {
+      // 显示部分密钥
+      const key = settings.apiConfig.apiKey;
+      const masked = key.length > 8 ? key.substring(0, 8) + '...' : '已配置';
+      keyStatus.textContent = masked;
+    } else {
+      keyStatus.textContent = '未配置';
+    }
+  }
+
+  // Model
+  const modelValue = document.getElementById('api-model-value');
+  if (modelValue) {
+    modelValue.textContent = settings.apiConfig.model || 'gpt-3.5-turbo';
+  }
+
+  // Temperature
+  const tempValue = document.getElementById('api-temperature-value');
+  if (tempValue) {
+    tempValue.textContent = settings.apiConfig.temperature || 0.7;
+  }
+}
+
+/**
+ * API URL 设置
+ */
+function showAPIUrlSettings(roche) {
+  const currentURL = settings.apiConfig.url || '';
+
+  const newURL = prompt(
+    'API 网址设置\n\n' +
+    '请输入 API 接口地址\n' +
+    '例如: https://api.openai.com/v1/chat/completions\n\n' +
+    '当前地址：' + (currentURL || '未配置') + '\n\n' +
+    '请输入新的 API 地址（留空则清除）：',
+    currentURL
+  );
+
+  if (newURL !== null) {
+    settings.apiConfig.url = newURL.trim();
+    saveSettings(roche);
+
+    if (settings.apiConfig.url) {
+      showToast('API 地址已设置', 'success');
+      console.log('[设置] API 地址:', settings.apiConfig.url);
+    } else {
+      showToast('API 地址已清除', 'success');
+    }
+
+    updateAPIConfigDisplay();
+  }
+}
+
+/**
+ * API Key 设置
+ */
+function showAPIKeySettings(roche) {
+  const currentKey = settings.apiConfig.apiKey || '';
+
+  const newKey = prompt(
+    'API 密钥设置\n\n' +
+    '请输入 API 密钥\n' +
+    '例如: sk-...\n\n' +
+    '当前密钥：' + (currentKey ? currentKey.substring(0, 8) + '...' : '未配置') + '\n\n' +
+    '请输入新的 API 密钥（留空则清除）：',
+    currentKey
+  );
+
+  if (newKey !== null) {
+    settings.apiConfig.apiKey = newKey.trim();
+    saveSettings(roche);
+
+    if (settings.apiConfig.apiKey) {
+      showToast('API 密钥已设置', 'success');
+      console.log('[设置] API 密钥已更新');
+    } else {
+      showToast('API 密钥已清除', 'success');
+    }
+
+    updateAPIConfigDisplay();
+  }
+}
+
+/**
+ * API Model 设置
+ */
+function showAPIModelSettings(roche) {
+  const models = [
+    'gpt-4',
+    'gpt-4-turbo',
+    'gpt-3.5-turbo',
+    'gpt-3.5-turbo-16k',
+    'claude-3-opus',
+    'claude-3-sonnet',
+    'claude-3-haiku',
+    'deepseek-chat',
+    'deepseek-coder'
+  ];
+
+  const currentModel = settings.apiConfig.model || 'gpt-3.5-turbo';
+  const currentIndex = models.indexOf(currentModel);
+
+  const choice = prompt(
+    '选择模型：\n\n' +
+    models.map((m, i) => `${i + 1}. ${m}${m === currentModel ? ' (当前)' : ''}`).join('\n') +
+    '\n\n请输入序号（1-' + models.length + '）或自定义模型名称：',
+    currentIndex >= 0 ? (currentIndex + 1).toString() : currentModel
+  );
+
+  if (choice !== null && choice.trim() !== '') {
+    let selectedModel;
+
+    if (!isNaN(choice)) {
+      const index = parseInt(choice) - 1;
+      if (index >= 0 && index < models.length) {
+        selectedModel = models[index];
+      } else {
+        showToast('无效的序号', 'error');
+        return;
+      }
+    } else {
+      selectedModel = choice.trim();
+    }
+
+    settings.apiConfig.model = selectedModel;
+    saveSettings(roche);
+    showToast(`已设置模型为：${selectedModel}`, 'success');
+    updateAPIConfigDisplay();
+  }
+}
+
+/**
+ * API Temperature 设置
+ */
+function showAPITemperatureSettings(roche) {
+  const currentTemp = settings.apiConfig.temperature || 0.7;
+
+  const newTemp = prompt(
+    '温度参数设置\n\n' +
+    '温度范围：0.0 - 2.0\n' +
+    '较低值 (0.0-0.3): 更确定、更一致\n' +
+    '中等值 (0.4-0.8): 平衡创造性和一致性\n' +
+    '较高值 (0.9-2.0): 更有创造性、更随机\n\n' +
+    '当前温度：' + currentTemp + '\n\n' +
+    '请输入新的温度值（0.0-2.0）：',
+    currentTemp.toString()
+  );
+
+  if (newTemp !== null && newTemp.trim() !== '') {
+    const temp = parseFloat(newTemp);
+
+    if (isNaN(temp)) {
+      showToast('请输入有效的数字', 'error');
+      return;
+    }
+
+    if (temp < 0 || temp > 2) {
+      showToast('温度必须在 0.0-2.0 之间', 'error');
+      return;
+    }
+
+    settings.apiConfig.temperature = temp;
+    saveSettings(roche);
+    showToast(`已设置温度为：${temp}`, 'success');
+    updateAPIConfigDisplay();
   }
 }
 
