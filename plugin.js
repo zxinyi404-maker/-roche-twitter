@@ -68,7 +68,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '3.6.0',
+    version: '3.6.1',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -3711,8 +3711,8 @@ function handleSidebarMenu(menu, roche) {
       showProfile(currentUser, roche);
       break;
     case 'settings':
-      // 侧边栏的"设置和隐私"直接进入切换账号页面
-      showSwitchAccount(roche);
+      // 侧边栏的"设置和隐私"打开设置页面
+      switchView('settings');
       break;
     case 'bookmarks':
       showBookmarks(roche);
@@ -3955,10 +3955,25 @@ async function renderTweets(roche, filter = 'recommended') {
   }
 
   listEl.innerHTML = filteredTweets.map(tweet => {
-    const user = twitterData.users[tweet.userId];
+    let user = twitterData.users[tweet.userId];
     const isLiked = tweet.likes.includes(currentUser);
     const isRetweeted = tweet.retweets.includes(currentUser);
     const timeAgo = getTimeAgo(tweet.timestamp);
+
+    // 转发推文显示
+    let retweetHeader = '';
+    if (tweet.isRetweet) {
+      const retweeter = user;
+      const originalUser = twitterData.users[tweet.originalUserId];
+      retweetHeader = `
+        <div style="padding: 0 16px 8px 48px; color: #536471; font-size: 13px; display: flex; align-items: center; gap: 4px;">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M4.5 3.88l4.432 4.14-1.364 1.46L5.5 7.55V16c0 1.1.896 2 2 2H13v2H7.5c-2.209 0-4-1.79-4-4V7.55L1.432 9.48.068 8.02 4.5 3.88zM16.5 6H11V4h5.5c2.209 0 4 1.79 4 4v8.45l2.068-1.93 1.364 1.46-4.432 4.14-4.432-4.14 1.364-1.46 2.068 1.93V8c0-1.1-.896-2-2-2z"></path></svg>
+          <span>${retweeter.name} 转发了</span>
+        </div>
+      `;
+      // 使用原作者信息
+      user = originalUser;
+    }
 
     // 新闻推文特殊样式
     const newsLabel = tweet.isNews ? `<span style="display: inline-block; background: #1d9bf0; color: white; font-size: 11px; padding: 2px 6px; border-radius: 4px; margin-left: 4px; font-weight: 700;">新闻</span>` : '';
@@ -3966,6 +3981,7 @@ async function renderTweets(roche, filter = 'recommended') {
 
     return `
       <div class="tweet-item" data-tweet-id="${tweet.id}" ${tweet.isNews ? 'data-is-news="true"' : ''}>
+        ${retweetHeader}
         <div class="tweet-header">
           <img class="tweet-avatar" src="${user.avatar}" alt="">
           <div class="tweet-content">
@@ -4342,10 +4358,8 @@ async function handleDetailAction(action, tweetId, roche) {
       const likeIndex = tweet.likes.indexOf(currentUser);
       if (likeIndex > -1) {
         tweet.likes.splice(likeIndex, 1);
-        showToast('已取消喜欢', 'info');
       } else {
         tweet.likes.push(currentUser);
-        showToast('已喜欢', 'success');
       }
       await saveData(roche);
       showTweetDetail(tweetId, roche);
@@ -4354,11 +4368,35 @@ async function handleDetailAction(action, tweetId, roche) {
     case 'retweet':
       const retweetIndex = tweet.retweets.indexOf(currentUser);
       if (retweetIndex > -1) {
+        // 取消转发 - 删除转发的推文
         tweet.retweets.splice(retweetIndex, 1);
-        showToast('已取消转发', 'info');
+
+        // 找到并删除转发的推文
+        const retweetedTweetIndex = twitterData.tweets.findIndex(t =>
+          t.isRetweet && t.originalTweetId === tweetId && t.userId === currentUser
+        );
+        if (retweetedTweetIndex > -1) {
+          twitterData.tweets.splice(retweetedTweetIndex, 1);
+        }
       } else {
+        // 转发 - 创建一条新的转发推文
         tweet.retweets.push(currentUser);
-        showToast('已转发', 'success');
+
+        // 创建转发推文
+        const retweetedTweet = {
+          id: twitterData.nextTweetId++,
+          userId: currentUser,
+          content: tweet.content,
+          timestamp: Date.now(),
+          likes: [],
+          retweets: [],
+          replies: [],
+          isRetweet: true,
+          originalTweetId: tweetId,
+          originalUserId: tweet.userId
+        };
+
+        twitterData.tweets.unshift(retweetedTweet);
 
         // 转发时保存到记忆
         try {
@@ -4393,10 +4431,8 @@ async function handleDetailAction(action, tweetId, roche) {
       const bookmarkIndex = twitterData.bookmarks[currentUser].indexOf(tweetId);
       if (bookmarkIndex > -1) {
         twitterData.bookmarks[currentUser].splice(bookmarkIndex, 1);
-        showToast('已移除书签', 'info');
       } else {
         twitterData.bookmarks[currentUser].push(tweetId);
-        showToast('已添加到书签', 'success');
       }
       await saveData(roche);
       showTweetDetail(tweetId, roche);
@@ -5290,9 +5326,35 @@ async function handleTweetAction(action, tweetId, roche) {
     case 'retweet':
       const retweetIndex = tweet.retweets.indexOf(currentUser);
       if (retweetIndex > -1) {
+        // 取消转发 - 删除转发的推文
         tweet.retweets.splice(retweetIndex, 1);
+
+        // 找到并删除转发的推文
+        const retweetedTweetIndex = twitterData.tweets.findIndex(t =>
+          t.isRetweet && t.originalTweetId === tweetId && t.userId === currentUser
+        );
+        if (retweetedTweetIndex > -1) {
+          twitterData.tweets.splice(retweetedTweetIndex, 1);
+        }
       } else {
+        // 转发 - 创建一条新的转发推文
         tweet.retweets.push(currentUser);
+
+        // 创建转发推文
+        const retweetedTweet = {
+          id: twitterData.nextTweetId++,
+          userId: currentUser,
+          content: tweet.content,
+          timestamp: Date.now(),
+          likes: [],
+          retweets: [],
+          replies: [],
+          isRetweet: true,
+          originalTweetId: tweetId,
+          originalUserId: tweet.userId
+        };
+
+        twitterData.tweets.unshift(retweetedTweet);
       }
       break;
 
