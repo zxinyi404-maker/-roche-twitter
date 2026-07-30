@@ -67,7 +67,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '3.4.2',
+    version: '3.5.0',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -1056,16 +1056,17 @@ function renderUI(container, roche) {
       .detail-main {
         padding-top: calc(60px + env(safe-area-inset-top));
         padding-bottom: calc(80px + env(safe-area-inset-bottom));
+        max-width: 768px;
+        margin: 0 auto;
       }
 
       .detail-tweet {
-        padding: 16px;
-        border-bottom: 1px solid #eff3f4;
+        padding: 12px 16px;
       }
 
       .detail-tweet-header {
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         gap: 12px;
         margin-bottom: 12px;
       }
@@ -1074,16 +1075,24 @@ function renderUI(container, roche) {
         width: 48px;
         height: 48px;
         border-radius: 50%;
+        flex-shrink: 0;
       }
 
       .detail-tweet-author {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .detail-tweet-author-top {
         display: flex;
-        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        margin-bottom: 2px;
       }
 
       .detail-tweet-name {
         font-weight: 700;
-        font-size: 16px;
+        font-size: 15px;
         color: #0f1419;
       }
 
@@ -1092,13 +1101,29 @@ function renderUI(container, roche) {
         font-size: 15px;
       }
 
+      .detail-tweet-translate {
+        color: #1d9bf0;
+        font-size: 13px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin-top: 8px;
+        padding: 4px 0;
+      }
+
+      .detail-tweet-translate:hover {
+        text-decoration: underline;
+      }
+
       .detail-tweet-text {
-        font-size: 23px;
-        line-height: 28px;
-        margin: 16px 0;
+        font-size: 17px;
+        line-height: 24px;
+        margin: 12px 0;
         white-space: pre-wrap;
         word-wrap: break-word;
         color: #0f1419;
+      }
       }
 
       /* 新的详情页样式 */
@@ -4082,80 +4107,83 @@ function showTweetDetail(tweetId, roche) {
   const detailMain = document.getElementById('detail-main');
   detailMain.innerHTML = `
     <div class="detail-tweet">
-      <!-- 用户信息区 -->
-      <div class="detail-user-section">
-        <div class="detail-user-header">
-          <img class="detail-tweet-avatar" src="${user.avatar}" alt="">
-          <div class="detail-user-info">
-            <div class="detail-tweet-name">${user.name}</div>
-            <div class="detail-tweet-username">${user.username}</div>
+      <!-- 头部：头像 + 用户信息 + 关注按钮 -->
+      <div class="detail-tweet-header">
+        <img class="detail-tweet-avatar" src="${user.avatar}" alt="">
+        <div class="detail-tweet-author">
+          <div class="detail-tweet-author-top">
+            <span class="detail-tweet-name">${user.name}</span>
           </div>
-          ${!isSelf ? `
-            <button class="detail-follow-btn ${isFollowing ? 'following' : ''}" id="detail-follow-btn">
-              <span>${isFollowing ? '正在关注' : '关注'}</span>
-            </button>
-          ` : ''}
+          <div class="detail-tweet-username">${user.username}</div>
         </div>
-        <div class="detail-translate-link" id="translate-link">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="#1d9bf0"><path d="M12.87 2.27c-.5-.5-1.29-.5-1.79 0l-6.36 6.37c-.5.5-.5 1.29 0 1.79l1.41 1.41c.5.5 1.29.5 1.79 0L10 9.77V18c0 .55.45 1 1 1s1-.45 1-1V9.77l2.09 2.09c.5.5 1.29.5 1.79 0l1.41-1.41c.5-.5.5-1.29 0-1.79l-6.36-6.37z"></path></svg>
-          <span style="color: #1d9bf0; font-size: 15px;">显示翻译</span>
-        </div>
+        ${!isSelf ? `
+          <button class="detail-follow-btn ${isFollowing ? 'following' : ''}" id="detail-follow-btn" style="margin-left: auto;">
+            <span>${isFollowing ? '正在关注' : '关注'}</span>
+          </button>
+        ` : ''}
+      </div>
+
+      <!-- 翻译链接 -->
+      <div class="detail-tweet-translate" id="translate-link">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"></path></svg>
+        <span>显示翻译</span>
       </div>
 
       <!-- 推文内容 -->
-      <div class="detail-tweet-content" id="detail-tweet-content">
+      <div class="detail-tweet-text" id="detail-tweet-content">
         ${escapeHtml(tweet.content)}
       </div>
 
       <!-- 翻译内容（隐藏） -->
-      <div class="detail-tweet-translation" id="detail-tweet-translation" style="display: none; padding: 16px; background: #f7f9f9; border-radius: 12px; margin-top: 12px; color: #536471; font-size: 15px;">
+      <div class="detail-tweet-translation" id="detail-tweet-translation" style="display: none; padding: 12px; background: #f7f9f9; border-radius: 12px; margin-top: 12px; color: #0f1419; font-size: 15px; line-height: 20px;">
         正在翻译...
       </div>
 
       <!-- 时间和查看数 -->
-      <div class="detail-tweet-time">
-        <span style="color: #536471;">${formattedDateTime}</span>
-        <span style="color: #536471; margin: 0 4px;">·</span>
+      <div class="detail-tweet-time" style="color: #536471; font-size: 15px; margin: 16px 0 8px 0; padding-bottom: 16px; border-bottom: 1px solid #eff3f4;">
+        <span>${formattedDateTime}</span>
+        <span style="margin: 0 4px;">·</span>
         <span style="font-weight: 700; color: #0f1419;">${viewCount}</span>
-        <span style="color: #536471;"> 查看</span>
+        <span> 查看</span>
       </div>
 
-      <!-- 只显示喜欢数 -->
-      <div class="detail-tweet-likes">
-        <span style="font-weight: 700; color: #0f1419;">${tweet.likes.length}</span>
-        <span style="color: #536471; margin-left: 4px;">喜欢</span>
+      <!-- 点赞数 -->
+      <div class="detail-tweet-stats" style="padding: 12px 0; border-bottom: 1px solid #eff3f4;">
+        <span style="font-weight: 700; color: #0f1419; font-size: 15px;">${tweet.likes.length}</span>
+        <span style="color: #536471; margin-left: 4px; font-size: 15px;">喜欢</span>
       </div>
 
       <!-- 操作按钮 -->
-      <div class="detail-action-bar">
-        <div class="detail-action-icon" data-action="reply">
+      <div class="detail-tweet-actions" style="display: flex; justify-content: space-around; padding: 8px 0; border-bottom: 1px solid #eff3f4;">
+        <div class="detail-action-btn" data-action="reply" style="display: flex; align-items: center; justify-content: center; padding: 8px; cursor: pointer; border-radius: 50%; transition: background 0.2s; color: #536471;">
           ${icons.comment}
         </div>
-        <div class="detail-action-icon ${isRetweeted ? 'retweeted' : ''}" data-action="retweet">
+        <div class="detail-action-btn ${isRetweeted ? 'retweeted' : ''}" data-action="retweet" style="display: flex; align-items: center; justify-content: center; padding: 8px; cursor: pointer; border-radius: 50%; transition: background 0.2s; color: ${isRetweeted ? '#00ba7c' : '#536471'};">
           ${icons.retweet}
         </div>
-        <div class="detail-action-icon ${isLiked ? 'liked' : ''}" data-action="like">
+        <div class="detail-action-btn ${isLiked ? 'liked' : ''}" data-action="like" style="display: flex; align-items: center; justify-content: center; padding: 8px; cursor: pointer; border-radius: 50%; transition: background 0.2s; color: ${isLiked ? '#f91880' : '#536471'};">
           ${isLiked ? icons.likeFilled : icons.like}
         </div>
-        <div class="detail-action-icon ${isBookmarked ? 'bookmarked' : ''}" data-action="bookmark">
+        <div class="detail-action-btn ${isBookmarked ? 'bookmarked' : ''}" data-action="bookmark" style="display: flex; align-items: center; justify-content: center; padding: 8px; cursor: pointer; border-radius: 50%; transition: background 0.2s; color: ${isBookmarked ? '#1d9bf0' : '#536471'};">
           ${isBookmarked
-            ? '<svg viewBox="0 0 24 24" width="20" height="20" fill="#1d9bf0"><path d="M4 4.5C4 3.12 5.119 2 6.5 2h11C18.881 2 20 3.12 20 4.5v18.44l-8-5.71-8 5.71V4.5z"></path></svg>'
+            ? '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M4 4.5C4 3.12 5.119 2 6.5 2h11C18.881 2 20 3.12 20 4.5v18.44l-8-5.71-8 5.71V4.5z"></path></svg>'
             : '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M4 4.5C4 3.12 5.119 2 6.5 2h11C18.881 2 20 3.12 20 4.5v18.44l-8-5.71-8 5.71V4.5zM6.5 4c-.276 0-.5.224-.5.5v14.56l6-4.29 6 4.29V4.5c0-.276-.224-.5-.5-.5h-11z"></path></svg>'}
         </div>
-        <div class="detail-action-icon" data-action="share">
+        <div class="detail-action-btn" data-action="share" style="display: flex; align-items: center; justify-content: center; padding: 8px; cursor: pointer; border-radius: 50%; transition: background 0.2s; color: #536471;">
           ${icons.share}
         </div>
       </div>
 
-      <!-- 回复排序 -->
-      <div class="detail-replies-header">
+      <!-- 最相关的回复 -->
+      <div class="detail-replies-header" style="display: flex; align-items: center; justify-content: space-between; padding: 16px; color: #0f1419;">
         <span style="font-weight: 700; font-size: 15px;">最相关的回复</span>
         <svg viewBox="0 0 24 24" width="18" height="18" fill="#536471"><path d="M3.543 8.96l1.414-1.42L12 14.59l7.043-7.05 1.414 1.42L12 17.41 3.543 8.96z"></path></svg>
       </div>
 
       <!-- 发现更多 -->
-      <div class="detail-discover-more">
-        <div style="font-weight: 700; font-size: 20px; color: #0f1419;">发现更多</div>
+      <div class="detail-discover-more" style="padding: 16px;">
+        <div style="font-weight: 700; font-size: 20px; color: #0f1419; margin-bottom: 8px;">发现更多</div>
+        <div style="color: #536471; font-size: 15px;">源自于整个 𝕏</div>
       </div>
 
       <!-- 来源标签 -->
