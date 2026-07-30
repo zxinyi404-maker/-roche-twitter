@@ -15,9 +15,9 @@ const NPC_CONFIG = {
   maxNPCs: 50,               // NPC 总数上限
   cleanupDays: 7,            // 清理无互动 NPC 的天数
   dailyActiveNPCs: 10,       // 每天随机抽取发帖的 NPC 数量
-  postsPerActiveNPC: 2,      // 每个活跃 NPC 每天发帖数
-  postIntervalMin: 2,        // 最小发帖间隔（小时）
-  postIntervalMax: 4,        // 最大发帖间隔（小时）
+  postsPerActiveNPC: 3,      // 每个活跃 NPC 每天发帖数
+  postIntervalMin: 30,       // 最小发帖间隔（分钟）
+  postIntervalMax: 120,      // 最大发帖间隔（分钟）
   interestDecayRate: 0.95,   // 兴趣度每天衰减率
   minInterestForRecommend: 0.3  // 推荐的最小兴趣度
 };
@@ -90,7 +90,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '4.2.0',
+    version: '4.2.1',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -3175,7 +3175,7 @@ function renderUI(container, roche) {
           <div class="setting-item" id="setting-npc-frequency">
             <div class="setting-info">
               <div class="setting-label">发帖频率</div>
-              <div class="setting-description">当前: <span id="npc-frequency-value">每 2-5 分钟</span></div>
+              <div class="setting-description">当前: <span id="npc-frequency-value">30-120 分钟</span></div>
             </div>
             <div class="setting-arrow">›</div>
           </div>
@@ -8785,7 +8785,7 @@ function startNPCPostingSystem(roche) {
   // 初始化今日活跃 NPC
   selectDailyActiveNPCs();
 
-  // 每小时检查一次
+  // 每 5 分钟检查一次，让 NPC 更频繁地发帖
   setInterval(async () => {
     const today = new Date().toDateString();
 
@@ -8802,9 +8802,9 @@ function startNPCPostingSystem(roche) {
       const npc = twitterData.npcs[npcId];
       if (!npc) continue;
 
-      // 计算随机发帖间隔
-      const minInterval = NPC_CONFIG.postIntervalMin * 60 * 60 * 1000;
-      const maxInterval = NPC_CONFIG.postIntervalMax * 60 * 60 * 1000;
+      // 计算随机发帖间隔（分钟转毫秒）
+      const minInterval = NPC_CONFIG.postIntervalMin * 60 * 1000;
+      const maxInterval = NPC_CONFIG.postIntervalMax * 60 * 1000;
       const randomInterval = minInterval + Math.random() * (maxInterval - minInterval);
 
       // 检查是否该发帖了
@@ -8816,11 +8816,11 @@ function startNPCPostingSystem(roche) {
           console.log('[NPC] 定时发帖:', twitterData.users[npcId].name);
           await npcAutoPost(npcId, roche);
           npc.todayPostCount++;
-          await new Promise(resolve => setTimeout(resolve, 3000));
+          await new Promise(resolve => setTimeout(resolve, 2000));
         }
       }
     }
-  }, 60 * 60 * 1000); // 每小时检查
+  }, 5 * 60 * 1000); // 每 5 分钟检查一次
 
   console.log('[NPC] 定时发帖系统已启动');
 }
@@ -8892,24 +8892,27 @@ function showNPCCountSettings(roche) {
  */
 function showNPCFrequencySettings(roche) {
   const options = [
-    { label: '非常频繁（每 1-2 分钟）', min: 60000, max: 120000 },
-    { label: '频繁（每 2-5 分钟）', min: 120000, max: 300000 },
-    { label: '正常（每 5-10 分钟）', min: 300000, max: 600000 },
-    { label: '较少（每 10-20 分钟）', min: 600000, max: 1200000 },
-    { label: '很少（每 20-30 分钟）', min: 1200000, max: 1800000 }
+    { label: '非常频繁（每 15-30 分钟）', min: 15, max: 30 },
+    { label: '频繁（每 30-60 分钟）', min: 30, max: 60 },
+    { label: '正常（每 30-120 分钟）', min: 30, max: 120 },
+    { label: '较少（每 1-2 小时）', min: 60, max: 120 },
+    { label: '很少（每 2-4 小时）', min: 120, max: 240 }
   ];
 
   const choice = prompt(
     '选择 NPC 发帖频率：\n\n' +
     options.map((opt, i) => `${i + 1}. ${opt.label}`).join('\n') +
     '\n\n请输入序号（1-5）：',
-    '2'
+    '3'
   );
 
   if (choice && !isNaN(choice)) {
     const index = parseInt(choice) - 1;
     if (index >= 0 && index < options.length) {
       settings.npcPostInterval = options[index];
+      // 同时更新 NPC_CONFIG
+      NPC_CONFIG.postIntervalMin = options[index].min;
+      NPC_CONFIG.postIntervalMax = options[index].max;
       saveSettings(roche);
       showToast(`已设置为：${options[index].label}`, 'success');
       document.getElementById('npc-frequency-value').textContent = options[index].label.match(/每 (.+?)）/)[1];
