@@ -67,7 +67,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '3.3.0',
+    version: '3.4.0',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -4870,6 +4870,160 @@ async function handleNewsTweetAction(action, tweetId, roche) {
 }
 
 /**
+ * 显示分享对话框
+ */
+async function showShareDialog(tweet, roche) {
+  try {
+    // 获取所有对话列表
+    const conversations = await roche.conversation.list();
+
+    if (!conversations || conversations.length === 0) {
+      showToast('暂无可分享的对话', 'info');
+      return;
+    }
+
+    // 创建遮罩层
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+      animation: fadeIn 0.2s;
+      padding: 20px;
+    `;
+
+    // 创建对话框
+    const dialog = document.createElement('div');
+    dialog.style.cssText = `
+      background: white;
+      border-radius: 16px;
+      max-width: 500px;
+      width: 100%;
+      max-height: 70vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+      animation: scaleIn 0.2s;
+      overflow: hidden;
+    `;
+
+    // 获取帖子作者信息
+    const tweetUser = twitterData.users[tweet.user];
+    const tweetContent = tweet.content.length > 100 ? tweet.content.substring(0, 100) + '...' : tweet.content;
+
+    dialog.innerHTML = `
+      <div style="padding: 20px; border-bottom: 1px solid #eff3f4; display: flex; justify-content: space-between; align-items: center;">
+        <div style="font-size: 20px; font-weight: 700; color: #0f1419;">分享推文</div>
+        <div class="dialog-close-btn" style="width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.2s;">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+            <path d="M13.414 12l5.793-5.793c.39-.39.39-1.023 0-1.414s-1.023-.39-1.414 0L12 10.586 6.207 4.793c-.39-.39-1.023-.39-1.414 0s-.39 1.023 0 1.414L10.586 12l-5.793 5.793c-.39.39-.39 1.023 0 1.414.195.195.45.293.707.293s.512-.098.707-.293L12 13.414l5.793 5.793c.195.195.45.293.707.293s.512-.098.707-.293c.39-.39.39-1.023 0-1.414L13.414 12z"></path>
+          </svg>
+        </div>
+      </div>
+
+      <!-- 推文预览 -->
+      <div style="padding: 16px; border-bottom: 1px solid #eff3f4; background: #f7f9f9;">
+        <div style="font-size: 13px; color: #536471; margin-bottom: 8px;">分享内容</div>
+        <div style="display: flex; gap: 12px;">
+          <img src="${tweetUser.avatar}" style="width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; object-fit: cover;" alt="">
+          <div style="flex: 1; min-width: 0;">
+            <div style="font-weight: 700; font-size: 14px; color: #0f1419;">${tweetUser.name}</div>
+            <div style="font-size: 14px; color: #0f1419; margin-top: 4px;">${escapeHtml(tweetContent)}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 对话列表 -->
+      <div style="flex: 1; overflow-y: auto; padding: 12px;" id="share-conversation-list">
+        <div style="font-size: 15px; font-weight: 700; color: #0f1419; margin-bottom: 12px; padding: 0 8px;">选择对话</div>
+        ${conversations.map(conv => {
+          const initial = conv.title ? conv.title.charAt(0).toUpperCase() : '?';
+          return `
+            <div class="share-conversation-item" data-conv-id="${conv.id}" style="padding: 12px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: background 0.2s; border-radius: 8px;">
+              <div style="width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; font-weight: 700; flex-shrink: 0;">
+                ${initial}
+              </div>
+              <div style="flex: 1; min-width: 0;">
+                <div style="font-size: 15px; font-weight: 700; color: #0f1419;">${conv.title || '未命名对话'}</div>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+
+      <style>
+        .share-conversation-item:hover {
+          background: rgba(0, 0, 0, 0.03);
+        }
+        .dialog-close-btn:hover {
+          background: rgba(0, 0, 0, 0.05);
+        }
+      </style>
+    `;
+
+    overlay.appendChild(dialog);
+    document.body.appendChild(overlay);
+
+    // 绑定关闭按钮
+    dialog.querySelector('.dialog-close-btn').addEventListener('click', () => {
+      document.body.removeChild(overlay);
+    });
+
+    // 绑定对话项点击事件
+    dialog.querySelectorAll('.share-conversation-item').forEach(item => {
+      item.addEventListener('click', async () => {
+        const convId = item.dataset.convId;
+        document.body.removeChild(overlay);
+
+        // 分享推文到私信
+        await shareTweetToConversation(tweet, convId, roche);
+      });
+    });
+
+  } catch (error) {
+    console.error('显示分享对话框失败:', error);
+    showToast('加载失败', 'error');
+  }
+}
+
+/**
+ * 分享推文到对话
+ */
+async function shareTweetToConversation(tweet, convId, roche) {
+  try {
+    const tweetUser = twitterData.users[tweet.user];
+    const shareMessage = `【分享推文】\n\n@${tweetUser.username}: ${tweet.content}\n\n—— 来自 Twitter`;
+
+    // 使用 AI 聊天 API 发送分享消息
+    await roche.ai.chat({
+      conversationId: convId,
+      message: shareMessage,
+      stream: false
+    });
+
+    // 保存到记忆（带角色标记）
+    await roche.memory.saveLongTerm({
+      conversationId: convId,
+      text: shareMessage,
+      metadata: { role: 'user', timestamp: Date.now(), type: 'share' },
+      importance: 3
+    });
+
+    showToast('已分享到私信', 'success');
+  } catch (error) {
+    console.error('分享失败:', error);
+    showToast('分享失败', 'error');
+  }
+}
+
+/**
  * 处理推文操作
  */
 async function handleTweetAction(action, tweetId, roche) {
@@ -4900,7 +5054,7 @@ async function handleTweetAction(action, tweetId, roche) {
       return;
 
     case 'share':
-      showToast('分享功能开发中...', 'info');
+      showShareDialog(tweet, roche);
       return;
   }
 
