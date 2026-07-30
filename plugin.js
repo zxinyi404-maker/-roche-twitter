@@ -67,7 +67,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '3.1.0',
+    version: '3.2.0',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -6087,45 +6087,14 @@ async function openChatWithConv(convId, roche) {
     document.getElementById('chat-user-name').textContent = conv.title || '未命名对话';
 
     // 获取聊天历史（通过 Roche 的对话记忆）
-    const longTerm = await roche.memory.getLongTerm({ conversationId: convId, limit: 50 });
-    const memories = [...(longTerm.facts || []), ...(longTerm.vectors || [])];
-
-    // 渲染消息（从记忆中提取）
+    // 注意：不显示历史消息，聊天界面默认为空
     const chatMessages = document.getElementById('chat-messages');
-
-    if (memories.length === 0) {
-      chatMessages.innerHTML = `
-        <div style="text-align: center; padding: 40px 20px; color: #536471;">
-          <div style="font-size: 15px; margin-bottom: 8px;">还没有聊天记录</div>
-          <div style="font-size: 13px;">发送第一条消息开始对话</div>
-        </div>
-      `;
-    } else {
-      // 获取当前用户头像
-      const currentUserData = twitterData.users[currentUser];
-      const userAvatar = currentUserData?.avatar || generateAvatar(currentUserData?.name || 'User');
-
-      // 从记忆中构建消息列表，根据 metadata.role 区分
-      chatMessages.innerHTML = memories.map(mem => {
-        const text = mem.summaryText || mem.text || '';
-        const role = mem.metadata?.role || 'assistant'; // 默认是 assistant
-        const isOwn = role === 'user';
-
-        return `
-          <div class="chat-message ${isOwn ? 'own' : ''}" style="display: flex; gap: 8px; margin-bottom: 16px; ${isOwn ? 'flex-direction: row-reverse;' : ''}">
-            <img class="chat-message-avatar" src="${isOwn ? userAvatar : charAvatar}" alt="" style="width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; object-fit: cover;">
-            <div class="chat-message-bubble" style="
-              background: ${isOwn ? '#1d9bf0' : '#eff3f4'};
-              color: ${isOwn ? 'white' : '#0f1419'};
-              padding: 12px 16px;
-              border-radius: 18px;
-              max-width: 70%;
-              word-wrap: break-word;
-            ">${escapeHtml(text)}</div>
-          </div>
-        `;
-      }).join('');
-    }
+    chatMessages.innerHTML = `
+      <div style="text-align: center; padding: 40px 20px; color: #536471;">
+        <div style="font-size: 15px; margin-bottom: 8px;">开始新对话</div>
+        <div style="font-size: 13px;">发送消息与 ${conv.title || 'AI'} 聊天</div>
+      </div>
+    `;
 
     // 滚动到底部
     setTimeout(() => {
@@ -6176,10 +6145,288 @@ async function openChatWithConv(convId, roche) {
       });
     }
 
+    // 绑定设置按钮
+    const chatSettingsBtn = document.querySelector('.chat-settings-btn');
+    if (chatSettingsBtn) {
+      chatSettingsBtn.onclick = () => {
+        showChatSettings(roche, currentConversationId);
+      };
+    }
+
   } catch (error) {
     console.error('打开聊天失败:', error);
     showToast('加载聊天失败', 'error');
   }
+}
+
+/**
+ * 显示聊天设置对话框
+ */
+async function showChatSettings(roche, convId) {
+  try {
+    // 获取当前设置
+    const chatSettings = await roche.storage.get(`twitter-chat-settings-${convId}`) || {
+      memorySummaryInterval: 10 // 默认每 10 条消息总结一次
+    };
+
+    // 获取当前对话的所有记忆
+    const longTerm = await roche.memory.getLongTerm({ conversationId: convId, limit: 100 });
+    const memories = [...(longTerm.facts || []), ...(longTerm.vectors || [])];
+
+    // 过滤出非消息类记忆（importance >= 5 的是总结记忆）
+    const summaryMemories = memories.filter(m =>
+      !m.metadata?.role && (m.importance >= 5 || m.summaryText)
+    );
+
+    // 创建遮罩层
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+      animation: fadeIn 0.2s;
+      padding: 20px;
+    `;
+
+    // 创建对话框
+    const dialog = document.createElement('div');
+    dialog.style.cssText = `
+      background: white;
+      border-radius: 16px;
+      max-width: 600px;
+      width: 100%;
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+      animation: scaleIn 0.2s;
+      overflow: hidden;
+    `;
+
+    dialog.innerHTML = `
+      <div style="padding: 20px; border-bottom: 1px solid #eff3f4; display: flex; justify-content: space-between; align-items: center;">
+        <div style="font-size: 20px; font-weight: 700; color: #0f1419;">聊天设置</div>
+        <div class="dialog-close-btn" style="width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.2s;">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+            <path d="M13.414 12l5.793-5.793c.39-.39.39-1.023 0-1.414s-1.023-.39-1.414 0L12 10.586 6.207 4.793c-.39-.39-1.023-.39-1.414 0s-.39 1.023 0 1.414L10.586 12l-5.793 5.793c-.39.39-.39 1.023 0 1.414.195.195.45.293.707.293s.512-.098.707-.293L12 13.414l5.793 5.793c.195.195.45.293.707.293s.512-.098.707-.293c.39-.39.39-1.023 0-1.414L13.414 12z"></path>
+          </svg>
+        </div>
+      </div>
+
+      <div style="flex: 1; overflow-y: auto; padding: 20px;">
+        <!-- 记忆总结设置 -->
+        <div style="margin-bottom: 24px;">
+          <div style="font-size: 15px; font-weight: 700; color: #0f1419; margin-bottom: 8px;">记忆总结</div>
+          <div style="font-size: 13px; color: #536471; margin-bottom: 12px;">设置多少条消息后自动总结为长期记忆</div>
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <input type="number" id="memory-interval-input" value="${chatSettings.memorySummaryInterval}" min="1" max="100"
+              style="flex: 1; padding: 12px 16px; border: 1px solid #eff3f4; border-radius: 8px; font-size: 15px; outline: none;">
+            <span style="color: #536471;">条消息</span>
+          </div>
+        </div>
+
+        <!-- 总结记忆列表 -->
+        <div>
+          <div style="font-size: 15px; font-weight: 700; color: #0f1419; margin-bottom: 12px;">总结记忆 (${summaryMemories.length})</div>
+          <div id="summary-memories-list" style="display: flex; flex-direction: column; gap: 12px;">
+            ${summaryMemories.length === 0 ? `
+              <div style="text-align: center; padding: 40px 20px; color: #536471;">
+                <div style="font-size: 15px;">暂无总结记忆</div>
+              </div>
+            ` : summaryMemories.map((mem, idx) => `
+              <div class="memory-card" data-memory-id="${mem.id || idx}" style="position: relative; background: #f7f9f9; border-radius: 12px; padding: 16px; transition: background 0.2s;">
+                <!-- 操作按钮（右上角，隐蔽） -->
+                <div style="position: absolute; top: 8px; right: 8px; display: flex; gap: 4px; opacity: 0.3; transition: opacity 0.2s;" class="memory-actions">
+                  <div class="memory-edit-btn" data-memory-id="${mem.id || idx}" style="width: 28px; height: 28px; border-radius: 50%; background: rgba(255,255,255,0.8); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.2s;" title="编辑">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="#536471">
+                      <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"></path>
+                    </svg>
+                  </div>
+                  <div class="memory-delete-btn" data-memory-id="${mem.id || idx}" style="width: 28px; height: 28px; border-radius: 50%; background: rgba(255,255,255,0.8); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.2s;" title="删除">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="#f91880">
+                      <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"></path>
+                    </svg>
+                  </div>
+                </div>
+
+                <div style="font-size: 14px; color: #0f1419; line-height: 1.5; padding-right: 60px;">${escapeHtml(mem.summaryText || mem.text || '')}</div>
+                <div style="font-size: 12px; color: #536471; margin-top: 8px;">重要度: ${mem.importance || 5}</div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+
+      <div style="padding: 16px; border-top: 1px solid #eff3f4; display: flex; gap: 12px;">
+        <button id="save-settings-btn" style="flex: 1; padding: 12px; background: #1d9bf0; color: white; border: none; border-radius: 24px; font-size: 15px; font-weight: 700; cursor: pointer; transition: background 0.2s;">
+          保存设置
+        </button>
+      </div>
+
+      <style>
+        .memory-card:hover {
+          background: #eff3f4;
+        }
+        .memory-card:hover .memory-actions {
+          opacity: 1 !important;
+        }
+        .memory-edit-btn:hover, .memory-delete-btn:hover {
+          background: white !important;
+        }
+        #save-settings-btn:hover {
+          background: #1a8cd8;
+        }
+      </style>
+    `;
+
+    overlay.appendChild(dialog);
+    document.body.appendChild(overlay);
+
+    // 绑定关闭按钮
+    dialog.querySelector('.dialog-close-btn').addEventListener('click', () => {
+      document.body.removeChild(overlay);
+    });
+
+    // 绑定保存按钮
+    document.getElementById('save-settings-btn').addEventListener('click', async () => {
+      const interval = parseInt(document.getElementById('memory-interval-input').value);
+      if (interval < 1 || interval > 100) {
+        showToast('请输入 1-100 之间的数字', 'error');
+        return;
+      }
+
+      await roche.storage.set(`twitter-chat-settings-${convId}`, {
+        memorySummaryInterval: interval
+      });
+
+      showToast('设置已保存', 'success');
+      document.body.removeChild(overlay);
+    });
+
+    // 绑定编辑按钮
+    dialog.querySelectorAll('.memory-edit-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const memoryId = e.currentTarget.dataset.memoryId;
+        const memory = summaryMemories[memoryId];
+        if (memory) {
+          editMemory(roche, convId, memory);
+        }
+      });
+    });
+
+    // 绑定删除按钮
+    dialog.querySelectorAll('.memory-delete-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const memoryId = e.currentTarget.dataset.memoryId;
+        const memory = summaryMemories[memoryId];
+        if (memory && confirm('确定删除这条记忆吗？')) {
+          try {
+            // 调用 Roche 的删除记忆 API
+            await roche.memory.deleteLongTerm({
+              conversationId: convId,
+              memoryId: memory.id
+            });
+            showToast('记忆已删除', 'success');
+            // 重新打开设置对话框
+            document.body.removeChild(overlay);
+            showChatSettings(roche, convId);
+          } catch (error) {
+            console.error('删除记忆失败:', error);
+            showToast('删除失败', 'error');
+          }
+        }
+      });
+    });
+
+  } catch (error) {
+    console.error('打开设置失败:', error);
+    showToast('加载设置失败', 'error');
+  }
+}
+
+/**
+ * 编辑记忆
+ */
+function editMemory(roche, convId, memory) {
+  // 创建编辑对话框
+  const overlay = document.createElement('div');
+  overlay.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10001;
+    padding: 20px;
+  `;
+
+  const dialog = document.createElement('div');
+  dialog.style.cssText = `
+    background: white;
+    border-radius: 16px;
+    max-width: 500px;
+    width: 100%;
+    padding: 20px;
+  `;
+
+  dialog.innerHTML = `
+    <div style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">编辑记忆</div>
+    <textarea id="edit-memory-text" style="width: 100%; height: 120px; padding: 12px; border: 1px solid #eff3f4; border-radius: 8px; font-size: 15px; resize: none; outline: none; font-family: inherit;">${escapeHtml(memory.summaryText || memory.text || '')}</textarea>
+    <div style="margin-top: 16px; display: flex; gap: 12px;">
+      <button id="cancel-edit-btn" style="flex: 1; padding: 12px; background: #eff3f4; color: #0f1419; border: none; border-radius: 24px; font-size: 15px; font-weight: 700; cursor: pointer;">
+        取消
+      </button>
+      <button id="save-edit-btn" style="flex: 1; padding: 12px; background: #1d9bf0; color: white; border: none; border-radius: 24px; font-size: 15px; font-weight: 700; cursor: pointer;">
+        保存
+      </button>
+    </div>
+  `;
+
+  overlay.appendChild(dialog);
+  document.body.appendChild(overlay);
+
+  document.getElementById('cancel-edit-btn').addEventListener('click', () => {
+    document.body.removeChild(overlay);
+  });
+
+  document.getElementById('save-edit-btn').addEventListener('click', async () => {
+    const newText = document.getElementById('edit-memory-text').value.trim();
+    if (!newText) {
+      showToast('内容不能为空', 'error');
+      return;
+    }
+
+    try {
+      // 调用 Roche 的更新记忆 API
+      await roche.memory.updateLongTerm({
+        conversationId: convId,
+        memoryId: memory.id,
+        text: newText
+      });
+      showToast('记忆已更新', 'success');
+      document.body.removeChild(overlay);
+      // 重新打开设置对话框
+      const settingsOverlay = document.querySelector('div[style*="z-index: 10000"]');
+      if (settingsOverlay) {
+        document.body.removeChild(settingsOverlay);
+      }
+      showChatSettings(roche, convId);
+    } catch (error) {
+      console.error('更新记忆失败:', error);
+      showToast('更新失败', 'error');
+    }
+  });
 }
 
 /**
