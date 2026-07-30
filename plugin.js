@@ -68,7 +68,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '3.8.1',
+    version: '3.8.2',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -1550,8 +1550,8 @@ function renderUI(container, roche) {
         display: flex;
         align-items: center;
         background: #eff3f4;
-        border-radius: 20px;
-        padding: 8px 12px;
+        border-radius: 18px;
+        padding: 6px 12px;
         gap: 8px;
         color: #536471;
         min-width: 0;
@@ -2055,8 +2055,8 @@ function renderUI(container, roche) {
         display: flex;
         align-items: center;
         background: #eff3f4;
-        border-radius: 20px;
-        padding: 8px 12px;
+        border-radius: 18px;
+        padding: 6px 12px;
         gap: 8px;
         color: #536471;
       }
@@ -3846,62 +3846,8 @@ async function fetchNewsTweets(roche) {
   // 预留：之后接入 MCP 或 NewsAPI
   // const news = await roche.mcp?.fetchNews?.();
 
-  // 模拟新闻数据（占位）
-  const mockNews = [
-    {
-      id: 'news_1',
-      userId: 'news_bot',
-      content: '【科技】OpenAI 发布最新 GPT-5 模型，性能提升 40%，支持多模态理解和生成。#AI #科技新闻',
-      timestamp: Date.now() - 3600000,
-      source: '科技日报',
-      category: 'tech',
-      isNews: true,
-      likes: [],
-      retweets: [],
-      replies: []
-    },
-    {
-      id: 'news_2',
-      userId: 'news_bot',
-      content: '【财经】全球股市今日普遍上涨，科技股领涨，纳斯达克指数上涨 2.3%。#财经 #股市',
-      timestamp: Date.now() - 7200000,
-      source: '财经周刊',
-      category: 'finance',
-      isNews: true,
-      likes: [],
-      retweets: [],
-      replies: []
-    },
-    {
-      id: 'news_3',
-      userId: 'news_bot',
-      content: '【体育】NBA 总决赛第三场，湖人队主场以 108-102 战胜凯尔特人队，大比分 2-1 领先。#NBA #体育',
-      timestamp: Date.now() - 10800000,
-      source: '体育周报',
-      category: 'sports',
-      isNews: true,
-      likes: [],
-      retweets: [],
-      replies: []
-    }
-  ];
-
-  // 创建新闻机器人用户（如果不存在）
-  if (!twitterData.users['news_bot']) {
-    twitterData.users['news_bot'] = {
-      id: 'news_bot',
-      name: '新闻机器人',
-      username: '@news_bot',
-      avatar: generateAvatar('新闻'),
-      bio: '为你推送最新资讯',
-      followers: 0,
-      following: 0,
-      isPersona: false,
-      isBot: true
-    };
-  }
-
-  return mockNews;
+  // 不再生成模拟新闻推文
+  return [];
 }
 
 /**
@@ -5413,6 +5359,18 @@ async function handleTweetAction(action, tweetId, roche) {
       }
       break;
 
+    case 'bookmark':
+      if (!twitterData.bookmarks[currentUser]) {
+        twitterData.bookmarks[currentUser] = [];
+      }
+      const bookmarkIndex = twitterData.bookmarks[currentUser].indexOf(tweetId);
+      if (bookmarkIndex > -1) {
+        twitterData.bookmarks[currentUser].splice(bookmarkIndex, 1);
+      } else {
+        twitterData.bookmarks[currentUser].push(tweetId);
+      }
+      break;
+
     case 'reply':
       showToast('回复功能开发中...', 'info');
       return;
@@ -5423,7 +5381,69 @@ async function handleTweetAction(action, tweetId, roche) {
   }
 
   await saveData(roche);
-  renderTweets(roche);
+
+  // 只更新当前推文的按钮状态，不重新渲染整个列表
+  updateTweetButtons(tweetId);
+}
+
+/**
+ * 更新推文按钮状态（不重新渲染整个列表）
+ */
+function updateTweetButtons(tweetId) {
+  const tweet = twitterData.tweets.find(t => t.id === tweetId);
+  if (!tweet) return;
+
+  // 查找所有显示这条推文的元素
+  document.querySelectorAll(`[data-tweet-id="${tweetId}"]`).forEach(tweetEl => {
+    // 更新点赞按钮
+    const likeBtn = tweetEl.querySelector('[data-action="like"]');
+    if (likeBtn) {
+      const isLiked = tweet.likes.includes(currentUser);
+      if (isLiked) {
+        likeBtn.classList.add('liked');
+      } else {
+        likeBtn.classList.remove('liked');
+      }
+      const likeIcon = likeBtn.querySelector('.action-icon');
+      if (likeIcon) {
+        likeIcon.innerHTML = isLiked ? icons.likeFilled : icons.like;
+      }
+      const likeCount = likeBtn.querySelector('span:last-child');
+      if (likeCount) {
+        likeCount.textContent = tweet.likes.length || '';
+      }
+    }
+
+    // 更新转发按钮
+    const retweetBtn = tweetEl.querySelector('[data-action="retweet"]');
+    if (retweetBtn) {
+      const isRetweeted = tweet.retweets.includes(currentUser);
+      if (isRetweeted) {
+        retweetBtn.classList.add('retweeted');
+      } else {
+        retweetBtn.classList.remove('retweeted');
+      }
+      const retweetCount = retweetBtn.querySelector('span:last-child');
+      if (retweetCount) {
+        retweetCount.textContent = tweet.retweets.length || '';
+      }
+    }
+
+    // 更新书签按钮
+    const bookmarkBtn = tweetEl.querySelector('[data-action="bookmark"]');
+    if (bookmarkBtn) {
+      const isBookmarked = twitterData.bookmarks[currentUser]?.includes(tweetId);
+      if (isBookmarked) {
+        bookmarkBtn.classList.add('bookmarked');
+      } else {
+        bookmarkBtn.classList.remove('bookmarked');
+      }
+      const bookmarkIcon = bookmarkBtn.querySelector('.action-icon');
+      if (bookmarkIcon) {
+        bookmarkIcon.innerHTML = isBookmarked ? icons.bookmarkFilled : icons.bookmark;
+      }
+    }
+  });
 }
 
 /**
