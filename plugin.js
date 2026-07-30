@@ -90,7 +90,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '4.1.2',
+    version: '4.2.0',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -3149,6 +3149,38 @@ function renderUI(container, roche) {
           </div>
           <div class="setting-item" id="setting-clear-memory">
             <div class="setting-label" style="color: #f4212e;">清除所有记忆</div>
+            <div class="setting-arrow">›</div>
+          </div>
+        </div>
+
+        <h2 class="section-title" style="margin-top: 20px;">NPC 系统设置</h2>
+        <div class="settings-section">
+          <div class="setting-item setting-toggle">
+            <div class="setting-info">
+              <div class="setting-label">启用 NPC 系统</div>
+              <div class="setting-description">AI NPC 会自动发帖和互动</div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggle-npc" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="setting-item" id="setting-npc-count">
+            <div class="setting-info">
+              <div class="setting-label">NPC 数量</div>
+              <div class="setting-description">当前: <span id="npc-count-value">8</span> 个</div>
+            </div>
+            <div class="setting-arrow">›</div>
+          </div>
+          <div class="setting-item" id="setting-npc-frequency">
+            <div class="setting-info">
+              <div class="setting-label">发帖频率</div>
+              <div class="setting-description">当前: <span id="npc-frequency-value">每 2-5 分钟</span></div>
+            </div>
+            <div class="setting-arrow">›</div>
+          </div>
+          <div class="setting-item" id="setting-npc-manage">
+            <div class="setting-label">管理 NPC</div>
             <div class="setting-arrow">›</div>
           </div>
         </div>
@@ -7670,6 +7702,48 @@ function showSettings(roche) {
     });
   }
 
+  // 绑定 NPC 系统开关
+  const toggleNPC = document.getElementById('toggle-npc');
+  if (toggleNPC) {
+    toggleNPC.checked = settings.enableNPC !== false; // 默认开启
+    toggleNPC.replaceWith(toggleNPC.cloneNode(true));
+    document.getElementById('toggle-npc').addEventListener('change', async (e) => {
+      settings.enableNPC = e.target.checked;
+      await saveSettings(roche);
+      showToast(settings.enableNPC ? '已启用 NPC 系统' : '已禁用 NPC 系统', 'success');
+      if (settings.enableNPC) {
+        initNPCSystem(roche);
+      }
+    });
+  }
+
+  // 绑定 NPC 数量设置
+  const settingNPCCount = document.getElementById('setting-npc-count');
+  if (settingNPCCount) {
+    settingNPCCount.replaceWith(settingNPCCount.cloneNode(true));
+    document.getElementById('setting-npc-count').addEventListener('click', () => {
+      showNPCCountSettings(roche);
+    });
+  }
+
+  // 绑定 NPC 发帖频率设置
+  const settingNPCFrequency = document.getElementById('setting-npc-frequency');
+  if (settingNPCFrequency) {
+    settingNPCFrequency.replaceWith(settingNPCFrequency.cloneNode(true));
+    document.getElementById('setting-npc-frequency').addEventListener('click', () => {
+      showNPCFrequencySettings(roche);
+    });
+  }
+
+  // 绑定管理 NPC
+  const settingNPCManage = document.getElementById('setting-npc-manage');
+  if (settingNPCManage) {
+    settingNPCManage.replaceWith(settingNPCManage.cloneNode(true));
+    document.getElementById('setting-npc-manage').addEventListener('click', () => {
+      showNPCManagement(roche);
+    });
+  }
+
   // 切换到设置视图
   switchView('settings');
 }
@@ -8788,6 +8862,82 @@ async function initNPCSystem(roche) {
     console.error('[NPC] NPC 系统初始化失败:', error);
     throw error;
   }
+}
+
+/**
+ * NPC 数量设置
+ */
+function showNPCCountSettings(roche) {
+  const count = Object.keys(twitterData.npcs || {}).length;
+  const newCount = prompt(`当前 NPC 数量：${count}\n\n请输入新的 NPC 数量（1-20）：`, count);
+
+  if (newCount && !isNaN(newCount)) {
+    const num = parseInt(newCount);
+    if (num >= 1 && num <= 20) {
+      settings.npcCount = num;
+      saveSettings(roche);
+      showToast(`已设置 NPC 数量为 ${num}`, 'success');
+      document.getElementById('npc-count-value').textContent = num;
+
+      // 重新初始化 NPC 系统
+      initNPCSystem(roche);
+    } else {
+      showToast('请输入 1-20 之间的数字', 'error');
+    }
+  }
+}
+
+/**
+ * NPC 发帖频率设置
+ */
+function showNPCFrequencySettings(roche) {
+  const options = [
+    { label: '非常频繁（每 1-2 分钟）', min: 60000, max: 120000 },
+    { label: '频繁（每 2-5 分钟）', min: 120000, max: 300000 },
+    { label: '正常（每 5-10 分钟）', min: 300000, max: 600000 },
+    { label: '较少（每 10-20 分钟）', min: 600000, max: 1200000 },
+    { label: '很少（每 20-30 分钟）', min: 1200000, max: 1800000 }
+  ];
+
+  const choice = prompt(
+    '选择 NPC 发帖频率：\n\n' +
+    options.map((opt, i) => `${i + 1}. ${opt.label}`).join('\n') +
+    '\n\n请输入序号（1-5）：',
+    '2'
+  );
+
+  if (choice && !isNaN(choice)) {
+    const index = parseInt(choice) - 1;
+    if (index >= 0 && index < options.length) {
+      settings.npcPostInterval = options[index];
+      saveSettings(roche);
+      showToast(`已设置为：${options[index].label}`, 'success');
+      document.getElementById('npc-frequency-value').textContent = options[index].label.match(/每 (.+?)）/)[1];
+
+      // 重新初始化 NPC 系统
+      initNPCSystem(roche);
+    }
+  }
+}
+
+/**
+ * NPC 管理页面
+ */
+function showNPCManagement(roche) {
+  const npcs = Object.values(twitterData.npcs || {});
+
+  if (npcs.length === 0) {
+    showToast('当前没有 NPC', 'info');
+    return;
+  }
+
+  const npcList = npcs.map((npc, i) => {
+    const user = twitterData.users[npc.userId];
+    return `${i + 1}. ${user.name} (@${user.username}) - 发帖 ${npc.postCount} 次`;
+  }).join('\n');
+
+  const message = `当前 NPC 列表：\n\n${npcList}\n\n功能开发中，敬请期待！`;
+  showToast(message, 'info');
 }
 
 })(); // 立即执行函数结束
