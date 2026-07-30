@@ -67,7 +67,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '3.5.3',
+    version: '3.5.4',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -1055,13 +1055,14 @@ function renderUI(container, roche) {
 
       .detail-main {
         padding-top: calc(60px + env(safe-area-inset-top));
-        padding-bottom: 80px;
+        padding-bottom: calc(80px + env(safe-area-inset-bottom));
         max-width: 768px;
         margin: 0 auto;
+        overflow-y: auto;
       }
 
       .detail-tweet {
-        padding: 12px 16px;
+        padding: 0;
       }
 
       .detail-tweet-header {
@@ -1069,6 +1070,7 @@ function renderUI(container, roche) {
         align-items: flex-start;
         gap: 12px;
         margin-bottom: 12px;
+        padding: 12px 16px 0 16px;
       }
 
       .detail-tweet-avatar {
@@ -1109,7 +1111,7 @@ function renderUI(container, roche) {
         align-items: center;
         gap: 4px;
         margin-top: 8px;
-        padding: 4px 0;
+        padding: 4px 16px;
       }
 
       .detail-tweet-translate:hover {
@@ -1120,6 +1122,7 @@ function renderUI(container, roche) {
         font-size: 17px;
         line-height: 24px;
         margin: 12px 0;
+        padding: 0 16px;
         white-space: pre-wrap;
         word-wrap: break-word;
         color: #0f1419;
@@ -1379,17 +1382,17 @@ function renderUI(container, roche) {
       .detail-reply-input {
         display: flex;
         gap: 12px;
-        padding: 16px;
-        padding-bottom: calc(16px + env(safe-area-inset-bottom));
+        padding: 12px 16px;
+        padding-bottom: calc(12px + env(safe-area-inset-bottom));
         border-top: 1px solid #eff3f4;
-        background: rgba(255, 255, 255, 0.85);
-        backdrop-filter: blur(12px);
+        background: #ffffff;
         position: fixed;
         bottom: 0;
         left: 0;
         right: 0;
         max-width: 768px;
         margin: 0 auto;
+        z-index: 50;
       }
 
       .detail-reply-avatar {
@@ -4135,12 +4138,12 @@ function showTweetDetail(tweetId, roche) {
       </div>
 
       <!-- 翻译内容（隐藏） -->
-      <div class="detail-tweet-translation" id="detail-tweet-translation" style="display: none; padding: 12px; background: #f7f9f9; border-radius: 12px; margin-top: 12px; color: #0f1419; font-size: 15px; line-height: 20px;">
+      <div class="detail-tweet-translation" id="detail-tweet-translation" style="display: none; padding: 12px 16px; background: #f7f9f9; border-radius: 12px; margin: 12px 16px; color: #0f1419; font-size: 15px; line-height: 20px;">
         正在翻译...
       </div>
 
       <!-- 时间和查看数 -->
-      <div class="detail-tweet-time" style="color: #536471; font-size: 15px; margin: 16px 0 8px 0; padding-bottom: 16px; border-bottom: 1px solid #eff3f4;">
+      <div class="detail-tweet-time" style="color: #536471; font-size: 15px; margin: 16px 0; padding: 0 16px 16px 16px; border-bottom: 1px solid #eff3f4;">
         <span>${formattedDateTime}</span>
         <span style="margin: 0 4px;">·</span>
         <span style="font-weight: 700; color: #0f1419;">${viewCount}</span>
@@ -4148,13 +4151,13 @@ function showTweetDetail(tweetId, roche) {
       </div>
 
       <!-- 点赞数 -->
-      <div class="detail-tweet-stats" style="padding: 12px 0; border-bottom: 1px solid #eff3f4;">
+      <div class="detail-tweet-stats" style="padding: 12px 16px; border-bottom: 1px solid #eff3f4;">
         <span style="font-weight: 700; color: #0f1419; font-size: 15px;">${tweet.likes.length}</span>
         <span style="color: #536471; margin-left: 4px; font-size: 15px;">喜欢</span>
       </div>
 
       <!-- 操作按钮 -->
-      <div class="detail-tweet-actions" style="display: flex; justify-content: space-around; padding: 8px 0; border-bottom: 1px solid #eff3f4;">
+      <div class="detail-tweet-actions" style="display: flex; justify-content: space-around; padding: 12px 16px; border-bottom: 1px solid #eff3f4;">
         <div class="detail-action-btn" data-action="reply" style="display: flex; align-items: center; justify-content: center; padding: 8px; cursor: pointer; border-radius: 50%; transition: background 0.2s; color: #536471;">
           ${icons.comment}
         </div>
@@ -4175,19 +4178,19 @@ function showTweetDetail(tweetId, roche) {
       </div>
 
       <!-- 最相关的回复 -->
-      <div class="detail-replies-header" style="display: flex; align-items: center; justify-content: space-between; padding: 16px; color: #0f1419;">
+      <div class="detail-replies-header" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; color: #0f1419; border-bottom: 1px solid #eff3f4;">
         <span style="font-weight: 700; font-size: 15px;">最相关的回复</span>
         <svg viewBox="0 0 24 24" width="18" height="18" fill="#536471"><path d="M3.543 8.96l1.414-1.42L12 14.59l7.043-7.05 1.414 1.42L12 17.41 3.543 8.96z"></path></svg>
       </div>
 
       <!-- 发现更多 -->
-      <div class="detail-discover-more" style="padding: 16px;">
+      <div class="detail-discover-more" style="padding: 32px 16px;">
         <div style="font-weight: 700; font-size: 20px; color: #0f1419; margin-bottom: 8px;">发现更多</div>
         <div style="color: #536471; font-size: 15px;">源自于整个 𝕏</div>
       </div>
 
       <!-- 来源标签 -->
-      <div class="detail-source-label">
+      <div class="detail-source-label" style="padding: 12px 16px; border-top: 1px solid #eff3f4;">
         <span style="color: #536471; font-size: 13px;">源自于整个 X</span>
       </div>
 
