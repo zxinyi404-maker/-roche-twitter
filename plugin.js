@@ -67,7 +67,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '3.2.0',
+    version: '3.2.1',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -6226,7 +6226,7 @@ async function showChatSettings(roche, convId) {
           <div style="font-size: 15px; font-weight: 700; color: #0f1419; margin-bottom: 8px;">记忆总结</div>
           <div style="font-size: 13px; color: #536471; margin-bottom: 12px;">设置多少条消息后自动总结为长期记忆</div>
           <div style="display: flex; align-items: center; gap: 12px;">
-            <input type="number" id="memory-interval-input" value="${chatSettings.memorySummaryInterval}" min="1" max="100"
+            <input type="number" id="memory-interval-input" value="${chatSettings.memorySummaryInterval}" min="1" max="1000"
               style="flex: 1; padding: 12px 16px; border: 1px solid #eff3f4; border-radius: 8px; font-size: 15px; outline: none;">
             <span style="color: #536471;">条消息</span>
           </div>
@@ -6240,16 +6240,16 @@ async function showChatSettings(roche, convId) {
               <div style="text-align: center; padding: 40px 20px; color: #536471;">
                 <div style="font-size: 15px;">暂无总结记忆</div>
               </div>
-            ` : summaryMemories.map((mem, idx) => `
-              <div class="memory-card" data-memory-id="${mem.id || idx}" style="position: relative; background: #f7f9f9; border-radius: 12px; padding: 16px; transition: background 0.2s;">
+            ` : summaryMemories.map((mem) => `
+              <div class="memory-card" data-memory-index="${summaryMemories.indexOf(mem)}" style="position: relative; background: #f7f9f9; border-radius: 12px; padding: 16px; transition: background 0.2s;">
                 <!-- 操作按钮（右上角，隐蔽） -->
                 <div style="position: absolute; top: 8px; right: 8px; display: flex; gap: 4px; opacity: 0.3; transition: opacity 0.2s;" class="memory-actions">
-                  <div class="memory-edit-btn" data-memory-id="${mem.id || idx}" style="width: 28px; height: 28px; border-radius: 50%; background: rgba(255,255,255,0.8); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.2s;" title="编辑">
+                  <div class="memory-edit-btn" data-memory-index="${summaryMemories.indexOf(mem)}" style="width: 28px; height: 28px; border-radius: 50%; background: rgba(255,255,255,0.8); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.2s;" title="编辑">
                     <svg viewBox="0 0 24 24" width="14" height="14" fill="#536471">
                       <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"></path>
                     </svg>
                   </div>
-                  <div class="memory-delete-btn" data-memory-id="${mem.id || idx}" style="width: 28px; height: 28px; border-radius: 50%; background: rgba(255,255,255,0.8); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.2s;" title="删除">
+                  <div class="memory-delete-btn" data-memory-index="${summaryMemories.indexOf(mem)}" style="width: 28px; height: 28px; border-radius: 50%; background: rgba(255,255,255,0.8); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.2s;" title="删除">
                     <svg viewBox="0 0 24 24" width="14" height="14" fill="#f91880">
                       <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"></path>
                     </svg>
@@ -6297,8 +6297,8 @@ async function showChatSettings(roche, convId) {
     // 绑定保存按钮
     document.getElementById('save-settings-btn').addEventListener('click', async () => {
       const interval = parseInt(document.getElementById('memory-interval-input').value);
-      if (interval < 1 || interval > 100) {
-        showToast('请输入 1-100 之间的数字', 'error');
+      if (interval < 1 || interval > 1000) {
+        showToast('请输入 1-1000 之间的数字', 'error');
         return;
       }
 
@@ -6313,10 +6313,12 @@ async function showChatSettings(roche, convId) {
     // 绑定编辑按钮
     dialog.querySelectorAll('.memory-edit-btn').forEach(btn => {
       btn.addEventListener('click', async (e) => {
-        const memoryId = e.currentTarget.dataset.memoryId;
-        const memory = summaryMemories[memoryId];
+        e.stopPropagation();
+        const memoryIndex = parseInt(e.currentTarget.dataset.memoryIndex);
+        const memory = summaryMemories[memoryIndex];
         if (memory) {
-          editMemory(roche, convId, memory);
+          document.body.removeChild(overlay);
+          editMemory(roche, convId, memory, summaryMemories);
         }
       });
     });
@@ -6324,22 +6326,26 @@ async function showChatSettings(roche, convId) {
     // 绑定删除按钮
     dialog.querySelectorAll('.memory-delete-btn').forEach(btn => {
       btn.addEventListener('click', async (e) => {
-        const memoryId = e.currentTarget.dataset.memoryId;
-        const memory = summaryMemories[memoryId];
+        e.stopPropagation();
+        const memoryIndex = parseInt(e.currentTarget.dataset.memoryIndex);
+        const memory = summaryMemories[memoryIndex];
         if (memory && confirm('确定删除这条记忆吗？')) {
           try {
             // 调用 Roche 的删除记忆 API
-            await roche.memory.deleteLongTerm({
-              conversationId: convId,
-              memoryId: memory.id
-            });
+            // 注意：可能需要根据 Roche 实际 API 调整
+            if (memory.id) {
+              await roche.memory.delete({
+                conversationId: convId,
+                id: memory.id
+              });
+            }
             showToast('记忆已删除', 'success');
             // 重新打开设置对话框
             document.body.removeChild(overlay);
             showChatSettings(roche, convId);
           } catch (error) {
             console.error('删除记忆失败:', error);
-            showToast('删除失败', 'error');
+            showToast('删除失败: ' + error.message, 'error');
           }
         }
       });
@@ -6354,7 +6360,7 @@ async function showChatSettings(roche, convId) {
 /**
  * 编辑记忆
  */
-function editMemory(roche, convId, memory) {
+function editMemory(roche, convId, memory, allMemories) {
   // 创建编辑对话框
   const overlay = document.createElement('div');
   overlay.style.cssText = `
@@ -6398,6 +6404,7 @@ function editMemory(roche, convId, memory) {
 
   document.getElementById('cancel-edit-btn').addEventListener('click', () => {
     document.body.removeChild(overlay);
+    showChatSettings(roche, convId);
   });
 
   document.getElementById('save-edit-btn').addEventListener('click', async () => {
@@ -6409,22 +6416,21 @@ function editMemory(roche, convId, memory) {
 
     try {
       // 调用 Roche 的更新记忆 API
-      await roche.memory.updateLongTerm({
-        conversationId: convId,
-        memoryId: memory.id,
-        text: newText
-      });
+      // 注意：可能需要根据 Roche 实际 API 调整
+      if (memory.id) {
+        await roche.memory.update({
+          conversationId: convId,
+          id: memory.id,
+          text: newText
+        });
+      }
       showToast('记忆已更新', 'success');
       document.body.removeChild(overlay);
       // 重新打开设置对话框
-      const settingsOverlay = document.querySelector('div[style*="z-index: 10000"]');
-      if (settingsOverlay) {
-        document.body.removeChild(settingsOverlay);
-      }
       showChatSettings(roche, convId);
     } catch (error) {
       console.error('更新记忆失败:', error);
-      showToast('更新失败', 'error');
+      showToast('更新失败: ' + error.message, 'error');
     }
   });
 }
