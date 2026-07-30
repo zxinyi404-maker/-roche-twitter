@@ -68,7 +68,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '3.9.0',
+    version: '3.9.1',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -1204,7 +1204,7 @@ function renderUI(container, roche) {
         font-size: 23px;
         line-height: 28px;
         color: #0f1419;
-        margin: 16px 0;
+        margin: 4px 0 16px 0;
         white-space: pre-wrap;
         word-wrap: break-word;
       }
@@ -1438,33 +1438,6 @@ function renderUI(container, roche) {
 
       .detail-reply-textarea:focus {
         border-color: #1d9bf0;
-      }
-
-      .detail-reply-btn {
-        background: #1d9bf0;
-        color: #fff;
-        border: none;
-        border-radius: 20px;
-        padding: 8px 16px;
-        font-weight: 700;
-        font-size: 15px;
-        cursor: pointer;
-        transition: background 0.2s;
-        min-width: 70px;
-        white-space: nowrap;
-      }
-
-      .detail-reply-btn:hover:not(:disabled) {
-        background: #1a8cd8;
-      }
-
-      .detail-reply-btn:active:not(:disabled) {
-        background: #1780c2;
-      }
-
-      .detail-reply-btn:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
       }
 
       /* 页面视图 */
@@ -2845,8 +2818,7 @@ function renderUI(container, roche) {
         <div class="detail-reply-input" id="detail-reply-input">
           <img class="detail-reply-avatar" id="detail-reply-avatar" src="" alt="">
           <div class="detail-reply-form">
-            <textarea class="detail-reply-textarea" id="detail-reply-textarea" placeholder="发布你的回复" rows="1"></textarea>
-            <button class="detail-reply-btn" id="detail-reply-btn" disabled>回复</button>
+            <textarea class="detail-reply-textarea" id="detail-reply-textarea" placeholder="发布你的回复（按回车发送）" rows="1"></textarea>
           </div>
         </div>
       </div>
@@ -3491,20 +3463,24 @@ function bindEvents(container, roche) {
 
   // 详情页回复功能
   const replyTextarea = document.getElementById('detail-reply-textarea');
-  const replyBtn = document.getElementById('detail-reply-btn');
 
   replyTextarea.addEventListener('input', () => {
-    replyBtn.disabled = replyTextarea.value.trim().length === 0;
     // 自动调整高度
     replyTextarea.style.height = 'auto';
     replyTextarea.style.height = Math.min(replyTextarea.scrollHeight, 120) + 'px';
   });
 
-  replyBtn.addEventListener('click', () => {
-    postReply(roche, currentTweetId, replyTextarea.value.trim());
-    replyTextarea.value = '';
-    replyTextarea.style.height = 'auto';
-    replyBtn.disabled = true;
+  // 回车键发送回复
+  replyTextarea.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      const content = replyTextarea.value.trim();
+      if (content) {
+        postReply(roche, currentTweetId, content);
+        replyTextarea.value = '';
+        replyTextarea.style.height = 'auto';
+      }
+    }
   });
 
   // 底部导航切换
