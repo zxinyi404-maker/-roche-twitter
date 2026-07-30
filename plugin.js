@@ -90,7 +90,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '4.1.1',
+    version: '4.1.2',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -1496,13 +1496,15 @@ function renderUI(container, roche) {
         position: relative;
         left: 0;
         right: 0;
-        height: 60px;
+        padding-top: env(safe-area-inset-top);
+        height: calc(60px + env(safe-area-inset-top));
         background: rgba(255, 255, 255, 0.85);
         backdrop-filter: blur(12px);
         border-bottom: 1px solid #eff3f4;
         display: flex;
         align-items: center;
-        padding: 0 16px;
+        padding-left: 16px;
+        padding-right: 16px;
         gap: 8px;
         z-index: 100;
         max-width: 768px;
@@ -1766,14 +1768,16 @@ function renderUI(container, roche) {
         position: relative;
         left: 0;
         right: 0;
-        height: 60px;
+        padding-top: env(safe-area-inset-top);
+        height: calc(60px + env(safe-area-inset-top));
         background: rgba(255, 255, 255, 0.85);
         backdrop-filter: blur(12px);
         border-bottom: 1px solid #eff3f4;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 0 16px;
+        padding-left: 16px;
+        padding-right: 16px;
         z-index: 100;
         max-width: 768px;
         margin: 0 auto;
@@ -1972,14 +1976,16 @@ function renderUI(container, roche) {
         position: relative;
         left: 0;
         right: 0;
-        height: 60px;
+        padding-top: env(safe-area-inset-top);
+        height: calc(60px + env(safe-area-inset-top));
         background: rgba(255, 255, 255, 0.85);
         backdrop-filter: blur(12px);
         border-bottom: 1px solid #eff3f4;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 0 16px;
+        padding-left: 16px;
+        padding-right: 16px;
         z-index: 100;
         max-width: 768px;
         margin: 0 auto;
