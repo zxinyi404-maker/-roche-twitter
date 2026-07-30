@@ -67,7 +67,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '2.8.0',
+    version: '2.9.0',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -1454,7 +1454,7 @@ function renderUI(container, roche) {
         display: flex;
         align-items: center;
         padding: 0 16px;
-        gap: 12px;
+        gap: 8px;
         z-index: 100;
         max-width: 768px;
         margin: 0 auto;
@@ -1511,6 +1511,7 @@ function renderUI(container, roche) {
         padding: 10px 16px;
         gap: 12px;
         color: #536471;
+        min-width: 0;
       }
 
       .search-input {
@@ -1520,6 +1521,7 @@ function renderUI(container, roche) {
         outline: none;
         font-size: 15px;
         color: #0f1419;
+        min-width: 0;
       }
 
       .search-input::placeholder {
@@ -2825,25 +2827,110 @@ function renderUI(container, roche) {
           <div id="search-results-list"></div>
         </div>
 
-        <!-- 默认展示：趋势和推荐 -->
+        <!-- 默认展示：推荐视频 + 趋势 -->
         <div id="search-default-section">
-          <div class="trends-section">
-            <div class="trend-item">
-              <div class="trend-category">日本的趋势</div>
-              <div class="trend-hashtag">#人工智能</div>
-              <div class="trend-count">125K 推文</div>
+          <!-- 推荐视频卡片 -->
+          <div style="position: relative; width: 100%; aspect-ratio: 16/9; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 16px; overflow: hidden; margin: 16px 0;">
+            <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; color: white; font-size: 18px; font-weight: 700;">
+              推荐视频内容
             </div>
-            <div class="trend-item">
-              <div class="trend-category">科技 · 热门</div>
-              <div class="trend-hashtag">#ClaudeAI</div>
-              <div class="trend-count">89.3K 推文</div>
+            <div style="position: absolute; top: 12px; right: 12px; display: flex; gap: 8px;">
+              <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; cursor: pointer;">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="white"><path d="M6 4v16l13-8-13-8z"></path></svg>
+              </div>
+              <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; cursor: pointer;">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="white"><path d="M3 12c0-1.1.9-2 2-2s2 .9 2 2-.9 2-2 2-2-.9-2-2zm9 0c0-1.1.9-2 2-2s2 .9 2 2-.9 2-2 2-2-.9-2-2zm9 0c0-1.1.9-2 2-2s2 .9 2 2-.9 2-2 2-2-.9-2-2z"></path></svg>
+              </div>
             </div>
-            <div class="trend-item">
-              <div class="trend-category">编程 · 热门</div>
-              <div class="trend-hashtag">#JavaScript</div>
-              <div class="trend-count">56.7K 推文</div>
+            <div style="position: absolute; bottom: 12px; left: 12px; right: 12px;">
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                <div style="width: 20px; height: 20px; background: rgba(255,255,255,0.3); border-radius: 4px;"></div>
+                <span style="font-size: 13px; color: white;">由 示例账号 推荐</span>
+              </div>
             </div>
           </div>
+
+          <!-- 趋势列表 -->
+          <div class="trends-section">
+            <div class="trend-item" style="padding: 12px 16px; cursor: pointer; transition: background 0.2s;">
+              <div style="display: flex; justify-content: space-between; align-items: start;">
+                <div style="flex: 1;">
+                  <div class="trend-category" style="font-size: 13px; color: #536471; margin-bottom: 2px;">日本的趋势</div>
+                  <div class="trend-hashtag" style="font-size: 15px; font-weight: 700; color: #0f1419; margin-bottom: 2px;">ホームランダービー</div>
+                  <div class="trend-count" style="font-size: 13px; color: #536471;"></div>
+                </div>
+                <div style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; cursor: pointer; transition: background 0.2s;">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="#536471"><path d="M3 12c0-1.1.9-2 2-2s2 .9 2 2-.9 2-2 2-2-.9-2-2zm9 0c0-1.1.9-2 2-2s2 .9 2 2-.9 2-2 2-2-.9-2-2zm9 0c0-1.1.9-2 2-2s2 .9 2 2-.9 2-2 2-2-.9-2-2z"></path></svg>
+                </div>
+              </div>
+            </div>
+            <div class="trend-item" style="padding: 12px 16px; cursor: pointer; transition: background 0.2s;">
+              <div style="display: flex; justify-content: space-between; align-items: start;">
+                <div style="flex: 1;">
+                  <div class="trend-category" style="font-size: 13px; color: #536471; margin-bottom: 2px;">日本的趋势</div>
+                  <div class="trend-hashtag" style="font-size: 15px; font-weight: 700; color: #0f1419; margin-bottom: 2px;">イオンの会見</div>
+                  <div class="trend-count" style="font-size: 13px; color: #536471;"></div>
+                </div>
+                <div style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; cursor: pointer; transition: background 0.2s;">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="#536471"><path d="M3 12c0-1.1.9-2 2-2s2 .9 2 2-.9 2-2 2-2-.9-2-2zm9 0c0-1.1.9-2 2-2s2 .9 2 2-.9 2-2 2-2-.9-2-2zm9 0c0-1.1.9-2 2-2s2 .9 2 2-.9 2-2 2-2-.9-2-2z"></path></svg>
+                </div>
+              </div>
+            </div>
+            <div class="trend-item" style="padding: 12px 16px; cursor: pointer; transition: background 0.2s;">
+              <div style="display: flex; justify-content: space-between; align-items: start;">
+                <div style="flex: 1;">
+                  <div class="trend-category" style="font-size: 13px; color: #536471; margin-bottom: 2px;">日本的趋势</div>
+                  <div class="trend-hashtag" style="font-size: 15px; font-weight: 700; color: #0f1419; margin-bottom: 2px;">細川優勝</div>
+                  <div class="trend-count" style="font-size: 13px; color: #536471;"></div>
+                </div>
+                <div style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; cursor: pointer; transition: background 0.2s;">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="#536471"><path d="M3 12c0-1.1.9-2 2-2s2 .9 2 2-.9 2-2 2-2-.9-2-2zm9 0c0-1.1.9-2 2-2s2 .9 2 2-.9 2-2 2-2-.9-2-2zm9 0c0-1.1.9-2 2-2s2 .9 2 2-.9 2-2 2-2-.9-2-2z"></path></svg>
+                </div>
+              </div>
+            </div>
+            <div class="trend-item" style="padding: 12px 16px; cursor: pointer; transition: background 0.2s;">
+              <div style="display: flex; justify-content: space-between; align-items: start;">
+                <div style="flex: 1;">
+                  <div class="trend-category" style="font-size: 13px; color: #536471; margin-bottom: 2px;">日本的趋势</div>
+                  <div class="trend-hashtag" style="font-size: 15px; font-weight: 700; color: #0f1419; margin-bottom: 2px;">政治資金パーティー開催</div>
+                  <div class="trend-count" style="font-size: 13px; color: #536471;"></div>
+                </div>
+                <div style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; cursor: pointer; transition: background 0.2s;">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="#536471"><path d="M3 12c0-1.1.9-2 2-2s2 .9 2 2-.9 2-2 2-2-.9-2-2zm9 0c0-1.1.9-2 2-2s2 .9 2 2-.9 2-2 2-2-.9-2-2zm9 0c0-1.1.9-2 2-2s2 .9 2 2-.9 2-2 2-2-.9-2-2z"></path></svg>
+                </div>
+              </div>
+            </div>
+            <div class="trend-item" style="padding: 12px 16px; cursor: pointer; transition: background 0.2s;">
+              <div style="display: flex; justify-content: space-between; align-items: start;">
+                <div style="flex: 1;">
+                  <div class="trend-category" style="font-size: 13px; color: #536471; margin-bottom: 2px;">日本的趋势</div>
+                  <div class="trend-hashtag" style="font-size: 15px; font-weight: 700; color: #0f1419; margin-bottom: 2px;">自民福岡</div>
+                  <div class="trend-count" style="font-size: 13px; color: #536471;"></div>
+                </div>
+                <div style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; cursor: pointer; transition: background 0.2s;">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="#536471"><path d="M3 12c0-1.1.9-2 2-2s2 .9 2 2-.9 2-2 2-2-.9-2-2zm9 0c0-1.1.9-2 2-2s2 .9 2 2-.9 2-2 2-2-.9-2-2zm9 0c0-1.1.9-2 2-2s2 .9 2 2-.9 2-2 2-2-.9-2-2z"></path></svg>
+                </div>
+              </div>
+            </div>
+            <div class="trend-item" style="padding: 12px 16px; cursor: pointer; transition: background 0.2s;">
+              <div style="display: flex; justify-content: space-between; align-items: start;">
+                <div style="flex: 1;">
+                  <div class="trend-category" style="font-size: 13px; color: #536471; margin-bottom: 2px;">娱乐 · 热门</div>
+                  <div class="trend-hashtag" style="font-size: 15px; font-weight: 700; color: #0f1419; margin-bottom: 2px;">#gojimu</div>
+                  <div class="trend-count" style="font-size: 13px; color: #536471;"></div>
+                </div>
+                <div style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; cursor: pointer; transition: background 0.2s;">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="#536471"><path d="M3 12c0-1.1.9-2 2-2s2 .9 2 2-.9 2-2 2-2-.9-2-2zm9 0c0-1.1.9-2 2-2s2 .9 2 2-.9 2-2 2-2-.9-2-2zm9 0c0-1.1.9-2 2-2s2 .9 2 2-.9 2-2 2-2-.9-2-2z"></path></svg>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <style>
+            .trend-item:hover {
+              background: rgba(0, 0, 0, 0.03);
+            }
+          </style>
         </div>
       </div>
     </div>
