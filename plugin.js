@@ -97,7 +97,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '5.2.0',
+    version: '5.3.0',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -119,6 +119,11 @@ function showToast(message, type = 'success') {
           // 初始化 NPC 系统（异步，不阻塞界面）
           initNPCSystem(roche).catch(error => {
             console.error('[NPC] NPC 系统初始化失败:', error);
+          });
+
+          // 初始化 Char 自动发推系统
+          initCharTweetSystem(roche).catch(error => {
+            console.error('[Char] Char 发推系统初始化失败:', error);
           });
 
         } catch (error) {
@@ -9619,6 +9624,182 @@ async function initNPCSystem(roche) {
     console.log('[NPC] NPC 系统初始化完成');
   } catch (error) {
     console.error('[NPC] NPC 系统初始化失败:', error);
+    throw error;
+  }
+}
+
+/**
+ * 初始化 Char 自动发推系统
+ */
+async function initCharTweetSystem(roche) {
+  console.log('[Char] 初始化 Char 自动发推系统');
+
+  // 初始化 charTweets 字段
+  if (!twitterData.charTweets) {
+    twitterData.charTweets = {};
+  }
+
+  // 启动定时检查
+  startCharTweetingSystem(roche);
+
+  console.log('[Char] Char 自动发推系统初始化完成');
+}
+
+/**
+ * 启动 Char 发推定时系统
+ */
+function startCharTweetingSystem(roche) {
+  // 每 30 分钟检查一次
+  setInterval(async () => {
+    try {
+      await checkAndPostCharTweets(roche);
+    } catch (error) {
+      console.error('[Char] Char 发推检查失败:', error);
+    }
+  }, 30 * 60 * 1000); // 30 分钟
+
+  // 立即执行一次
+  setTimeout(() => {
+    checkAndPostCharTweets(roche).catch(error => {
+      console.error('[Char] Char 发推检查失败:', error);
+    });
+  }, 5000); // 5 秒后执行第一次
+}
+
+/**
+ * 检查并发布 Char 推文
+ */
+async function checkAndPostCharTweets(roche) {
+  if (!twitterData.charTweets) return;
+
+  const now = Date.now();
+  const enabledChars = Object.entries(twitterData.charTweets).filter(([id, config]) => config.enabled);
+
+  if (enabledChars.length === 0) {
+    return;
+  }
+
+  console.log(`[Char] 检查 ${enabledChars.length} 个已启用的 Char`);
+
+  for (const [charId, config] of enabledChars) {
+    try {
+      // 计算发推间隔（毫秒）
+      // 频率是每天 N 条，所以间隔是 24小时 / N
+      const intervalMs = (24 * 60 * 60 * 1000) / config.frequency;
+
+      // 检查是否到了发推时间
+      const timeSinceLastTweet = now - (config.lastTweetTime || 0);
+
+      if (timeSinceLastTweet >= intervalMs) {
+        console.log(`[Char] ${charId} 需要发推文`);
+        await generateAndPostCharTweet(roche, charId, config);
+
+        // 更新最后发推时间
+        twitterData.charTweets[charId].lastTweetTime = now;
+        await saveData(roche);
+      }
+    } catch (error) {
+      console.error(`[Char] ${charId} 发推失败:`, error);
+    }
+  }
+}
+
+/**
+ * 生成并发布 Char 推文
+ */
+async function generateAndPostCharTweet(roche, charId, config) {
+  try {
+    // 获取角色信息
+    const character = await roche.character.get(charId);
+    if (!character) {
+      console.error(`[Char] 找不到角色: ${charId}`);
+      return;
+    }
+
+    console.log(`[Char] 为 ${character.name} 生成推文`);
+
+    // 构建提示词，让 Char 生成推文
+    const prompt = `你是 ${character.name}。请根据你的性格和背景发一条推文（最多280字）。
+
+你的性格和背景：
+${character.description || character.persona || ''}
+
+要求：
+- 推文内容要符合你的性格
+- 不要超过 280 字
+- 不要包含任何解释，只输出推文内容
+- 可以是日常分享、想法、观点、感受等
+- 自然真实，像普通人发推特一样`;
+
+    // 使用 Roche AI 生成推文内容
+    const response = await roche.ai.chat({
+      conversationId: charId,
+      messages: [
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+      stream: false
+    });
+
+    let tweetContent = '';
+
+    // 提取回复内容
+    if (typeof response === 'string') {
+      tweetContent = response;
+    } else if (response?.content) {
+      tweetContent = response.content;
+    } else if (response?.text) {
+      tweetContent = response.text;
+    } else if (response?.message) {
+      tweetContent = response.message;
+    }
+
+    // 清理内容
+    tweetContent = tweetContent.trim();
+
+    // 去掉可能的引号
+    if (tweetContent.startsWith('"') && tweetContent.endsWith('"')) {
+      tweetContent = tweetContent.slice(1, -1);
+    }
+    if (tweetContent.startsWith('"') && tweetContent.endsWith('"')) {
+      tweetContent = tweetContent.slice(1, -1);
+    }
+
+    // 限制长度
+    if (tweetContent.length > 280) {
+      tweetContent = tweetContent.substring(0, 277) + '...';
+    }
+
+    if (!tweetContent) {
+      console.error('[Char] 生成的推文内容为空');
+      return;
+    }
+
+    console.log(`[Char] 生成的推文内容: ${tweetContent}`);
+
+    // 创建推文
+    const newTweet = {
+      id: Date.now(),
+      userId: config.userId,
+      content: tweetContent,
+      timestamp: Date.now(),
+      likes: [],
+      retweets: [],
+      replies: [],
+      replyTo: null,
+      isCharTweet: true,
+      charId: charId
+    };
+
+    twitterData.tweets.unshift(newTweet);
+    await saveData(roche);
+
+    console.log(`[Char] ${character.name} 发布了推文: ${tweetContent.substring(0, 50)}...`);
+
+  } catch (error) {
+    console.error(`[Char] 生成推文失败:`, error);
     throw error;
   }
 }
