@@ -67,7 +67,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '3.5.2',
+    version: '3.5.3',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -1054,8 +1054,8 @@ function renderUI(container, roche) {
       }
 
       .detail-main {
-        padding-top: 60px;
-        padding-bottom: calc(80px + env(safe-area-inset-bottom));
+        padding-top: calc(60px + env(safe-area-inset-top));
+        padding-bottom: 80px;
         max-width: 768px;
         margin: 0 auto;
       }
@@ -6748,6 +6748,7 @@ function showSidebar(roche) {
     flex-direction: column;
     animation: slideInLeft 0.3s;
     overflow-y: auto;
+    padding-top: env(safe-area-inset-top);
   `;
 
   // 获取所有可切换的用户
