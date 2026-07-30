@@ -9073,80 +9073,12 @@ function showNPCManagement(roche) {
   const npcs = Object.values(twitterData.npcs || {});
 
   if (npcs.length === 0) {
-    // 直接创建一个测试 NPC，不使用 AI
-    const testNPCId = `npc_test_${Date.now()}`;
-
-    twitterData.users[testNPCId] = {
-      id: testNPCId,
-      name: '测试NPC',
-      username: '@test_npc',
-      avatar: generateAvatar('测试NPC'),
-      bio: '这是一个测试NPC账号',
-      followers: 100,
-      following: 50,
-      isPersona: false,
-      isNPC: true
-    };
-
-    twitterData.npcs[testNPCId] = {
-      name: '测试NPC',
-      username: 'test_npc',
-      bio: '这是一个测试NPC账号',
-      personality: '友好开朗',
-      occupation: '测试工程师',
-      interests: ['编程', '测试', '调试'],
-      age: 25,
-      location: '北京',
-      talkStyle: '简洁明了',
-      id: testNPCId,
-      createdAt: Date.now(),
-      lastPostTime: 0,
-      postCount: 0,
-      totalInteractions: 0,
-      lastInteractionTime: Date.now()
-    };
-
-    saveData(roche);
-    showToast('测试 NPC 创建成功！', 'success');
-
-    // 重新调用显示 NPC 列表
-    setTimeout(() => showNPCManagement(roche), 500);
+    showToast('暂无 NPC，请先创建', 'info');
     return;
   }
 
-  // 选择第一个 NPC 进行测试
-  const firstNPC = npcs[0];
-  const user = twitterData.users[firstNPC.id];
-
-  const confirmTest = confirm(`📢 测试 NPC 发帖\n\nNPC: ${user.name} (@${user.username})\n发帖次数: ${firstNPC.postCount}\n\n点击"确定"让这个 NPC 立即发一条推文测试`);
-
-  if (confirmTest) {
-    showToast('正在测试 NPC 发帖...', 'info');
-    console.log('========== NPC 发帖测试开始 ==========');
-    console.log('[测试] NPC ID:', firstNPC.id);
-    console.log('[测试] NPC 名字:', user.name);
-    console.log('[测试] settings.useNoirAPI:', settings.useNoirAPI);
-    console.log('[测试] roche.noir 是否存在:', !!roche.noir);
-    console.log('[测试] roche.noir.autoPost 是否存在:', !!roche.noir?.autoPost);
-    console.log('[测试] roche.ai.chat 是否存在:', !!roche.ai?.chat);
-    console.log('[测试] roche.conversation.create 是否存在:', !!roche.conversation?.create);
-
-    npcAutoPost(firstNPC.id, roche).then(() => {
-      console.log('========== NPC 发帖测试完成 ==========');
-      showToast('测试完成！请查看控制台日志', 'success');
-
-      // 刷新时间线
-      setTimeout(() => {
-        if (currentView === 'timeline') {
-          renderTimeline(roche);
-        }
-      }, 1000);
-    }).catch(error => {
-      console.error('========== NPC 发帖测试失败 ==========');
-      console.error('[测试错误]', error);
-      showToast('测试失败: ' + error.message, 'error');
-    });
-  }
+  // TODO: 显示 NPC 管理界面
+  showToast('NPC 管理功能开发中...', 'info');
 }
 
 })(); // 立即执行函数结束
