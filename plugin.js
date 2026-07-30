@@ -90,7 +90,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '4.3.2',
+    version: '4.3.3',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -9068,14 +9068,44 @@ function showNPCManagement(roche) {
   const npcs = Object.values(twitterData.npcs || {});
 
   if (npcs.length === 0) {
-    showToast('当前没有 NPC，正在生成...', 'info');
-    // 生成一个测试 NPC
-    createNPC(roche).then(() => {
-      showToast('NPC 创建成功！', 'success');
-      showNPCManagement(roche);
-    }).catch(error => {
-      showToast('NPC 创建失败: ' + error.message, 'error');
-    });
+    // 直接创建一个测试 NPC，不使用 AI
+    const testNPCId = `npc_test_${Date.now()}`;
+
+    twitterData.users[testNPCId] = {
+      id: testNPCId,
+      name: '测试NPC',
+      username: '@test_npc',
+      avatar: generateAvatar('测试NPC'),
+      bio: '这是一个测试NPC账号',
+      followers: 100,
+      following: 50,
+      isPersona: false,
+      isNPC: true
+    };
+
+    twitterData.npcs[testNPCId] = {
+      name: '测试NPC',
+      username: 'test_npc',
+      bio: '这是一个测试NPC账号',
+      personality: '友好开朗',
+      occupation: '测试工程师',
+      interests: ['编程', '测试', '调试'],
+      age: 25,
+      location: '北京',
+      talkStyle: '简洁明了',
+      id: testNPCId,
+      createdAt: Date.now(),
+      lastPostTime: 0,
+      postCount: 0,
+      totalInteractions: 0,
+      lastInteractionTime: Date.now()
+    };
+
+    saveData(roche);
+    showToast('测试 NPC 创建成功！', 'success');
+
+    // 重新调用显示 NPC 列表
+    setTimeout(() => showNPCManagement(roche), 500);
     return;
   }
 
