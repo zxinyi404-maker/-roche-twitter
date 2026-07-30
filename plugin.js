@@ -67,7 +67,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '2.9.3',
+    version: '2.9.4',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -5310,11 +5310,13 @@ async function renderMessages(roche) {
         if (conv.id) {
           try {
             const persona = await roche.persona.get(conv.id);
+            console.log('[Twitter] 尝试获取 persona 头像:', conv.title, persona);
             if (persona?.avatar) {
               avatarUrl = persona.avatar;
+              console.log('[Twitter] 通过 persona 获取头像成功:', avatarUrl);
             }
           } catch (e) {
-            // persona API 可能不存在
+            console.log('[Twitter] persona API 调用失败:', e);
           }
         }
 
@@ -5324,9 +5326,14 @@ async function renderMessages(roche) {
           for (const field of possibleFields) {
             if (conv[field]) {
               avatarUrl = conv[field];
+              console.log(`[Twitter] 在 conversation.${field} 找到头像:`, avatarUrl);
               break;
             }
           }
+        }
+
+        if (!avatarUrl) {
+          console.log('[Twitter] 未找到头像，将使用首字母:', conv.title);
         }
 
         return {
