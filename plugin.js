@@ -3227,6 +3227,13 @@ function renderUI(container, roche) {
             <div class="setting-label">管理 NPC</div>
             <div class="setting-arrow">›</div>
           </div>
+          <div class="setting-item" id="setting-test-npc-api">
+            <div class="setting-info">
+              <div class="setting-label">测试 NPC 发帖</div>
+              <div class="setting-description">测试 API 是否能正常生成内容</div>
+            </div>
+            <div class="setting-arrow">›</div>
+          </div>
         </div>
 
         <h2 class="section-title" style="margin-top: 20px;">关于</h2>
@@ -7844,6 +7851,15 @@ function showSettings(roche) {
     });
   }
 
+  // 绑定测试 NPC API
+  const settingTestNPCAPI = document.getElementById('setting-test-npc-api');
+  if (settingTestNPCAPI) {
+    settingTestNPCAPI.replaceWith(settingTestNPCAPI.cloneNode(true));
+    document.getElementById('setting-test-npc-api').addEventListener('click', () => {
+      testNPCPostAPI(roche);
+    });
+  }
+
   // 切换到设置视图
   switchView('settings');
 }
@@ -9492,6 +9508,191 @@ function showNPCFrequencySettings(roche) {
       // 重新初始化 NPC 系统
       initNPCSystem(roche);
     }
+  }
+}
+
+/**
+ * 测试 NPC 发帖 API
+ */
+async function testNPCPostAPI(roche) {
+  // 检查 API 配置
+  if (!settings.apiConfig.url || !settings.apiConfig.apiKey) {
+    showToast('请先配置 API 地址和密钥', 'error');
+    return;
+  }
+
+  showToast('正在测试 API...', 'success');
+
+  try {
+    // 构造测试请求
+    const testPrompt = `你是一个活跃的社交媒体用户。请用中文生成一条简短的推文（不超过100字），内容可以是日常生活、心情感悟或有趣的想法。只返回推文内容，不要有其他说明。`;
+
+    console.log('[测试] API 地址:', settings.apiConfig.url);
+    console.log('[测试] 模型:', settings.apiConfig.model);
+    console.log('[测试] 温度:', settings.apiConfig.temperature);
+
+    const response = await fetch(settings.apiConfig.url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${settings.apiConfig.apiKey}`
+      },
+      body: JSON.stringify({
+        model: settings.apiConfig.model,
+        messages: [
+          { role: 'user', content: testPrompt }
+        ],
+        temperature: settings.apiConfig.temperature,
+        max_tokens: 200
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    console.log('[测试] API 响应:', data);
+
+    // 解析响应
+    let generatedContent = '';
+
+    if (data.choices && data.choices[0]) {
+      // OpenAI 格式
+      generatedContent = data.choices[0].message?.content || data.choices[0].text || '';
+    } else if (data.content) {
+      // 其他格式
+      generatedContent = data.content;
+    } else if (data.response) {
+      generatedContent = data.response;
+    }
+
+    if (!generatedContent) {
+      throw new Error('API 返回的数据格式不正确，无法解析内容');
+    }
+
+    // 显示测试结果对话框
+    const dialog = document.createElement('div');
+    dialog.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+    `;
+
+    const dialogContent = document.createElement('div');
+    dialogContent.style.cssText = `
+      background: white;
+      border-radius: 16px;
+      width: 90%;
+      max-width: 500px;
+      max-height: 70vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    `;
+
+    dialogContent.innerHTML = `
+      <div style="padding: 20px; border-bottom: 1px solid #eff3f4;">
+        <div style="font-size: 20px; font-weight: 700; color: #0f1419;">✅ API 测试成功</div>
+      </div>
+      <div style="flex: 1; overflow-y: auto; padding: 20px;">
+        <div style="margin-bottom: 16px;">
+          <div style="font-size: 13px; color: #536471; font-weight: 600; margin-bottom: 8px;">API 配置</div>
+          <div style="background: #f7f9f9; padding: 12px; border-radius: 8px; font-size: 13px; color: #0f1419;">
+            <div style="margin-bottom: 4px;"><strong>地址:</strong> ${settings.apiConfig.url}</div>
+            <div style="margin-bottom: 4px;"><strong>模型:</strong> ${settings.apiConfig.model}</div>
+            <div><strong>温度:</strong> ${settings.apiConfig.temperature}</div>
+          </div>
+        </div>
+        <div>
+          <div style="font-size: 13px; color: #536471; font-weight: 600; margin-bottom: 8px;">生成的内容</div>
+          <div style="background: #eff3f4; padding: 16px; border-radius: 12px; font-size: 15px; color: #0f1419; line-height: 1.5;">
+            ${generatedContent}
+          </div>
+        </div>
+      </div>
+      <div style="padding: 12px; border-top: 1px solid #eff3f4;">
+        <button id="close-test-dialog" style="width: 100%; background: #1d9bf0; color: white; border: none; border-radius: 24px; padding: 12px; font-size: 15px; font-weight: 600; cursor: pointer;">
+          确定
+        </button>
+      </div>
+    `;
+
+    dialog.appendChild(dialogContent);
+    document.body.appendChild(dialog);
+
+    // 关闭对话框
+    const closeDialog = () => {
+      if (document.body.contains(dialog)) {
+        document.body.removeChild(dialog);
+      }
+    };
+
+    dialog.addEventListener('click', (e) => {
+      if (e.target === dialog) closeDialog();
+    });
+
+    document.getElementById('close-test-dialog').addEventListener('click', closeDialog);
+
+    showToast('API 测试成功！', 'success');
+
+  } catch (error) {
+    console.error('[测试] API 测试失败:', error);
+
+    // 显示错误对话框
+    const errorDialog = document.createElement('div');
+    errorDialog.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+    `;
+
+    const errorContent = document.createElement('div');
+    errorContent.style.cssText = `
+      background: white;
+      border-radius: 16px;
+      width: 90%;
+      max-width: 500px;
+      padding: 20px;
+    `;
+
+    errorContent.innerHTML = `
+      <div style="font-size: 20px; font-weight: 700; color: #f4212e; margin-bottom: 16px;">❌ API 测试失败</div>
+      <div style="background: #fff1f0; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
+        <div style="font-size: 13px; color: #536471; font-weight: 600; margin-bottom: 8px;">错误信息</div>
+        <div style="font-size: 14px; color: #f4212e; word-break: break-word;">${error.message}</div>
+      </div>
+      <button id="close-error-dialog" style="width: 100%; background: #0f1419; color: white; border: none; border-radius: 24px; padding: 12px; font-size: 15px; font-weight: 600; cursor: pointer;">
+        关闭
+      </button>
+    `;
+
+    errorDialog.appendChild(errorContent);
+    document.body.appendChild(errorDialog);
+
+    errorDialog.addEventListener('click', (e) => {
+      if (e.target === errorDialog || e.target.id === 'close-error-dialog') {
+        if (document.body.contains(errorDialog)) {
+          document.body.removeChild(errorDialog);
+        }
+      }
+    });
+
+    showToast('API 测试失败，请检查配置', 'error');
   }
 }
 
