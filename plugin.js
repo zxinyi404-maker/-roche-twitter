@@ -14,7 +14,8 @@ const NPC_CONFIG = {
   dailyNewNPCs: 3,           // 每天生成新 NPC 数量
   maxNPCs: 50,               // NPC 总数上限
   cleanupDays: 7,            // 清理无互动 NPC 的天数
-  postsPerNPCPerDay: 2,      // 每个 NPC 每天发帖数
+  dailyActiveNPCs: 10,       // 每天随机抽取发帖的 NPC 数量
+  postsPerActiveNPC: 2,      // 每个活跃 NPC 每天发帖数
   postIntervalMin: 2,        // 最小发帖间隔（小时）
   postIntervalMax: 4,        // 最大发帖间隔（小时）
   interestDecayRate: 0.95,   // 兴趣度每天衰减率
@@ -89,7 +90,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '4.0.0',
+    version: '4.0.1',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -8683,13 +8684,45 @@ async function dailyGenerateNPCs(roche) {
 function startNPCPostingSystem(roche) {
   if (!settings.enableNPC) return;
 
+  // 每天重置活跃 NPC 列表
+  let dailyActiveNPCs = [];
+  let lastResetDate = new Date().toDateString();
+
+  // 随机选择今天活跃的 NPC
+  function selectDailyActiveNPCs() {
+    const allNPCIds = Object.keys(twitterData.npcs);
+    const shuffled = allNPCIds.sort(() => Math.random() - 0.5);
+    dailyActiveNPCs = shuffled.slice(0, Math.min(NPC_CONFIG.dailyActiveNPCs, allNPCIds.length));
+
+    // 重置发帖计数
+    dailyActiveNPCs.forEach(npcId => {
+      if (twitterData.npcs[npcId]) {
+        twitterData.npcs[npcId].todayPostCount = 0;
+      }
+    });
+
+    console.log('[NPC] 今日活跃 NPC:', dailyActiveNPCs.map(id => twitterData.users[id]?.name));
+  }
+
+  // 初始化今日活跃 NPC
+  selectDailyActiveNPCs();
+
   // 每小时检查一次
   setInterval(async () => {
-    const npcIds = Object.keys(twitterData.npcs);
+    const today = new Date().toDateString();
+
+    // 检查是否需要重置（新的一天）
+    if (today !== lastResetDate) {
+      lastResetDate = today;
+      selectDailyActiveNPCs();
+    }
+
     const now = Date.now();
 
-    for (const npcId of npcIds) {
+    // 只让今日活跃的 NPC 发帖
+    for (const npcId of dailyActiveNPCs) {
       const npc = twitterData.npcs[npcId];
+      if (!npc) continue;
 
       // 计算随机发帖间隔
       const minInterval = NPC_CONFIG.postIntervalMin * 60 * 60 * 1000;
@@ -8699,17 +8732,12 @@ function startNPCPostingSystem(roche) {
       // 检查是否该发帖了
       if (now - npc.lastPostTime > randomInterval) {
         // 检查今天是否已经发够了
-        const today = new Date().toDateString();
-        const lastPostDate = new Date(npc.lastPostTime).toDateString();
+        if (!npc.todayPostCount) npc.todayPostCount = 0;
 
-        if (today !== lastPostDate) {
-          // 新的一天，重置计数
-          npc.postCount = 0;
-        }
-
-        if (npc.postCount < NPC_CONFIG.postsPerNPCPerDay) {
+        if (npc.todayPostCount < NPC_CONFIG.postsPerActiveNPC) {
           console.log('[NPC] 定时发帖:', twitterData.users[npcId].name);
           await npcAutoPost(npcId, roche);
+          npc.todayPostCount++;
           await new Promise(resolve => setTimeout(resolve, 3000));
         }
       }
