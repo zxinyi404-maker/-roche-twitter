@@ -90,7 +90,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '4.2.2',
+    version: '4.2.3',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -1059,7 +1059,9 @@ function renderUI(container, roche) {
         top: 0;
         left: 0;
         right: 0;
-        height: 60px;
+        /* iOS 安全区域适配 */
+        padding-top: env(safe-area-inset-top);
+        height: calc(60px + env(safe-area-inset-top));
         background: rgba(255, 255, 255, 0.85);
         backdrop-filter: blur(12px);
         border-bottom: 1px solid #eff3f4;
@@ -2384,7 +2386,8 @@ function renderUI(container, roche) {
         top: 0;
         left: 0;
         right: 0;
-        height: 53px;
+        padding-top: env(safe-area-inset-top);
+        height: calc(53px + env(safe-area-inset-top));
         background: rgba(255, 255, 255, 0.85);
         backdrop-filter: blur(12px);
         border-bottom: 1px solid #eff3f4;
