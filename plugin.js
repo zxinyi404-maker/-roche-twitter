@@ -68,7 +68,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '3.7.1',
+    version: '3.7.2',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -5801,13 +5801,14 @@ async function renderMessages(roche) {
         });
 
         const memories = [...(longTerm.facts || []), ...(longTerm.vectors || [])];
-        const lastMessage = memories.length > 0
-          ? (memories[0].summaryText || memories[0].text || '开始新对话...')
-          : '开始新对话...';
 
-        const lastTimestamp = memories.length > 0
-          ? (memories[0].timestamp || Date.now())
-          : Date.now();
+        // 只返回有消息记录的对话
+        if (memories.length === 0) {
+          return null; // 没有消息记录，不显示
+        }
+
+        const lastMessage = memories[0].summaryText || memories[0].text || '开始新对话...';
+        const lastTimestamp = memories[0].timestamp || Date.now();
 
         // 获取 Char 头像
         let avatarUrl = null;
@@ -5850,20 +5851,25 @@ async function renderMessages(roche) {
           unread: false // 可以后续添加未读逻辑
         };
       } catch (e) {
-        return {
-          ...conv,
-          lastMessage: '加载失败',
-          lastTimestamp: Date.now(),
-          unread: false
-        };
+        return null;
       }
     }));
 
+    // 过滤掉 null 值（没有消息记录的对话）
+    const validConversations = conversationsWithMessages.filter(conv => conv !== null);
+
+    // 如果没有有效对话，显示欢迎界面
+    if (validConversations.length === 0) {
+      if (welcomeEl) welcomeEl.style.display = 'block';
+      if (messagesEl) messagesEl.style.display = 'none';
+      return;
+    }
+
     // 按时间排序
-    conversationsWithMessages.sort((a, b) => b.lastTimestamp - a.lastTimestamp);
+    validConversations.sort((a, b) => b.lastTimestamp - a.lastTimestamp);
 
     // 渲染对话列表
-    messagesEl.innerHTML = conversationsWithMessages.map(conv => {
+    messagesEl.innerHTML = validConversations.map(conv => {
       // 头像处理
       const initial = conv.title ? conv.title.charAt(0).toUpperCase() : '?';
       const avatarGradient = `linear-gradient(135deg, #667eea 0%, #764ba2 100%)`;
