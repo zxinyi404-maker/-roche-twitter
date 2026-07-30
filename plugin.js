@@ -90,7 +90,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '4.2.4',
+    version: '4.2.5',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -1099,7 +1099,6 @@ function renderUI(container, roche) {
       }
 
       .detail-main {
-        padding-top: calc(60px + env(safe-area-inset-top));
         padding-bottom: calc(80px + env(safe-area-inset-bottom));
         overflow-y: auto;
         min-height: 100vh;
