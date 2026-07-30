@@ -68,7 +68,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '3.8.0',
+    version: '3.8.1',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -644,7 +644,7 @@ function renderUI(container, roche) {
       }
 
       .timeline-content {
-        padding-top: calc(53px + env(safe-area-inset-top));
+        padding-top: calc(60px + env(safe-area-inset-top) + 53px); /* 顶部栏60px + 标签栏53px */
         padding-bottom: calc(60px + env(safe-area-inset-bottom));
         overflow-y: auto;
         height: 100vh;
@@ -2075,7 +2075,7 @@ function renderUI(container, roche) {
       }
 
       .messages-content {
-        padding-top: calc(60px + env(safe-area-inset-top) + 50px); /* 顶部栏 + 搜索栏 */
+        padding-top: calc(120px + env(safe-area-inset-top) + 24px); /* 顶部栏60px + 搜索栏高度60px + padding */
         padding-bottom: calc(60px + env(safe-area-inset-bottom));
         overflow-y: auto;
         height: 100vh;
