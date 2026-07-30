@@ -67,7 +67,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '2.9.1',
+    version: '2.9.2',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -3999,39 +3999,39 @@ function switchView(view) {
   } else if (view === 'search') {
     // 显示搜索页
     if (searchView) searchView.classList.add('active');
-    if (topBar) topBar.style.display = 'flex';
+    if (topBar) topBar.style.display = 'none'; // 隐藏全局顶部栏
   } else if (view === 'notifications') {
     // 显示通知页
     if (notificationsView) notificationsView.classList.add('active');
-    if (topBar) topBar.style.display = 'flex';
+    if (topBar) topBar.style.display = 'none'; // 隐藏全局顶部栏
   } else if (view === 'messages') {
     // 显示私信页
     if (messagesView) messagesView.classList.add('active');
-    if (topBar) topBar.style.display = 'flex';
+    if (topBar) topBar.style.display = 'none'; // 隐藏全局顶部栏
   } else if (view === 'profile') {
     // 显示个人资料页
     if (profileView) profileView.classList.add('active');
-    if (topBar) topBar.style.display = 'flex';
+    if (topBar) topBar.style.display = 'none'; // 隐藏全局顶部栏
   } else if (view === 'settings') {
     // 显示设置页
     if (settingsView) settingsView.classList.add('active');
-    if (topBar) topBar.style.display = 'flex';
+    if (topBar) topBar.style.display = 'none'; // 隐藏全局顶部栏
   } else if (view === 'privacySettings') {
     // 显示设置和隐私页
     if (privacySettingsView) privacySettingsView.classList.add('active');
-    if (topBar) topBar.style.display = 'flex';
+    if (topBar) topBar.style.display = 'none'; // 隐藏全局顶部栏
   } else if (view === 'switchAccount') {
     // 显示切换账号页
     if (switchAccountView) switchAccountView.classList.add('active');
-    if (topBar) topBar.style.display = 'flex';
+    if (topBar) topBar.style.display = 'none'; // 隐藏全局顶部栏
   } else if (view === 'followingList') {
     // 显示关注列表页
     if (followingListView) followingListView.classList.add('active');
-    if (topBar) topBar.style.display = 'flex';
+    if (topBar) topBar.style.display = 'none'; // 隐藏全局顶部栏
   } else if (view === 'followersList') {
     // 显示粉丝列表页
     if (followersListView) followersListView.classList.add('active');
-    if (topBar) topBar.style.display = 'flex';
+    if (topBar) topBar.style.display = 'none'; // 隐藏全局顶部栏
   }
 }
 
