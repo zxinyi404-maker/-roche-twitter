@@ -16,8 +16,8 @@ const NPC_CONFIG = {
   cleanupDays: 7,            // 清理无互动 NPC 的天数
   dailyActiveNPCs: 10,       // 每天随机抽取发帖的 NPC 数量
   postsPerActiveNPC: 3,      // 每个活跃 NPC 每天发帖数
-  postIntervalMin: 30,       // 最小发帖间隔（分钟）
-  postIntervalMax: 120,      // 最大发帖间隔（分钟）
+  postIntervalMin: 2,        // 最小发帖间隔（分钟）- 改为 2 分钟
+  postIntervalMax: 15,       // 最大发帖间隔（分钟）- 改为 15 分钟
   interestDecayRate: 0.95,   // 兴趣度每天衰减率
   minInterestForRecommend: 0.3  // 推荐的最小兴趣度
 };
@@ -97,7 +97,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '5.4.1',
+    version: '5.4.2',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -9636,7 +9636,25 @@ function startNPCPostingSystem(roche) {
   // 初始化今日活跃 NPC
   selectDailyActiveNPCs();
 
-  // 每 5 分钟检查一次，让 NPC 更频繁地发帖
+  // 立即让部分 NPC 发推（启动时）
+  setTimeout(async () => {
+    console.log('[NPC] 启动时立即发推');
+    const immediatePostCount = Math.min(3, dailyActiveNPCs.length);
+    for (let i = 0; i < immediatePostCount; i++) {
+      const npcId = dailyActiveNPCs[i];
+      if (twitterData.npcs[npcId]) {
+        try {
+          await npcAutoPost(npcId, roche);
+          twitterData.npcs[npcId].todayPostCount = (twitterData.npcs[npcId].todayPostCount || 0) + 1;
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        } catch (error) {
+          console.error('[NPC] 启动发推失败:', error);
+        }
+      }
+    }
+  }, 5000); // 5 秒后开始
+
+  // 每 2 分钟检查一次，让 NPC 更频繁地发帖
   setInterval(async () => {
     const today = new Date().toDateString();
 
@@ -9671,7 +9689,7 @@ function startNPCPostingSystem(roche) {
         }
       }
     }
-  }, 5 * 60 * 1000); // 每 5 分钟检查一次
+  }, 2 * 60 * 1000); // 每 2 分钟检查一次
 
   console.log('[NPC] 定时发帖系统已启动');
 }
