@@ -67,7 +67,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '2.6.0',
+    version: '2.7.0',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -5233,7 +5233,7 @@ function renderMessages(roche) {
  * 显示私信筛选菜单
  */
 function showMessagesFilterMenu() {
-  // 创建遮罩层
+  // 创建遮罩层（透明，用于点击关闭）
   const overlay = document.createElement('div');
   overlay.style.cssText = `
     position: fixed;
@@ -5241,24 +5241,43 @@ function showMessagesFilterMenu() {
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.4);
-    display: flex;
-    align-items: flex-end;
-    justify-content: center;
+    background: transparent;
     z-index: 10000;
-    animation: fadeIn 0.2s;
   `;
 
-  // 创建菜单（底部弹出）
+  // 获取按钮位置
+  const filterBtn = document.getElementById('messages-filter-btn');
+  const rect = filterBtn.getBoundingClientRect();
+
+  // 创建菜单（右上角下拉）
   const menu = document.createElement('div');
   menu.style.cssText = `
+    position: fixed;
+    top: ${rect.bottom + 8}px;
+    right: 16px;
     background: white;
-    border-radius: 16px 16px 0 0;
-    width: 100%;
-    max-width: 600px;
+    border-radius: 8px;
+    min-width: 200px;
     padding: 8px 0;
-    animation: slideUpMenu 0.3s;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.1);
+    animation: dropdownMenu 0.2s ease-out;
   `;
+
+  // 添加动画
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes dropdownMenu {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  `;
+  document.head.appendChild(style);
 
   // 获取当前筛选状态
   const currentFilter = twitterData.messageFilter || 'all';
@@ -5333,6 +5352,13 @@ function showMessagesFilterMenu() {
       const action = option.dataset.action;
 
       if (filter) {
+        // 特殊处理：点击"请求"显示请求页面
+        if (filter === 'request') {
+          document.body.removeChild(overlay);
+          showMessageRequestsPage();
+          return;
+        }
+
         // 更新筛选状态
         twitterData.messageFilter = filter;
 
@@ -5359,8 +5385,6 @@ function showMessagesFilterMenu() {
           filtered = conversations.filter(c => !c.isGroup);
         } else if (filter === 'group') {
           filtered = conversations.filter(c => c.isGroup);
-        } else if (filter === 'request') {
-          filtered = conversations.filter(c => c.isRequest);
         }
 
         if (filtered.length === 0) {
@@ -5406,7 +5430,7 @@ function showMessagesFilterMenu() {
         }
 
         document.body.removeChild(overlay);
-        showToast(`切换到：${filterNames[filter]}`, 'info');
+        // 移除 Toast 提示
       } else if (action === 'settings') {
         document.body.removeChild(overlay);
         switchView('settings');
@@ -5428,6 +5452,144 @@ function showMessagesFilterMenu() {
     if (e.target === overlay) {
       document.body.removeChild(overlay);
     }
+  });
+}
+
+/**
+ * 显示私信请求页面（Char 匹配系统）
+ */
+function showMessageRequestsPage() {
+  // 隐藏私信列表页
+  const messagesListView = document.getElementById('messages-list-view');
+  if (messagesListView) {
+    messagesListView.style.display = 'none';
+  }
+
+  // 创建请求页面
+  const requestsPage = document.createElement('div');
+  requestsPage.id = 'message-requests-page';
+  requestsPage.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: white;
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+  `;
+
+  requestsPage.innerHTML = `
+    <!-- 顶部栏 -->
+    <div style="position: fixed; top: env(safe-area-inset-top); left: 0; right: 0; height: 60px; background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); border-bottom: 1px solid #eff3f4; display: flex; align-items: center; padding: 0 16px; z-index: 100; max-width: 768px; margin: 0 auto;">
+      <div id="requests-back-btn" style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 50%; cursor: pointer; transition: background 0.2s; margin-right: 24px;">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="#0f1419"><path d="M7.414 13l5.043 5.04-1.414 1.42L3.586 12l7.457-7.46 1.414 1.42L7.414 11H21v2H7.414z"></path></svg>
+      </div>
+      <div style="font-size: 20px; font-weight: 700; color: #0f1419;">私信请求</div>
+    </div>
+
+    <!-- 标签栏 -->
+    <div style="position: fixed; top: calc(60px + env(safe-area-inset-top)); left: 0; right: 0; display: flex; background: white; border-bottom: 1px solid #eff3f4; z-index: 99; max-width: 768px; margin: 0 auto;">
+      <div class="request-tab active" data-tab="priority" style="flex: 1; text-align: center; padding: 16px; font-size: 15px; font-weight: 700; color: #0f1419; cursor: pointer; position: relative; border-bottom: 3px solid #1d9bf0;">
+        优先
+      </div>
+      <div class="request-tab" data-tab="hidden" style="flex: 1; text-align: center; padding: 16px; font-size: 15px; font-weight: 700; color: #536471; cursor: pointer; position: relative; border-bottom: 3px solid transparent;">
+        已隐藏
+      </div>
+    </div>
+
+    <!-- 内容区域 -->
+    <div style="margin-top: calc(120px + env(safe-area-inset-top)); flex: 1; overflow-y: auto;">
+      <!-- 优先标签内容 -->
+      <div id="priority-content" class="tab-content">
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 80px 40px; text-align: center;">
+          <div style="width: 96px; height: 96px; border-radius: 50%; background: #eff3f4; display: flex; align-items: center; justify-content: center; margin-bottom: 24px;">
+            <svg viewBox="0 0 24 24" width="48" height="48" fill="#536471">
+              <path d="M1.998 5.5c0-1.381 1.119-2.5 2.5-2.5h15c1.381 0 2.5 1.119 2.5 2.5v13c0 1.381-1.119 2.5-2.5 2.5h-15c-1.381 0-2.5-1.119-2.5-2.5v-13zm2.5-.5c-.276 0-.5.224-.5.5v.511l8.5 5.312 8.5-5.312v-.511c0-.276-.224-.5-.5-.5h-15zm-.5 2.49v10.51c0 .276.224.5.5.5h15c.276 0 .5-.224.5-.5v-10.51l-7.928 4.954c-.32.2-.73.2-1.05 0l-7.928-4.955z"></path>
+              <path d="M20 10l2 2-2 2" stroke="#536471" stroke-width="1.5" fill="none"></path>
+            </svg>
+          </div>
+          <div style="font-size: 31px; font-weight: 800; color: #0f1419; margin-bottom: 8px;">无私信请求</div>
+          <div style="font-size: 15px; color: #536471; line-height: 20px;">你暂无来自自己社交圈账号的私信请求</div>
+        </div>
+      </div>
+
+      <!-- 已隐藏标签内容 -->
+      <div id="hidden-content" class="tab-content" style="display: none;">
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 80px 40px; text-align: center;">
+          <div style="width: 96px; height: 96px; border-radius: 50%; background: #eff3f4; display: flex; align-items: center; justify-content: center; margin-bottom: 24px;">
+            <svg viewBox="0 0 24 24" width="48" height="48" fill="#536471">
+              <path d="M1.998 5.5c0-1.381 1.119-2.5 2.5-2.5h15c1.381 0 2.5 1.119 2.5 2.5v13c0 1.381-1.119 2.5-2.5 2.5h-15c-1.381 0-2.5-1.119-2.5-2.5v-13zm2.5-.5c-.276 0-.5.224-.5.5v.511l8.5 5.312 8.5-5.312v-.511c0-.276-.224-.5-.5-.5h-15zm-.5 2.49v10.51c0 .276.224.5.5.5h15c.276 0 .5-.224.5-.5v-10.51l-7.928 4.954c-.32.2-.73.2-1.05 0l-7.928-4.955z"></path>
+            </svg>
+          </div>
+          <div style="font-size: 31px; font-weight: 800; color: #0f1419; margin-bottom: 8px;">无隐藏请求</div>
+          <div style="font-size: 15px; color: #536471; line-height: 20px;">隐藏的私信请求将显示在这里</div>
+        </div>
+      </div>
+    </div>
+
+    <style>
+      .request-tab:hover {
+        background: rgba(0, 0, 0, 0.03);
+      }
+
+      .request-tab.active {
+        color: #0f1419;
+        border-bottom-color: #1d9bf0 !important;
+      }
+
+      #requests-back-btn:hover {
+        background: rgba(0, 0, 0, 0.05);
+      }
+    </style>
+  `;
+
+  document.body.appendChild(requestsPage);
+
+  // 返回按钮事件
+  const backBtn = requestsPage.querySelector('#requests-back-btn');
+  backBtn.addEventListener('click', () => {
+    document.body.removeChild(requestsPage);
+    if (messagesListView) {
+      messagesListView.style.display = 'block';
+    }
+    // 恢复筛选按钮为"全部"
+    const filterBtn = document.getElementById('messages-filter-btn');
+    if (filterBtn) {
+      filterBtn.querySelector('span').textContent = '全部';
+    }
+    twitterData.messageFilter = 'all';
+  });
+
+  // 标签切换事件
+  const tabs = requestsPage.querySelectorAll('.request-tab');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const targetTab = tab.dataset.tab;
+
+      // 更新标签样式
+      tabs.forEach(t => {
+        t.classList.remove('active');
+        t.style.color = '#536471';
+        t.style.borderBottomColor = 'transparent';
+      });
+      tab.classList.add('active');
+      tab.style.color = '#0f1419';
+      tab.style.borderBottomColor = '#1d9bf0';
+
+      // 切换内容
+      const priorityContent = requestsPage.querySelector('#priority-content');
+      const hiddenContent = requestsPage.querySelector('#hidden-content');
+
+      if (targetTab === 'priority') {
+        priorityContent.style.display = 'block';
+        hiddenContent.style.display = 'none';
+      } else {
+        priorityContent.style.display = 'none';
+        hiddenContent.style.display = 'block';
+      }
+    });
   });
 }
 
