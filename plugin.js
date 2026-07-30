@@ -97,7 +97,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '5.4.2',
+    version: '5.4.3',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -9637,7 +9637,7 @@ function startNPCPostingSystem(roche) {
   selectDailyActiveNPCs();
 
   // 立即让部分 NPC 发推（启动时）
-  setTimeout(async () => {
+  (async () => {
     console.log('[NPC] 启动时立即发推');
     const immediatePostCount = Math.min(3, dailyActiveNPCs.length);
     for (let i = 0; i < immediatePostCount; i++) {
@@ -9646,13 +9646,13 @@ function startNPCPostingSystem(roche) {
         try {
           await npcAutoPost(npcId, roche);
           twitterData.npcs[npcId].todayPostCount = (twitterData.npcs[npcId].todayPostCount || 0) + 1;
-          await new Promise(resolve => setTimeout(resolve, 2000));
+          await new Promise(resolve => setTimeout(resolve, 1000)); // 1秒间隔
         } catch (error) {
           console.error('[NPC] 启动发推失败:', error);
         }
       }
     }
-  }, 5000); // 5 秒后开始
+  })(); // 立即执行
 
   // 每 2 分钟检查一次，让 NPC 更频繁地发帖
   setInterval(async () => {
