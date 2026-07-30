@@ -68,7 +68,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '3.7.5',
+    version: '3.8.0',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -4108,6 +4108,7 @@ function switchView(view) {
   const bookmarksView = document.getElementById('bookmarks-view');
   const listsView = document.getElementById('lists-view');
   const topBar = document.querySelector('.mobile-top-bar');
+  const bottomNav = document.querySelector('.mobile-bottom-nav');
 
   // 隐藏所有视图
   if (timelineView) timelineView.style.display = 'none';
@@ -4124,6 +4125,12 @@ function switchView(view) {
   if (followersListView) followersListView.classList.remove('active');
   if (bookmarksView) bookmarksView.classList.remove('active');
   if (listsView) listsView.classList.remove('active');
+
+  // 只在主页、搜索、通知、私信四个页面显示底部导航栏
+  const showBottomNav = ['timeline', 'search', 'notifications', 'messages'].includes(view);
+  if (bottomNav) {
+    bottomNav.style.display = showBottomNav ? 'flex' : 'none';
+  }
 
   if (view === 'timeline') {
     // 显示时间线
