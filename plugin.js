@@ -68,7 +68,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '3.7.3',
+    version: '3.7.4',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -644,7 +644,7 @@ function renderUI(container, roche) {
       }
 
       .timeline-content {
-        padding-top: 53px;
+        padding-top: calc(53px + env(safe-area-inset-top));
         padding-bottom: calc(60px + env(safe-area-inset-bottom));
         overflow-y: auto;
         height: 100vh;
@@ -812,7 +812,7 @@ function renderUI(container, roche) {
         display: flex;
         align-items: center;
         justify-content: space-around;
-        z-index: 100;
+        z-index: 300;
         max-width: 768px;
         margin: 0 auto;
       }
@@ -1625,7 +1625,7 @@ function renderUI(container, roche) {
       }
 
       .search-content {
-        padding-top: calc(60px + 53px); /* 顶部栏 + 标签栏 */
+        padding-top: calc(60px + env(safe-area-inset-top) + 53px); /* 顶部栏 + 标签栏 */
         padding-bottom: calc(60px + env(safe-area-inset-bottom));
         overflow-y: auto;
         height: 100vh;
@@ -1885,7 +1885,7 @@ function renderUI(container, roche) {
 
       .notifications-content {
         width: 100%;
-        padding-top: calc(60px + 53px); /* 顶部栏 + 标签栏 */
+        padding-top: calc(60px + env(safe-area-inset-top) + 53px); /* 顶部栏 + 标签栏 */
         padding-bottom: calc(60px + env(safe-area-inset-bottom));
         overflow-y: auto;
         height: 100vh;
@@ -2075,7 +2075,7 @@ function renderUI(container, roche) {
       }
 
       .messages-content {
-        padding-top: calc(60px + 60px); /* 顶部栏 + 搜索栏 */
+        padding-top: calc(60px + env(safe-area-inset-top) + 60px); /* 顶部栏 + 搜索栏 */
         padding-bottom: calc(60px + env(safe-area-inset-bottom));
         overflow-y: auto;
         height: 100vh;
