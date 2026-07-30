@@ -97,7 +97,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '4.8.1',
+    version: '4.9.0',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -7795,7 +7795,7 @@ function showProfile(userId, roche) {
   if (!user) return;
 
   const isOwnProfile = userId === currentUser;
-  const userTweets = twitterData.tweets.filter(t => t.userId === userId);
+  const userTweets = twitterData.tweets.filter(t => t.userId === userId && !t.replyTo);
 
   // 更新头部信息
   document.getElementById('profile-header-name').textContent = user.name;
@@ -7807,8 +7807,20 @@ function showProfile(userId, roche) {
   document.getElementById('profile-username').textContent = user.username;
   document.getElementById('profile-bio').textContent = user.bio;
   document.getElementById('profile-joined').textContent = '加入于 2024年1月';
-  document.getElementById('profile-following').textContent = user.following || 0;
-  document.getElementById('profile-followers').textContent = user.followers || 0;
+
+  // 计算真实的关注数据
+  const followingCount = twitterData.follows[userId]?.length || 0;
+
+  // 计算关注者数（有多少人关注了这个用户）
+  let followersCount = 0;
+  for (const uid in twitterData.follows) {
+    if (twitterData.follows[uid].includes(userId)) {
+      followersCount++;
+    }
+  }
+
+  document.getElementById('profile-following').textContent = followingCount;
+  document.getElementById('profile-followers').textContent = followersCount;
 
   // 设置按钮
   const actionBtn = document.getElementById('profile-action-btn');
@@ -7825,73 +7837,8 @@ function showProfile(userId, roche) {
     };
   }
 
-  // 渲染推文列表
-  const tweetsListEl = document.getElementById('profile-tweets-list');
-  if (userTweets.length === 0) {
-    tweetsListEl.innerHTML = `
-      <div class="empty-state">
-        <div class="empty-state-icon">🐦</div>
-        <div>还没有推文</div>
-      </div>
-    `;
-  } else {
-    tweetsListEl.innerHTML = userTweets.map(tweet => {
-      const isLiked = tweet.likes.includes(currentUser);
-      const isRetweeted = tweet.retweets.includes(currentUser);
-      const timeAgo = getTimeAgo(tweet.timestamp);
-
-      return `
-        <div class="tweet-item" data-tweet-id="${tweet.id}">
-          <div class="tweet-header">
-            <img class="tweet-avatar" src="${user.avatar}" alt="">
-            <div class="tweet-content">
-              <div class="tweet-author">
-                <span class="tweet-author-name">${user.name}</span>
-                <span class="tweet-author-username">${user.username}</span>
-                <span class="tweet-time">· ${timeAgo}</span>
-              </div>
-              <div class="tweet-text">${escapeHtml(tweet.content)}</div>
-              <div class="tweet-actions">
-                <div class="tweet-action" data-action="reply">
-                  <span class="action-icon">${icons.comment}</span>
-                  <span>${tweet.replies.length || ''}</span>
-                </div>
-                <div class="tweet-action ${isRetweeted ? 'retweeted' : ''}" data-action="retweet">
-                  <span class="action-icon">${icons.retweet}</span>
-                  <span>${tweet.retweets.length || ''}</span>
-                </div>
-                <div class="tweet-action ${isLiked ? 'liked' : ''}" data-action="like">
-                  <span class="action-icon">${isLiked ? icons.likeFilled : icons.like}</span>
-                  <span>${tweet.likes.length || ''}</span>
-                </div>
-                <div class="tweet-action" data-action="share">
-                  <span class="action-icon">${icons.share}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      `;
-    }).join('');
-
-    // 绑定事件
-    tweetsListEl.querySelectorAll('.tweet-item').forEach(el => {
-      el.addEventListener('click', (e) => {
-        if (e.target.closest('.tweet-action')) return;
-        const tweetId = parseInt(el.dataset.tweetId);
-        showTweetDetail(tweetId, roche);
-      });
-    });
-
-    tweetsListEl.querySelectorAll('.tweet-action').forEach(el => {
-      el.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const action = el.dataset.action;
-        const tweetId = parseInt(el.closest('.tweet-item').dataset.tweetId);
-        handleTweetAction(action, tweetId, roche);
-      });
-    });
-  }
+  // 渲染默认推文列表
+  renderProfileTab('tweets', userId, user, roche);
 
   // 绑定标签切换
   document.querySelectorAll('.profile-tab').forEach(tab => {
@@ -7900,14 +7847,132 @@ function showProfile(userId, roche) {
       tab.classList.add('active');
 
       const tabType = tab.dataset.tab;
-      if (tabType !== 'tweets') {
-        showToast('功能开发中...', 'info');
-      }
+      renderProfileTab(tabType, userId, user, roche);
     });
   });
 
   // 切换到个人资料视图
   switchView('profile');
+}
+
+/**
+ * 渲染个人资料标签页内容
+ */
+function renderProfileTab(tabType, userId, user, roche) {
+  const tweetsListEl = document.getElementById('profile-tweets-list');
+  let tweets = [];
+
+  switch (tabType) {
+    case 'tweets':
+      // 只显示用户的原创推文（不包括回复）
+      tweets = twitterData.tweets.filter(t => t.userId === userId && !t.replyTo);
+      break;
+
+    case 'replies':
+      // 显示用户的回复
+      tweets = twitterData.tweets.filter(t => t.userId === userId && t.replyTo);
+      break;
+
+    case 'media':
+      // 显示包含媒体的推文（暂时为空，后续可以添加图片/视频支持）
+      tweets = twitterData.tweets.filter(t => t.userId === userId && t.media && t.media.length > 0);
+      break;
+
+    case 'likes':
+      // 显示用户喜欢的推文
+      tweets = twitterData.tweets.filter(t => t.likes.includes(userId));
+      break;
+  }
+
+  if (tweets.length === 0) {
+    const emptyMessages = {
+      tweets: '还没有推文',
+      replies: '还没有回复',
+      media: '还没有媒体',
+      likes: '还没有喜欢的推文'
+    };
+
+    tweetsListEl.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">🐦</div>
+        <div>${emptyMessages[tabType]}</div>
+      </div>
+    `;
+    return;
+  }
+
+  tweetsListEl.innerHTML = tweets.map(tweet => {
+    const tweetUser = twitterData.users[tweet.userId];
+    const isLiked = tweet.likes.includes(currentUser);
+    const isRetweeted = tweet.retweets.includes(currentUser);
+    const timeAgo = getTimeAgo(tweet.timestamp);
+
+    // 如果是回复，显示回复对象
+    let replyHeader = '';
+    if (tweet.replyTo) {
+      const parentTweet = twitterData.tweets.find(t => t.id === tweet.replyTo);
+      const parentUser = parentTweet ? twitterData.users[parentTweet.userId] : null;
+      if (parentUser) {
+        replyHeader = `
+          <div style="padding: 0 16px 8px 48px; color: #536471; font-size: 13px;">
+            回复 ${parentUser.username}
+          </div>
+        `;
+      }
+    }
+
+    return `
+      <div class="tweet-item" data-tweet-id="${tweet.id}">
+        ${replyHeader}
+        <div class="tweet-header">
+          <img class="tweet-avatar" src="${tweetUser.avatar}" alt="">
+          <div class="tweet-content">
+            <div class="tweet-author">
+              <span class="tweet-author-name">${tweetUser.name}</span>
+              <span class="tweet-author-username">${tweetUser.username}</span>
+              <span class="tweet-time">· ${timeAgo}</span>
+            </div>
+            <div class="tweet-text">${escapeHtml(tweet.content)}</div>
+            <div class="tweet-actions">
+              <div class="tweet-action" data-action="reply">
+                <span class="action-icon">${icons.comment}</span>
+                <span>${tweet.replies.length || ''}</span>
+              </div>
+              <div class="tweet-action ${isRetweeted ? 'retweeted' : ''}" data-action="retweet">
+                <span class="action-icon">${icons.retweet}</span>
+                <span>${tweet.retweets.length || ''}</span>
+              </div>
+              <div class="tweet-action ${isLiked ? 'liked' : ''}" data-action="like">
+                <span class="action-icon">${isLiked ? icons.likeFilled : icons.like}</span>
+                <span>${tweet.likes.length || ''}</span>
+              </div>
+              <div class="tweet-action" data-action="share">
+                <span class="action-icon">${icons.share}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // 绑定事件
+  tweetsListEl.querySelectorAll('.tweet-item').forEach(el => {
+    el.addEventListener('click', (e) => {
+      if (e.target.closest('.tweet-action')) return;
+      const tweetId = parseInt(el.dataset.tweetId);
+      showTweetDetail(tweetId, roche);
+    });
+  });
+
+  tweetsListEl.querySelectorAll('.tweet-action').forEach(el => {
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const action = el.dataset.action;
+      const tweetId = parseInt(el.closest('.tweet-item').dataset.tweetId);
+      handleTweetAction(action, tweetId, roche);
+    });
+  });
 }
 
 /**
