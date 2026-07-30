@@ -67,7 +67,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '3.0.0',
+    version: '3.0.1',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -5989,12 +5989,15 @@ function openChat(userId, roche) {
 let currentConversationId = null;
 
 async function openChatWithConv(convId, roche) {
+  console.log('[Twitter] === 开始打开聊天 ===', convId);
   try {
     currentConversationId = convId;
 
     // 获取对话信息
     const conversations = await roche.conversation.list();
+    console.log('[Twitter] 所有对话:', conversations);
     const conv = conversations.find(c => c.id === convId);
+    console.log('[Twitter] 找到的对话:', conv);
 
     if (!conv) {
       showToast('对话不存在', 'error');
@@ -6003,23 +6006,28 @@ async function openChatWithConv(convId, roche) {
 
     // 获取 Char 头像
     let charAvatar = null;
+    console.log('[Twitter] 开始获取 Char 头像...');
 
     // 1. 尝试通过 persona API 获取
     if (conv.id) {
       try {
+        console.log('[Twitter] 尝试调用 roche.persona.get:', conv.id);
         const persona = await roche.persona.get(conv.id);
-        console.log('[Twitter] 聊天页面 - 获取 persona:', persona);
+        console.log('[Twitter] 聊天页面 - 获取 persona 成功:', persona);
         if (persona?.avatar) {
           charAvatar = persona.avatar;
           console.log('[Twitter] 聊天页面 - Char 头像:', charAvatar);
+        } else {
+          console.log('[Twitter] persona 没有 avatar 字段');
         }
       } catch (e) {
-        console.log('[Twitter] 聊天页面 - persona API 失败:', e);
+        console.error('[Twitter] 聊天页面 - persona API 失败:', e);
       }
     }
 
     // 2. 检查 conversation 本身的字段
     if (!charAvatar) {
+      console.log('[Twitter] persona 没有头像，检查 conversation 字段...');
       const possibleFields = ['avatar', 'avatarUrl', 'image', 'imageUrl', 'icon', 'picture'];
       for (const field of possibleFields) {
         if (conv[field]) {
@@ -6039,8 +6047,10 @@ async function openChatWithConv(convId, roche) {
           <text x="24" y="32" font-size="20" fill="white" text-anchor="middle" font-family="Arial">${initial}</text>
         </svg>
       `)}`;
-      console.log('[Twitter] 聊天页面 - 使用默认头像（首字母）');
+      console.log('[Twitter] 聊天页面 - 使用默认头像（首字母）:', initial);
     }
+
+    console.log('[Twitter] 最终使用的 Char 头像:', charAvatar);
 
     // 更新聊天头部
     document.getElementById('chat-user-name').textContent = conv.title || '未命名对话';
