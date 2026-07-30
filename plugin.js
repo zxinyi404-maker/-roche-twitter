@@ -68,7 +68,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '3.6.2',
+    version: '3.6.3',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -3712,7 +3712,7 @@ function handleSidebarMenu(menu, roche) {
       break;
     case 'settings':
       // 侧边栏的"设置和隐私"打开设置页面
-      switchView('settings');
+      showSettings(roche);
       break;
     case 'bookmarks':
       showBookmarks(roche);
