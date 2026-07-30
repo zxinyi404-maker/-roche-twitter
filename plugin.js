@@ -97,7 +97,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '5.4.4',
+    version: '5.5.0',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -5522,6 +5522,144 @@ async function handleNewsTweetAction(action, tweetId, roche) {
 }
 
 /**
+ * 显示回复对话框
+ */
+function showReplyDialog(tweet, roche) {
+  const tweetUser = twitterData.users[tweet.userId];
+  if (!tweetUser) return;
+
+  const overlay = document.createElement('div');
+  overlay.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    z-index: 10000;
+    animation: fadeIn 0.2s;
+  `;
+
+  const dialog = document.createElement('div');
+  dialog.style.cssText = `
+    background: white;
+    border-radius: 16px 16px 0 0;
+    width: 100%;
+    max-width: 600px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    animation: slideUp 0.3s;
+  `;
+
+  const avatarHtml = tweetUser.avatar
+    ? `<img src="${tweetUser.avatar}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">`
+    : generateAvatar(tweetUser.name);
+
+  const currentUserData = twitterData.users[currentUser];
+  const currentUserAvatar = currentUserData?.avatar
+    ? `<img src="${currentUserData.avatar}" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover;">`
+    : generateAvatar(currentUserData?.name || 'User');
+
+  dialog.innerHTML = `
+    <div style="padding: 16px; border-bottom: 1px solid #eff3f4; display: flex; justify-content: space-between; align-items: center;">
+      <button id="reply-cancel" style="background: none; border: none; color: #0f1419; font-size: 15px; font-weight: 600; cursor: pointer;">取消</button>
+      <div style="font-size: 17px; font-weight: 700;">回复</div>
+      <button id="reply-send" style="background: #1d9bf0; color: white; border: none; padding: 8px 16px; border-radius: 20px; font-weight: 700; font-size: 15px; cursor: pointer;" disabled>回复</button>
+    </div>
+
+    <div style="flex: 1; overflow-y: auto; padding: 16px;">
+      <!-- 原推文 -->
+      <div style="display: flex; gap: 12px; margin-bottom: 16px;">
+        <div style="display: flex; flex-direction: column; align-items: center;">
+          ${avatarHtml}
+          <div style="flex: 1; width: 2px; background: #cfd9de; margin-top: 4px;"></div>
+        </div>
+        <div style="flex: 1;">
+          <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 4px;">
+            <span style="font-weight: 700; font-size: 15px;">${escapeHtml(tweetUser.name)}</span>
+            <span style="color: #536471; font-size: 15px;">${tweetUser.username}</span>
+          </div>
+          <div style="font-size: 15px; color: #0f1419; line-height: 1.5; margin-bottom: 8px;">${escapeHtml(tweet.content)}</div>
+          <div style="color: #536471; font-size: 15px;">回复 ${tweetUser.username}</div>
+        </div>
+      </div>
+
+      <!-- 回复输入区 -->
+      <div style="display: flex; gap: 12px;">
+        ${currentUserAvatar}
+        <div style="flex: 1;">
+          <textarea id="reply-input" placeholder="发布你的回复" style="width: 100%; min-height: 80px; border: none; outline: none; font-size: 17px; resize: none; font-family: inherit;"></textarea>
+        </div>
+      </div>
+    </div>
+  `;
+
+  overlay.appendChild(dialog);
+  document.body.appendChild(overlay);
+
+  const replyInput = document.getElementById('reply-input');
+  const sendBtn = document.getElementById('reply-send');
+
+  // 监听输入
+  replyInput.addEventListener('input', () => {
+    sendBtn.disabled = !replyInput.value.trim();
+  });
+
+  // 自动聚焦
+  setTimeout(() => replyInput.focus(), 100);
+
+  // 取消按钮
+  document.getElementById('reply-cancel').addEventListener('click', () => {
+    document.body.removeChild(overlay);
+  });
+
+  // 发送回复
+  sendBtn.addEventListener('click', async () => {
+    const content = replyInput.value.trim();
+    if (!content) return;
+
+    try {
+      // 创建回复推文
+      const replyTweet = {
+        id: twitterData.nextTweetId++,
+        userId: currentUser,
+        content: content,
+        timestamp: Date.now(),
+        likes: [],
+        retweets: [],
+        replies: [],
+        replyTo: tweet.id
+      };
+
+      twitterData.tweets.unshift(replyTweet);
+      tweet.replies.push(replyTweet.id);
+
+      await saveData(roche);
+
+      showToast('回复成功', 'success');
+      document.body.removeChild(overlay);
+
+      // 刷新推文列表
+      renderTweets(roche);
+    } catch (error) {
+      console.error('回复失败:', error);
+      showToast('回复失败', 'error');
+    }
+  });
+
+  // 点击背景关闭
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) {
+      document.body.removeChild(overlay);
+    }
+  });
+}
+
+/**
  * 显示分享对话框
  */
 async function showShareDialog(tweet, roche) {
@@ -5768,7 +5906,7 @@ async function handleTweetAction(action, tweetId, roche) {
       break;
 
     case 'reply':
-      showToast('回复功能开发中...', 'info');
+      showReplyDialog(tweet, roche);
       return;
 
     case 'share':
