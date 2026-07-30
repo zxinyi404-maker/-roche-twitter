@@ -90,7 +90,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '4.0.1',
+    version: '4.0.2',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -106,11 +106,13 @@ function showToast(message, type = 'success') {
           // 初始化用户
           await initializeUsers(roche);
 
-          // 初始化 NPC 系统
-          await initNPCSystem(roche);
-
           // 渲染界面
           renderUI(container, roche);
+
+          // 初始化 NPC 系统（异步，不阻塞界面）
+          initNPCSystem(roche).catch(error => {
+            console.error('[NPC] NPC 系统初始化失败:', error);
+          });
 
         } catch (error) {
           console.error('插件初始化失败:', error);
@@ -8751,27 +8753,39 @@ function startNPCPostingSystem(roche) {
  * 初始化 NPC 系统
  */
 async function initNPCSystem(roche) {
-  if (!settings.enableNPC) return;
+  if (!settings.enableNPC) {
+    console.log('[NPC] NPC 系统已禁用');
+    return;
+  }
 
   console.log('[NPC] 初始化 NPC 系统');
 
-  // 每日任务
-  await dailyGenerateNPCs(roche);
-  await cleanupInactiveNPCs(roche);
-  decayNPCInterests();
-
-  // 启动定时发帖
-  startNPCPostingSystem(roche);
-
-  // 每天执行一次清理和生成
-  setInterval(async () => {
+  try {
+    // 每日任务
     await dailyGenerateNPCs(roche);
     await cleanupInactiveNPCs(roche);
     decayNPCInterests();
-    await saveData(roche);
-  }, 24 * 60 * 60 * 1000);
 
-  console.log('[NPC] NPC 系统初始化完成');
+    // 启动定时发帖
+    startNPCPostingSystem(roche);
+
+    // 每天执行一次清理和生成
+    setInterval(async () => {
+      try {
+        await dailyGenerateNPCs(roche);
+        await cleanupInactiveNPCs(roche);
+        decayNPCInterests();
+        await saveData(roche);
+      } catch (error) {
+        console.error('[NPC] 每日任务执行失败:', error);
+      }
+    }, 24 * 60 * 60 * 1000);
+
+    console.log('[NPC] NPC 系统初始化完成');
+  } catch (error) {
+    console.error('[NPC] NPC 系统初始化失败:', error);
+    throw error;
+  }
 }
 
 })(); // 立即执行函数结束
