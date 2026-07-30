@@ -68,7 +68,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '3.9.1',
+    version: '3.9.2',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -1021,7 +1021,7 @@ function renderUI(container, roche) {
       }
 
       .detail-header {
-        position: fixed;
+        position: sticky;
         top: 0;
         left: 0;
         right: 0;
@@ -1807,7 +1807,7 @@ function renderUI(container, roche) {
       }
 
       .notifications-header {
-        position: fixed;
+        position: sticky;
         top: calc(60px + env(safe-area-inset-top));
         left: 0;
         right: 0;
@@ -2358,7 +2358,7 @@ function renderUI(container, roche) {
 
       /* 个人资料页 */
       .profile-header {
-        position: fixed;
+        position: sticky;
         top: 0;
         left: 0;
         right: 0;
