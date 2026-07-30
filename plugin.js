@@ -90,7 +90,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '4.2.3',
+    version: '4.2.4',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -1114,7 +1114,7 @@ function renderUI(container, roche) {
         align-items: flex-start;
         gap: 12px;
         margin-bottom: 12px;
-        padding: 12px 16px 0 16px;
+        padding: 0 16px 0 16px;
       }
 
       .detail-tweet-avatar {
@@ -1165,7 +1165,7 @@ function renderUI(container, roche) {
       .detail-tweet-text {
         font-size: 17px;
         line-height: 24px;
-        margin: 12px 0;
+        margin: 0 0 12px 0;
         padding: 0 16px;
         white-space: pre-wrap;
         word-wrap: break-word;
@@ -2430,7 +2430,6 @@ function renderUI(container, roche) {
       }
 
       .profile-content {
-        padding-top: calc(53px + env(safe-area-inset-top));
         padding-bottom: calc(80px + env(safe-area-inset-bottom));
         overflow-y: auto;
         height: 100vh;
