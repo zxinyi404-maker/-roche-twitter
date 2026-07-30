@@ -90,7 +90,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '4.1.0',
+    version: '4.1.1',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -307,13 +307,10 @@ function renderUI(container, roche) {
 
       /* 顶部导航栏 */
       .mobile-top-bar {
-        position: sticky;
-        top: 0;
+        position: relative;
         left: 0;
         right: 0;
-        /* iOS 安全区域适配 */
-        padding-top: env(safe-area-inset-top);
-        height: calc(60px + env(safe-area-inset-top));
+        height: 60px;
         background: rgba(255, 255, 255, 0.85);
         backdrop-filter: blur(12px);
         border-bottom: 1px solid #eff3f4;
@@ -1496,8 +1493,7 @@ function renderUI(container, roche) {
 
       /* 搜索页 */
       .search-top-bar {
-        position: sticky;
-        top: env(safe-area-inset-top);
+        position: relative;
         left: 0;
         right: 0;
         height: 60px;
@@ -1767,8 +1763,7 @@ function renderUI(container, roche) {
 
       /* 通知页 */
       .notifications-top-bar {
-        position: sticky;
-        top: env(safe-area-inset-top);
+        position: relative;
         left: 0;
         right: 0;
         height: 60px;
@@ -1974,8 +1969,7 @@ function renderUI(container, roche) {
       }
 
       .messages-top-bar {
-        position: sticky;
-        top: env(safe-area-inset-top);
+        position: relative;
         left: 0;
         right: 0;
         height: 60px;
