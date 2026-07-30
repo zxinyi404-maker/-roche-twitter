@@ -67,7 +67,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '3.2.1',
+    version: '3.3.0',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -6164,9 +6164,17 @@ async function openChatWithConv(convId, roche) {
  */
 async function showChatSettings(roche, convId) {
   try {
-    // 获取当前设置
+    // 获取当前设置（对齐 Roche 原生设置）
     const chatSettings = await roche.storage.get(`twitter-chat-settings-${convId}`) || {
-      memorySummaryInterval: 10 // 默认每 10 条消息总结一次
+      enableLongTermMemory: true,        // 长期记忆开关
+      summaryTriggerCount: 200,          // 总结触发条数
+      coreMemoryLimit: 500,              // 核心记忆上限（字）
+      recentFactsLimit: 2,               // 最新事实注入上限
+      enableVectorSearch: true,          // 向量记忆检索
+      enableRelevanceScoring: true,      // 记忆相关性打分
+      manualSyncBatch: 8,                // 手动同步批量
+      factCleaningRange: 30,             // 事实清洗范围
+      singleCleaningLimit: 3             // 单次清洗上限
     };
 
     // 获取当前对话的所有记忆
@@ -6221,20 +6229,10 @@ async function showChatSettings(roche, convId) {
       </div>
 
       <div style="flex: 1; overflow-y: auto; padding: 20px;">
-        <!-- 记忆总结设置 -->
-        <div style="margin-bottom: 24px;">
-          <div style="font-size: 15px; font-weight: 700; color: #0f1419; margin-bottom: 8px;">记忆总结</div>
-          <div style="font-size: 13px; color: #536471; margin-bottom: 12px;">设置多少条消息后自动总结为长期记忆</div>
-          <div style="display: flex; align-items: center; gap: 12px;">
-            <input type="number" id="memory-interval-input" value="${chatSettings.memorySummaryInterval}" min="1" max="1000"
-              style="flex: 1; padding: 12px 16px; border: 1px solid #eff3f4; border-radius: 8px; font-size: 15px; outline: none;">
-            <span style="color: #536471;">条消息</span>
-          </div>
-        </div>
-
         <!-- 总结记忆列表 -->
         <div>
           <div style="font-size: 15px; font-weight: 700; color: #0f1419; margin-bottom: 12px;">总结记忆 (${summaryMemories.length})</div>
+          <div style="font-size: 13px; color: #536471; margin-bottom: 16px;">查看和管理由 Roche 自动总结的长期记忆</div>
           <div id="summary-memories-list" style="display: flex; flex-direction: column; gap: 12px;">
             ${summaryMemories.length === 0 ? `
               <div style="text-align: center; padding: 40px 20px; color: #536471;">
@@ -6264,12 +6262,6 @@ async function showChatSettings(roche, convId) {
         </div>
       </div>
 
-      <div style="padding: 16px; border-top: 1px solid #eff3f4; display: flex; gap: 12px;">
-        <button id="save-settings-btn" style="flex: 1; padding: 12px; background: #1d9bf0; color: white; border: none; border-radius: 24px; font-size: 15px; font-weight: 700; cursor: pointer; transition: background 0.2s;">
-          保存设置
-        </button>
-      </div>
-
       <style>
         .memory-card:hover {
           background: #eff3f4;
@@ -6280,9 +6272,6 @@ async function showChatSettings(roche, convId) {
         .memory-edit-btn:hover, .memory-delete-btn:hover {
           background: white !important;
         }
-        #save-settings-btn:hover {
-          background: #1a8cd8;
-        }
       </style>
     `;
 
@@ -6291,22 +6280,6 @@ async function showChatSettings(roche, convId) {
 
     // 绑定关闭按钮
     dialog.querySelector('.dialog-close-btn').addEventListener('click', () => {
-      document.body.removeChild(overlay);
-    });
-
-    // 绑定保存按钮
-    document.getElementById('save-settings-btn').addEventListener('click', async () => {
-      const interval = parseInt(document.getElementById('memory-interval-input').value);
-      if (interval < 1 || interval > 1000) {
-        showToast('请输入 1-1000 之间的数字', 'error');
-        return;
-      }
-
-      await roche.storage.set(`twitter-chat-settings-${convId}`, {
-        memorySummaryInterval: interval
-      });
-
-      showToast('设置已保存', 'success');
       document.body.removeChild(overlay);
     });
 
