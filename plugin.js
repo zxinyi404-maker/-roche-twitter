@@ -67,7 +67,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '3.5.4',
+    version: '3.5.5',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -336,7 +336,6 @@ function renderUI(container, roche) {
         overflow-y: auto;
         box-shadow: 4px 0 12px rgba(0, 0, 0, 0.1);
         /* iOS 安全区域适配 */
-        padding-top: env(safe-area-inset-top);
         padding-bottom: env(safe-area-inset-bottom);
       }
 
@@ -346,6 +345,7 @@ function renderUI(container, roche) {
 
       .sidebar-header {
         padding: 16px;
+        padding-top: calc(16px + env(safe-area-inset-top));
         border-bottom: 1px solid #eff3f4;
       }
 
@@ -1001,6 +1001,14 @@ function renderUI(container, roche) {
       /* 推文详情页 */
       .tweet-detail-view {
         display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: #ffffff;
+        z-index: 200;
+        overflow-y: auto;
       }
 
       .tweet-detail-view.active {
@@ -1022,9 +1030,7 @@ function renderUI(container, roche) {
         align-items: center;
         padding-left: 16px;
         padding-right: 16px;
-        z-index: 100;
-        max-width: 768px;
-        margin: 0 auto;
+        z-index: 201;
       }
 
       .detail-back-btn {
@@ -1056,9 +1062,8 @@ function renderUI(container, roche) {
       .detail-main {
         padding-top: calc(60px + env(safe-area-inset-top));
         padding-bottom: calc(80px + env(safe-area-inset-bottom));
-        max-width: 768px;
-        margin: 0 auto;
         overflow-y: auto;
+        min-height: 100vh;
       }
 
       .detail-tweet {
@@ -1126,7 +1131,6 @@ function renderUI(container, roche) {
         white-space: pre-wrap;
         word-wrap: break-word;
         color: #0f1419;
-      }
       }
 
       /* 新的详情页样式 */
@@ -1390,9 +1394,7 @@ function renderUI(container, roche) {
         bottom: 0;
         left: 0;
         right: 0;
-        max-width: 768px;
-        margin: 0 auto;
-        z-index: 50;
+        z-index: 201;
       }
 
       .detail-reply-avatar {
