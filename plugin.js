@@ -108,7 +108,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '5.6.8',
+    version: '5.6.9',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
