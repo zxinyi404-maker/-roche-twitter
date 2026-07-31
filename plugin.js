@@ -108,7 +108,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '5.7.0',
+    version: '5.7.1',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -7235,10 +7235,46 @@ function openChat(userId, roche) {
     chatInput.replaceWith(newChatInput);
     sendBtn.replaceWith(newSendBtn);
 
-    // 禁用回车键发送
-    newChatInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault(); // 阻止回车键
+    // 回车键发送（不触发 AI 回复）
+    newChatInput.addEventListener('keypress', async (e) => {
+      if (e.key === 'Enter' && newChatInput.value.trim()) {
+        const content = newChatInput.value.trim();
+
+        // 添加用户消息
+        const newMessage = {
+          from: currentUser,
+          content: content,
+          timestamp: Date.now()
+        };
+
+        conversation.messages.push(newMessage);
+
+        // 立即显示消息
+        const currentUserData = twitterData.users[currentUser];
+        const userMessageHtml = `
+          <div class="chat-message own" style="display: flex; gap: 8px; margin-bottom: 12px; flex-direction: row-reverse;">
+            <img class="chat-message-avatar" src="${currentUserData.avatar}" alt="" style="width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; object-fit: cover;">
+            <div class="chat-message-bubble" style="
+              background: #1d9bf0;
+              color: white;
+              padding: 8px 12px;
+              border-radius: 18px;
+              max-width: 70%;
+              word-wrap: break-word;
+            ">${escapeHtml(content)}</div>
+          </div>
+        `;
+        chatMessages.insertAdjacentHTML('beforeend', userMessageHtml);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+
+        // 清空输入框并禁用发送按钮
+        newChatInput.value = '';
+        newSendBtn.disabled = true;
+
+        // 保存数据
+        await saveData(roche);
+
+        // 回车键不触发 AI 回复
       }
     });
 
@@ -7247,7 +7283,7 @@ function openChat(userId, roche) {
       newSendBtn.disabled = !newChatInput.value.trim();
     });
 
-    // 只有点击发送按钮才发送
+    // 点击发送按钮：发送消息 + 触发 AI 回复
     newSendBtn.addEventListener('click', async () => {
       const content = newChatInput.value.trim();
       if (!content) return;
@@ -7286,7 +7322,13 @@ function openChat(userId, roche) {
       // 保存数据
       await saveData(roche);
 
-      // TODO: 如果需要 NPC 自动回复，可以在这里添加逻辑
+      // TODO: 触发 AI 回复（如果目标用户是 NPC）
+      // 这里可以检查 userId 是否是 NPC，然后触发 NPC 回复
+      if (twitterData.npcs[userId]) {
+        // 是 NPC，触发回复
+        console.log('[Twitter] 触发 NPC 回复:', userId);
+        // 可以调用 NPC 回复逻辑
+      }
     });
   }
 }
