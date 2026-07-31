@@ -2,10 +2,10 @@
   "id": "twitter-x-2026",
   "name": "𝕏 (Twitter)",
   "version": "5.7.1",
-  "description": "🐦 完全还原推特 | 修复私信发送 | 完美体验 | iOS 适配",
+  "description": "🐦 完全还原推特 | 完整私信系统 | 完美体验 | iOS 适配",
   "author": "zxinyi404",
   "icon": "𝕏",
-  "entry": "https://raw.githubusercontent.com/zxinyi404-maker/-roche-twitter/main/plugin.js?v=20260801090000",
+  "entry": "https://raw.githubusercontent.com/zxinyi404-maker/-roche-twitter/main/plugin.js?v=20260801100000",
   "hash": "",
   "permissions": [
     "persona:read",

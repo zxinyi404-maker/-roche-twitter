@@ -5985,7 +5985,22 @@ async function shareTweetToConversation(tweet, convId, roche) {
       return;
     }
 
-    const shareMessage = `【分享推文】\n\n@${tweetUser.username}: ${tweet.content}\n\n—— 来自 Twitter`;
+    // 创建推文卡片 HTML（使用特殊标记）
+    const tweetCard = {
+      type: 'tweet_card',
+      tweetId: tweet.id,
+      author: {
+        name: tweetUser.name,
+        username: tweetUser.username,
+        avatar: tweetUser.avatar
+      },
+      content: tweet.content,
+      timestamp: tweet.timestamp,
+      likes: tweet.likes || 0,
+      retweets: tweet.retweets || 0
+    };
+
+    const shareMessage = JSON.stringify(tweetCard);
 
     showToast('正在分享...', 'success');
 
@@ -7153,6 +7168,184 @@ async function showNewMessageDialog(roche) {
     });
   });
 }
+/**
+ * 渲染聊天消息（支持文本和推文卡片）
+ */
+function renderChatMessage(message, isOwn, messageIndex) {
+  const msgUser = twitterData.users[message.from];
+  if (!msgUser) return '';
+
+  // 检查是否是推文卡片
+  let messageContent = '';
+  try {
+    const parsed = JSON.parse(message.content);
+    if (parsed.type === 'tweet_card') {
+      // 渲染推文卡片
+      messageContent = `
+        <div style="
+          border: 1px solid ${isOwn ? 'rgba(255,255,255,0.3)' : '#eff3f4'};
+          border-radius: 12px;
+          padding: 12px;
+          background: ${isOwn ? 'rgba(255,255,255,0.1)' : 'white'};
+          max-width: 100%;
+        ">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+            <img src="${parsed.author.avatar}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;" alt="">
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-weight: 700; font-size: 14px; color: ${isOwn ? 'white' : '#0f1419'};">${parsed.author.name}</div>
+              <div style="font-size: 13px; color: ${isOwn ? 'rgba(255,255,255,0.7)' : '#536471'};">@${parsed.author.username}</div>
+            </div>
+          </div>
+          <div style="font-size: 15px; color: ${isOwn ? 'white' : '#0f1419'}; line-height: 1.5; margin-bottom: 8px;">
+            ${escapeHtml(parsed.content)}
+          </div>
+          <div style="display: flex; gap: 16px; font-size: 13px; color: ${isOwn ? 'rgba(255,255,255,0.7)' : '#536471'}; padding-top: 8px; border-top: 1px solid ${isOwn ? 'rgba(255,255,255,0.2)' : '#eff3f4'};">
+            <div style="display: flex; align-items: center; gap: 4px;">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="${isOwn ? 'rgba(255,255,255,0.7)' : '#536471'}"><path d="M16.697 5.5c-1.222-.06-2.679.51-3.89 2.16l-.805 1.09-.806-1.09C9.984 6.01 8.526 5.44 7.304 5.5c-1.243.07-2.349.78-2.91 1.91-.552 1.12-.633 2.78.479 4.82 1.074 1.97 3.257 4.27 7.129 6.61 3.87-2.34 6.052-4.64 7.126-6.61 1.111-2.04 1.03-3.7.477-4.82-.561-1.13-1.666-1.84-2.908-1.91zm4.187 7.69c-1.351 2.48-4.001 5.12-8.379 7.67l-.503.3-.504-.3c-4.379-2.55-7.029-5.19-8.382-7.67-1.36-2.5-1.41-4.86-.514-6.67.887-1.79 2.647-2.91 4.601-3.01 1.651-.09 3.368.56 4.798 2.01 1.429-1.45 3.146-2.1 4.796-2.01 1.954.1 3.714 1.22 4.601 3.01.896 1.81.846 4.17-.514 6.67z"></path></svg>
+              <span>${parsed.likes}</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 4px;">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="${isOwn ? 'rgba(255,255,255,0.7)' : '#536471'}"><path d="M4.5 3.88l4.432 4.14-1.364 1.46L5.5 7.55V16c0 1.1.896 2 2 2H13v2H7.5c-2.209 0-4-1.79-4-4V7.55L1.432 9.48.068 8.02 4.5 3.88zM16.5 6H11V4h5.5c2.209 0 4 1.79 4 4v8.45l2.068-1.93 1.364 1.46-4.432 4.14-4.432-4.14 1.364-1.46 2.068 1.93V8c0-1.1-.896-2-2-2z"></path></svg>
+              <span>${parsed.retweets}</span>
+            </div>
+          </div>
+          <div style="margin-top: 8px; font-size: 12px; color: ${isOwn ? 'rgba(255,255,255,0.5)' : '#536471'}; text-align: right;">
+            来自 Twitter
+          </div>
+        </div>
+      `;
+    } else {
+      messageContent = escapeHtml(message.content);
+    }
+  } catch (e) {
+    messageContent = escapeHtml(message.content);
+  }
+
+  return `
+    <div class="chat-message ${isOwn ? 'own' : ''}" data-message-index="${messageIndex}" style="display: flex; gap: 8px; margin-bottom: 12px; ${isOwn ? 'flex-direction: row-reverse;' : ''}">
+      <img class="chat-message-avatar" src="${msgUser.avatar}" alt="" style="width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; object-fit: cover;">
+      <div class="chat-message-bubble" style="
+        background: ${isOwn ? '#1d9bf0' : '#eff3f4'};
+        color: ${isOwn ? 'white' : '#0f1419'};
+        padding: 8px 12px;
+        border-radius: 18px;
+        max-width: 70%;
+        word-wrap: break-word;
+        position: relative;
+        cursor: ${isOwn ? 'pointer' : 'default'};
+      ">${messageContent}</div>
+    </div>
+  `;
+}
+
+/**
+ * 显示删除消息确认对话框
+ */
+function showDeleteMessageDialog(userId, messageIndex, roche) {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    animation: fadeIn 0.2s;
+  `;
+
+  const dialog = document.createElement('div');
+  dialog.style.cssText = `
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    width: 90%;
+    max-width: 320px;
+    animation: scaleIn 0.2s;
+  `;
+
+  dialog.innerHTML = `
+    <div style="font-size: 20px; font-weight: 700; color: #0f1419; margin-bottom: 8px;">删除消息</div>
+    <div style="font-size: 15px; color: #536471; margin-bottom: 24px;">此操作无法撤销</div>
+    <div style="display: flex; gap: 12px;">
+      <button class="cancel-btn" style="
+        flex: 1;
+        padding: 12px;
+        border: 1px solid #cfd9de;
+        border-radius: 24px;
+        background: white;
+        color: #0f1419;
+        font-size: 15px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: background 0.2s;
+      ">取消</button>
+      <button class="delete-btn" style="
+        flex: 1;
+        padding: 12px;
+        border: none;
+        border-radius: 24px;
+        background: #f4212e;
+        color: white;
+        font-size: 15px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: background 0.2s;
+      ">删除</button>
+    </div>
+    <style>
+      @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+      @keyframes scaleIn {
+        from { transform: scale(0.9); opacity: 0; }
+        to { transform: scale(1); opacity: 1; }
+      }
+      .cancel-btn:hover {
+        background: #f7f9f9;
+      }
+      .delete-btn:hover {
+        background: #d4070f;
+      }
+    </style>
+  `;
+
+  overlay.appendChild(dialog);
+  document.body.appendChild(overlay);
+
+  // 取消按钮
+  dialog.querySelector('.cancel-btn').addEventListener('click', () => {
+    document.body.removeChild(overlay);
+  });
+
+  // 删除按钮
+  dialog.querySelector('.delete-btn').addEventListener('click', async () => {
+    document.body.removeChild(overlay);
+
+    // 删除消息
+    const conversation = twitterData.conversations[userId];
+    if (conversation && conversation.messages[messageIndex]) {
+      conversation.messages.splice(messageIndex, 1);
+      await saveData(roche);
+
+      // 重新渲染聊天界面
+      openChat(userId, roche);
+      showToast('消息已删除', 'success');
+    }
+  });
+
+  // 点击遮罩层关闭
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) {
+      document.body.removeChild(overlay);
+    }
+  });
+}
+
 function openChat(userId, roche) {
   currentChatUser = userId;
   const user = twitterData.users[userId];
@@ -7184,24 +7377,42 @@ function openChat(userId, roche) {
       </div>
     `;
   } else {
-    chatMessages.innerHTML = conversation.messages.map(msg => {
+    chatMessages.innerHTML = conversation.messages.map((msg, index) => {
       const isOwn = msg.from === currentUser;
-      const msgUser = twitterData.users[msg.from];
-      return `
-        <div class="chat-message ${isOwn ? 'own' : ''}" style="display: flex; gap: 8px; margin-bottom: 12px; ${isOwn ? 'flex-direction: row-reverse;' : ''}">
-          <img class="chat-message-avatar" src="${msgUser.avatar}" alt="" style="width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; object-fit: cover;">
-          <div class="chat-message-bubble" style="
-            background: ${isOwn ? '#1d9bf0' : '#eff3f4'};
-            color: ${isOwn ? 'white' : '#0f1419'};
-            padding: 8px 12px;
-            border-radius: 18px;
-            max-width: 70%;
-            word-wrap: break-word;
-          ">${escapeHtml(msg.content)}</div>
-        </div>
-      `;
+      return renderChatMessage(msg, isOwn, index);
     }).join('');
   }
+
+  // 绑定删除消息事件（只对自己的消息）
+  setTimeout(() => {
+    chatMessages.querySelectorAll('.chat-message.own').forEach(msgEl => {
+      const bubble = msgEl.querySelector('.chat-message-bubble');
+      let pressTimer = null;
+
+      // 长按删除（移动端）
+      bubble.addEventListener('touchstart', (e) => {
+        pressTimer = setTimeout(() => {
+          const messageIndex = parseInt(msgEl.dataset.messageIndex);
+          showDeleteMessageDialog(userId, messageIndex, roche);
+        }, 800);
+      });
+
+      bubble.addEventListener('touchend', () => {
+        if (pressTimer) clearTimeout(pressTimer);
+      });
+
+      bubble.addEventListener('touchmove', () => {
+        if (pressTimer) clearTimeout(pressTimer);
+      });
+
+      // 右键删除（桌面端）
+      bubble.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        const messageIndex = parseInt(msgEl.dataset.messageIndex);
+        showDeleteMessageDialog(userId, messageIndex, roche);
+      });
+    });
+  }, 100);
 
   // 滚动到底部
   setTimeout(() => {
@@ -7249,22 +7460,9 @@ function openChat(userId, roche) {
 
         conversation.messages.push(newMessage);
 
-        // 立即显示消息
-        const currentUserData = twitterData.users[currentUser];
-        const userMessageHtml = `
-          <div class="chat-message own" style="display: flex; gap: 8px; margin-bottom: 12px; flex-direction: row-reverse;">
-            <img class="chat-message-avatar" src="${currentUserData.avatar}" alt="" style="width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; object-fit: cover;">
-            <div class="chat-message-bubble" style="
-              background: #1d9bf0;
-              color: white;
-              padding: 8px 12px;
-              border-radius: 18px;
-              max-width: 70%;
-              word-wrap: break-word;
-            ">${escapeHtml(content)}</div>
-          </div>
-        `;
-        chatMessages.insertAdjacentHTML('beforeend', userMessageHtml);
+        // 立即显示消息（使用 renderChatMessage）
+        const messageHtml = renderChatMessage(newMessage, true);
+        chatMessages.insertAdjacentHTML('beforeend', messageHtml);
         chatMessages.scrollTop = chatMessages.scrollHeight;
 
         // 清空输入框并禁用发送按钮
@@ -7297,22 +7495,9 @@ function openChat(userId, roche) {
 
       conversation.messages.push(newMessage);
 
-      // 立即显示消息
-      const currentUserData = twitterData.users[currentUser];
-      const userMessageHtml = `
-        <div class="chat-message own" style="display: flex; gap: 8px; margin-bottom: 12px; flex-direction: row-reverse;">
-          <img class="chat-message-avatar" src="${currentUserData.avatar}" alt="" style="width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; object-fit: cover;">
-          <div class="chat-message-bubble" style="
-            background: #1d9bf0;
-            color: white;
-            padding: 8px 12px;
-            border-radius: 18px;
-            max-width: 70%;
-            word-wrap: break-word;
-          ">${escapeHtml(content)}</div>
-        </div>
-      `;
-      chatMessages.insertAdjacentHTML('beforeend', userMessageHtml);
+      // 立即显示消息（使用 renderChatMessage）
+      const messageHtml = renderChatMessage(newMessage, true);
+      chatMessages.insertAdjacentHTML('beforeend', messageHtml);
       chatMessages.scrollTop = chatMessages.scrollHeight;
 
       // 清空输入框并禁用发送按钮
