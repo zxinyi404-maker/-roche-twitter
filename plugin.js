@@ -7156,28 +7156,52 @@ async function showNewMessageDialog(roche) {
 function openChat(userId, roche) {
   currentChatUser = userId;
   const user = twitterData.users[userId];
+
+  // 初始化对话（如果不存在）
+  if (!twitterData.conversations[userId]) {
+    twitterData.conversations[userId] = {
+      userId: userId,
+      messages: [],
+      unread: false
+    };
+  }
+
   const conversation = twitterData.conversations[userId];
 
   // 标记为已读
-  if (conversation) {
-    conversation.unread = false;
-  }
+  conversation.unread = false;
 
   // 更新聊天头部
   document.getElementById('chat-user-name').textContent = user.name;
 
   // 渲染消息
   const chatMessages = document.getElementById('chat-messages');
-  chatMessages.innerHTML = conversation.messages.map(msg => {
-    const isOwn = msg.from === currentUser;
-    const msgUser = twitterData.users[msg.from];
-    return `
-      <div class="chat-message ${isOwn ? 'own' : ''}">
-        <img class="chat-message-avatar" src="${msgUser.avatar}" alt="">
-        <div class="chat-message-bubble">${escapeHtml(msg.content)}</div>
+  if (conversation.messages.length === 0) {
+    chatMessages.innerHTML = `
+      <div style="padding: 40px 20px; text-align: center; color: #536471;">
+        <div style="font-size: 15px; margin-bottom: 8px;">开始新的对话</div>
+        <div style="font-size: 13px;">发送消息与 ${user.name} 聊天</div>
       </div>
     `;
-  }).join('');
+  } else {
+    chatMessages.innerHTML = conversation.messages.map(msg => {
+      const isOwn = msg.from === currentUser;
+      const msgUser = twitterData.users[msg.from];
+      return `
+        <div class="chat-message ${isOwn ? 'own' : ''}" style="display: flex; gap: 8px; margin-bottom: 12px; ${isOwn ? 'flex-direction: row-reverse;' : ''}">
+          <img class="chat-message-avatar" src="${msgUser.avatar}" alt="" style="width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; object-fit: cover;">
+          <div class="chat-message-bubble" style="
+            background: ${isOwn ? '#1d9bf0' : '#eff3f4'};
+            color: ${isOwn ? 'white' : '#0f1419'};
+            padding: 8px 12px;
+            border-radius: 18px;
+            max-width: 70%;
+            word-wrap: break-word;
+          ">${escapeHtml(msg.content)}</div>
+        </div>
+      `;
+    }).join('');
+  }
 
   // 滚动到底部
   setTimeout(() => {
@@ -7198,6 +7222,72 @@ function openChat(userId, roche) {
   // 隐藏底部导航栏
   if (bottomNav) {
     bottomNav.style.display = 'none';
+  }
+
+  // 绑定输入框和发送按钮（Twitter 用户私信）
+  const chatInput = document.querySelector('#chat-view .chat-input');
+  const sendBtn = document.querySelector('#chat-view .chat-send-btn');
+
+  if (chatInput && sendBtn) {
+    // 清空之前的事件监听器
+    const newChatInput = chatInput.cloneNode(true);
+    const newSendBtn = sendBtn.cloneNode(true);
+    chatInput.replaceWith(newChatInput);
+    sendBtn.replaceWith(newSendBtn);
+
+    // 禁用回车键发送
+    newChatInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault(); // 阻止回车键
+      }
+    });
+
+    // 输入时启用/禁用发送按钮
+    newChatInput.addEventListener('input', () => {
+      newSendBtn.disabled = !newChatInput.value.trim();
+    });
+
+    // 只有点击发送按钮才发送
+    newSendBtn.addEventListener('click', async () => {
+      const content = newChatInput.value.trim();
+      if (!content) return;
+
+      // 添加用户消息
+      const newMessage = {
+        from: currentUser,
+        content: content,
+        timestamp: Date.now()
+      };
+
+      conversation.messages.push(newMessage);
+
+      // 立即显示消息
+      const currentUserData = twitterData.users[currentUser];
+      const userMessageHtml = `
+        <div class="chat-message own" style="display: flex; gap: 8px; margin-bottom: 12px; flex-direction: row-reverse;">
+          <img class="chat-message-avatar" src="${currentUserData.avatar}" alt="" style="width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; object-fit: cover;">
+          <div class="chat-message-bubble" style="
+            background: #1d9bf0;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 18px;
+            max-width: 70%;
+            word-wrap: break-word;
+          ">${escapeHtml(content)}</div>
+        </div>
+      `;
+      chatMessages.insertAdjacentHTML('beforeend', userMessageHtml);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+
+      // 清空输入框并禁用发送按钮
+      newChatInput.value = '';
+      newSendBtn.disabled = true;
+
+      // 保存数据
+      await saveData(roche);
+
+      // TODO: 如果需要 NPC 自动回复，可以在这里添加逻辑
+    });
   }
 }
 
