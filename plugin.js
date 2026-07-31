@@ -7423,6 +7423,12 @@ async function openChatWithConv(convId, roche) {
   try {
     currentConversationId = convId;
 
+    // 确保 chatHistory 存在（兼容旧数据）
+    if (!twitterData.chatHistory) {
+      twitterData.chatHistory = {};
+      console.log('[Twitter] 初始化 chatHistory 对象');
+    }
+
     // 获取对话信息
     const conversations = await roche.conversation.list();
     console.log('[Twitter] 所有对话:', conversations);
@@ -7833,6 +7839,12 @@ async function sendMessageToConv(roche, content) {
   if (!content || !currentConversationId) return;
 
   try {
+    // 确保 chatHistory 存在（兼容旧数据）
+    if (!twitterData.chatHistory) {
+      twitterData.chatHistory = {};
+      console.log('[Twitter] 初始化 chatHistory 对象');
+    }
+
     const chatMessages = document.getElementById('chat-messages');
 
     // 1. 立即显示用户消息
