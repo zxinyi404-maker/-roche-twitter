@@ -108,7 +108,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '5.6.7',
+    version: '5.6.8',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -4780,12 +4780,45 @@ function showTweetDetail(tweetId, roche) {
         try {
           translationDiv.textContent = '正在翻译...';
           const originalText = tweet.content;
-          const response = await roche.ai.chat([
-            { role: 'user', content: `请将以下内容翻译成英文，只返回翻译结果，不要任何解释：\n\n${originalText}` }
-          ]);
-          translationDiv.textContent = response.content;
+
+          // 优先使用 NPC 发帖 API（如果已配置）
+          if (settings.npcPostApi && settings.npcPostApi.trim()) {
+            try {
+              const response = await fetch(settings.npcPostApi, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  prompt: `请将以下推文翻译成中文，只返回翻译结果，不要任何解释：\n\n${originalText}`
+                })
+              });
+
+              if (response.ok) {
+                const data = await response.json();
+                translationDiv.textContent = data.content || data.text || data.response || '翻译失败';
+              } else {
+                throw new Error('API 请求失败');
+              }
+            } catch (apiError) {
+              console.log('[Twitter] 使用自定义 API 翻译失败，切换到 Roche AI:', apiError);
+              // 如果自定义 API 失败，使用 Roche AI
+              const response = await roche.ai.chat({
+                message: `请将以下推文翻译成中文，只返回翻译结果，不要任何解释：\n\n${originalText}`,
+                stream: false
+              });
+              translationDiv.textContent = response.text || response.message || '翻译失败';
+            }
+          } else {
+            // 使用 Roche AI 翻译
+            const response = await roche.ai.chat({
+              message: `请将以下推文翻译成中文，只返回翻译结果，不要任何解释：\n\n${originalText}`,
+              stream: false
+            });
+            translationDiv.textContent = response.text || response.message || '翻译失败';
+          }
         } catch (error) {
-          console.error('[Twitter] Translation failed:', error);
+          console.error('[Twitter] 翻译失败:', error);
           translationDiv.textContent = '翻译失败，请稍后重试';
         }
       }
@@ -5433,12 +5466,45 @@ function showNewsTweetDetail(newsId, roche) {
         try {
           translationDiv.textContent = '正在翻译...';
           const originalText = newsData.snippet || newsData.title || '';
-          const response = await roche.ai.chat([
-            { role: 'user', content: `请将以下内容翻译成中文，只返回翻译结果，不要任何解释：\n\n${originalText}` }
-          ]);
-          translationDiv.textContent = response.content;
+
+          // 优先使用 NPC 发帖 API（如果已配置）
+          if (settings.npcPostApi && settings.npcPostApi.trim()) {
+            try {
+              const response = await fetch(settings.npcPostApi, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  prompt: `请将以下内容翻译成中文，只返回翻译结果，不要任何解释：\n\n${originalText}`
+                })
+              });
+
+              if (response.ok) {
+                const data = await response.json();
+                translationDiv.textContent = data.content || data.text || data.response || '翻译失败';
+              } else {
+                throw new Error('API 请求失败');
+              }
+            } catch (apiError) {
+              console.log('[Twitter] 使用自定义 API 翻译失败，切换到 Roche AI:', apiError);
+              // 如果自定义 API 失败，使用 Roche AI
+              const response = await roche.ai.chat({
+                message: `请将以下内容翻译成中文，只返回翻译结果，不要任何解释：\n\n${originalText}`,
+                stream: false
+              });
+              translationDiv.textContent = response.text || response.message || '翻译失败';
+            }
+          } else {
+            // 使用 Roche AI 翻译
+            const response = await roche.ai.chat({
+              message: `请将以下内容翻译成中文，只返回翻译结果，不要任何解释：\n\n${originalText}`,
+              stream: false
+            });
+            translationDiv.textContent = response.text || response.message || '翻译失败';
+          }
         } catch (error) {
-          console.error('[Twitter] Translation failed:', error);
+          console.error('[Twitter] 翻译失败:', error);
           translationDiv.textContent = '翻译失败，请稍后重试';
         }
       }
@@ -6093,6 +6159,13 @@ function updateTweetButtons(tweetId) {
  * 切换关注状态
  */
 async function toggleFollow(userId, roche) {
+  // 确保用户存在
+  if (!twitterData.users[userId]) {
+    console.error('[Twitter] 用户不存在:', userId);
+    showToast('用户不存在', 'error');
+    return;
+  }
+
   if (!twitterData.follows[currentUser]) {
     twitterData.follows[currentUser] = [];
   }
@@ -6100,11 +6173,21 @@ async function toggleFollow(userId, roche) {
   const follows = twitterData.follows[currentUser];
   const index = follows.indexOf(userId);
 
+  // 确保用户数据有 followers 和 following 字段
+  if (!twitterData.users[userId].hasOwnProperty('followers')) {
+    twitterData.users[userId].followers = 0;
+  }
+  if (!twitterData.users[currentUser].hasOwnProperty('following')) {
+    twitterData.users[currentUser].following = 0;
+  }
+
   if (index > -1) {
+    // 取消关注
     follows.splice(index, 1);
     twitterData.users[userId].followers--;
     twitterData.users[currentUser].following--;
   } else {
+    // 关注
     follows.push(userId);
     twitterData.users[userId].followers++;
     twitterData.users[currentUser].following++;
