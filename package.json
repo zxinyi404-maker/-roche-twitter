@@ -1,0 +1,24 @@
+{
+  "name": "roche-twitter",
+  "version": "1.0.0",
+  "description": "**完全还原推特的 AI 角色社交网络插件**",
+  "main": "plugin.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zxinyi404-maker/-roche-twitter.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/zxinyi404-maker/-roche-twitter/issues"
+  },
+  "homepage": "https://github.com/zxinyi404-maker/-roche-twitter#readme",
+  "dependencies": {
+    "esprima": "^4.0.1"
+  }
+}
