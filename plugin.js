@@ -7046,67 +7046,16 @@ function showMessageRequestsPage() {
  * 显示新建私信对话框
  */
 async function showNewMessageDialog(roche) {
-  // 获取对话角色列表（char）
-  const conversations = await roche.conversation.list();
+  // 获取所有 Twitter 用户（排除自己）
+  const users = Object.values(twitterData.users).filter(u => u.id !== currentUser);
 
-  // 为每个对话获取最后一条消息、时间和头像
-  const conversationsWithInfo = await Promise.all(conversations.map(async (conv) => {
-    try {
-      // 获取最后一条消息
-      let lastMessage = '开始新对话...';
-      let lastTimestamp = conv.updatedAt || Date.now();
+  if (users.length === 0) {
+    showToast('没有可聊天的用户', 'error');
+    return;
+  }
 
-      try {
-        const history = await roche.memory.getShortTerm({
-          conversationId: conv.id,
-          limit: 10
-        });
-
-        if (history && history.length > 0) {
-          // 取最后一条消息（最新的）
-          const lastMsg = history[history.length - 1];
-          lastMessage = lastMsg.text || lastMsg.content || '开始新对话...';
-          lastTimestamp = lastMsg.timestamp || lastTimestamp;
-
-          // 截断过长的消息
-          if (lastMessage.length > 50) {
-            lastMessage = lastMessage.substring(0, 50) + '...';
-          }
-        }
-      } catch (e) {
-        console.log('[Twitter] 获取对话历史失败:', e);
-      }
-
-      // 获取 Char 头像
-      let avatarUrl = null;
-
-      // 检查 conversation 本身的字段
-      const possibleFields = ['avatar', 'avatarUrl', 'image', 'imageUrl', 'icon', 'picture'];
-      for (const field of possibleFields) {
-        if (conv[field]) {
-          avatarUrl = conv[field];
-          break;
-        }
-      }
-
-      return {
-        ...conv,
-        lastMessage,
-        lastTimestamp,
-        avatarUrl
-      };
-    } catch (e) {
-      return {
-        ...conv,
-        lastMessage: '开始新对话...',
-        lastTimestamp: Date.now(),
-        avatarUrl: null
-      };
-    }
-  }));
-
-  // 按最后消息时间排序（最新的在前面）
-  conversationsWithInfo.sort((a, b) => b.lastTimestamp - a.lastTimestamp);
+  // 按名字排序
+  users.sort((a, b) => a.name.localeCompare(b.name));
 
   // 创建遮罩层
   const overlay = document.createElement('div');
@@ -7149,35 +7098,20 @@ async function showNewMessageDialog(roche) {
     <div style="padding: 16px; border-bottom: 1px solid #eff3f4;">
       <div style="display: flex; align-items: center; background: #eff3f4; border-radius: 24px; padding: 10px 16px; gap: 12px;">
         ${icons.search}
-        <input type="text" placeholder="搜索对话" id="new-message-search" style="flex: 1; background: transparent; border: none; outline: none; font-size: 15px; color: #0f1419;">
+        <input type="text" placeholder="搜索用户" id="new-message-search" style="flex: 1; background: transparent; border: none; outline: none; font-size: 15px; color: #0f1419;">
       </div>
     </div>
 
     <div style="flex: 1; overflow-y: auto;" id="contact-list">
-      ${conversationsWithInfo.map(conv => {
-        const initial = conv.title ? conv.title.charAt(0).toUpperCase() : '?';
-        const avatarGradient = `linear-gradient(135deg, #667eea 0%, #764ba2 100%)`;
-
-        // 如果有真实头像，显示图片；否则显示首字母
-        const avatarHtml = conv.avatarUrl
-          ? `<img src="${conv.avatarUrl}" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; flex-shrink: 0;" alt="${conv.title || '头像'}">`
-          : `<div style="width: 48px; height: 48px; border-radius: 50%; background: ${avatarGradient}; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; font-weight: 700;">${initial}</div>`;
-
-        // 格式化时间
-        const timeAgo = getTimeAgo(conv.lastTimestamp);
-
-        return `
-        <div class="contact-item" data-conv-id="${conv.id}" style="padding: 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: background 0.2s; border-bottom: 1px solid #eff3f4;">
-          ${avatarHtml}
+      ${users.map(user => `
+        <div class="contact-item" data-user-id="${user.id}" style="padding: 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: background 0.2s; border-bottom: 1px solid #eff3f4;">
+          <img src="${user.avatar}" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; flex-shrink: 0;" alt="${user.name}">
           <div style="flex: 1; min-width: 0;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
-              <div style="font-size: 15px; font-weight: 700; color: #0f1419;">${conv.title || '未命名对话'}</div>
-              <div style="font-size: 13px; color: #536471;">${timeAgo}</div>
-            </div>
-            <div style="font-size: 13px; color: #536471; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(conv.lastMessage)}</div>
+            <div style="font-size: 15px; font-weight: 700; color: #0f1419;">${user.name}</div>
+            <div style="font-size: 13px; color: #536471;">@${user.username}</div>
           </div>
         </div>
-      `}).join('')}
+      `).join('')}
     </div>
 
     <style>
@@ -7185,14 +7119,8 @@ async function showNewMessageDialog(roche) {
         from { transform: scale(0.9); opacity: 0; }
         to { transform: scale(1); opacity: 1; }
       }
-
-      .dialog-close-btn:hover {
-        background: rgba(0, 0, 0, 0.05);
-      }
-
-      .contact-item:hover {
-        background: rgba(0, 0, 0, 0.03);
-      }
+      .dialog-close-btn:hover { background: rgba(0, 0, 0, 0.05); }
+      .contact-item:hover { background: rgba(0, 0, 0, 0.03); }
     </style>
   `;
 
@@ -7206,48 +7134,25 @@ async function showNewMessageDialog(roche) {
 
   // 绑定搜索功能
   const searchInput = dialog.querySelector('#new-message-search');
-  const contactList = dialog.querySelector('#contact-list');
-
   searchInput.addEventListener('input', (e) => {
     const query = e.target.value.toLowerCase();
-    const contacts = contactList.querySelectorAll('.contact-item');
-
-    contacts.forEach(contact => {
-      const name = contact.querySelector('div > div:first-child').textContent.toLowerCase();
-      const username = contact.querySelector('div > div:last-child').textContent.toLowerCase();
-
-      if (name.includes(query) || username.includes(query)) {
-        contact.style.display = 'flex';
-      } else {
-        contact.style.display = 'none';
-      }
+    dialog.querySelectorAll('.contact-item').forEach(item => {
+      const userId = item.dataset.userId;
+      const user = twitterData.users[userId];
+      const matches = user.name.toLowerCase().includes(query) || user.username.toLowerCase().includes(query);
+      item.style.display = matches ? 'flex' : 'none';
     });
   });
 
-  // 绑定联系人点击事件
+  // 绑定用户项点击事件
   dialog.querySelectorAll('.contact-item').forEach(item => {
     item.addEventListener('click', () => {
-      const convId = item.dataset.convId;
-
-      // 关闭对话框
+      const userId = item.dataset.userId;
       document.body.removeChild(overlay);
-
-      // 打开聊天界面（使用对话 ID）
-      openChatWithConv(convId, roche);
+      openChat(userId, roche);
     });
   });
-
-  // 点击遮罩层关闭
-  overlay.addEventListener('click', (e) => {
-    if (e.target === overlay) {
-      document.body.removeChild(overlay);
-    }
-  });
 }
-
-/**
- * 打开聊天界面
- */
 function openChat(userId, roche) {
   currentChatUser = userId;
   const user = twitterData.users[userId];
