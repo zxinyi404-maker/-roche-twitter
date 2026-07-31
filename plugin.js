@@ -105,7 +105,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '5.6.0',
+    version: '5.6.1',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -4683,6 +4683,69 @@ function showTweetDetail(tweetId, roche) {
     </div>
   `;
 
+  // 渲染回复列表
+  if (tweet.replies && tweet.replies.length > 0) {
+    const repliesContainer = document.getElementById('detail-replies');
+    repliesContainer.innerHTML = tweet.replies.map(replyId => {
+      const reply = twitterData.tweets.find(t => t.id === replyId);
+      if (!reply) return '';
+
+      const replyUser = twitterData.users[reply.userId];
+      if (!replyUser) return '';
+
+      const isReplyLiked = reply.likes.includes(currentUser);
+      const timeAgo = getTimeAgo(reply.timestamp);
+
+      return `
+        <div class="tweet-item" data-tweet-id="${reply.id}" style="padding: 12px 16px; border-bottom: 1px solid #eff3f4; cursor: pointer; transition: background 0.2s;">
+          <div style="display: flex; gap: 12px;">
+            <img src="${replyUser.avatar}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
+            <div style="flex: 1; min-width: 0;">
+              <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 4px;">
+                <span style="font-weight: 700; font-size: 15px; color: #0f1419;">${escapeHtml(replyUser.name)}</span>
+                <span style="color: #536471; font-size: 15px;">${replyUser.username}</span>
+                <span style="color: #536471; font-size: 15px;">· ${timeAgo}</span>
+              </div>
+              <div style="font-size: 15px; color: #0f1419; line-height: 1.5; margin-bottom: 8px;">${escapeHtml(reply.content)}</div>
+              <div class="tweet-actions" style="display: flex; gap: 60px; color: #536471; font-size: 13px;">
+                <div class="tweet-action" data-action="reply" data-tweet-id="${reply.id}" style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
+                  <span class="action-icon">${icons.comment}</span>
+                  <span>${reply.replies?.length || ''}</span>
+                </div>
+                <div class="tweet-action ${isReplyLiked ? 'liked' : ''}" data-action="like" data-tweet-id="${reply.id}" style="display: flex; align-items: center; gap: 4px; cursor: pointer; color: ${isReplyLiked ? '#f91880' : '#536471'};">
+                  <span class="action-icon">${isReplyLiked ? icons.likeFilled : icons.like}</span>
+                  <span>${reply.likes.length || ''}</span>
+                </div>
+                <div class="tweet-action" data-action="share" data-tweet-id="${reply.id}" style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
+                  <span class="action-icon">${icons.share}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // 绑定回复列表的操作按钮
+    repliesContainer.querySelectorAll('.tweet-action').forEach(el => {
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const action = el.dataset.action;
+        const replyTweetId = parseInt(el.dataset.tweetId);
+        handleTweetAction(action, replyTweetId, roche);
+      });
+    });
+
+    // 绑定回复项的点击事件（可以点击查看回复的详情）
+    repliesContainer.querySelectorAll('.tweet-item').forEach(el => {
+      el.addEventListener('click', (e) => {
+        if (e.target.closest('.tweet-action')) return;
+        const replyTweetId = parseInt(el.dataset.tweetId);
+        showTweetDetail(replyTweetId, roche);
+      });
+    });
+  }
+
   // 更新回复输入框头像
   document.getElementById('detail-reply-avatar').src = currentUserData.avatar;
 
@@ -5661,6 +5724,11 @@ function showReplyDialog(tweet, roche) {
       };
 
       twitterData.tweets.unshift(replyTweet);
+
+      // 确保原推文有 replies 数组
+      if (!tweet.replies) {
+        tweet.replies = [];
+      }
       tweet.replies.push(replyTweet.id);
 
       await saveData(roche);
@@ -5668,8 +5736,20 @@ function showReplyDialog(tweet, roche) {
       showToast('回复成功', 'success');
       document.body.removeChild(overlay);
 
-      // 刷新推文列表
-      renderTweets(roche);
+      // 如果当前在详情页，刷新详情页；否则刷新时间线
+      if (currentView === 'tweetDetail' && currentTweetId === tweet.id) {
+        showTweetDetail(tweet.id, roche);
+      } else {
+        renderTweets(roche);
+      }
+
+      // 触发 NPC 智能回复（异步，不阻塞）
+      setTimeout(() => {
+        npcSmartReply(replyTweet.id, roche).catch(err => {
+          console.error('[NPC 回复] 触发失败:', err);
+        });
+      }, 2000 + Math.random() * 3000);
+
     } catch (error) {
       console.error('回复失败:', error);
       showToast('回复失败', 'error');
@@ -5833,15 +5913,10 @@ async function shareTweetToConversation(tweet, convId, roche) {
 
     const shareMessage = `【分享推文】\n\n@${tweetUser.username}: ${tweet.content}\n\n—— 来自 Twitter`;
 
-    // 使用 roche.ai.chat 发送分享消息（这样会自动保存到记忆）
+    // 使用 roche.ai.chat 发送分享消息
     await roche.ai.chat({
       conversationId: convId,
-      messages: [
-        {
-          role: 'user',
-          content: shareMessage
-        }
-      ],
+      message: shareMessage,
       stream: false
     });
 

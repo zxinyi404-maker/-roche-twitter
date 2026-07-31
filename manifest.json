@@ -1,11 +1,11 @@
 {
   "id": "twitter-x-2026",
   "name": "𝕏 (Twitter)",
-  "version": "5.6.0",
-  "description": "🐦 完全还原推特 | NPC 智能回复 | 完整互动体验 | iOS 适配",
+  "version": "5.6.1",
+  "description": "🐦 完全还原推特 | 修复评论/关注/分享功能 | NPC 智能回复 | iOS 适配",
   "author": "zxinyi404",
   "icon": "𝕏",
-  "entry": "https://raw.githubusercontent.com/zxinyi404-maker/-roche-twitter/main/plugin.js?v=20260731900000",
+  "entry": "https://raw.githubusercontent.com/zxinyi404-maker/-roche-twitter/main/plugin.js?v=20260731950000",
   "hash": "",
   "permissions": [
     "persona:read",
