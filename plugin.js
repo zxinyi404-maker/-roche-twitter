@@ -108,7 +108,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '5.6.9',
+    version: '5.7.0',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -6615,184 +6615,67 @@ async function renderMessages(roche) {
   const messagesEl = document.getElementById('messages-list');
   const welcomeEl = document.getElementById('messages-welcome');
 
-  try {
-    // 从 Roche 加载真实的对话列表
-    const conversations = await roche.conversation.list();
-    console.log('[Twitter] 加载的对话列表:', conversations);
+  // 显示 Twitter 内部对话（用户之间的私信）
+  const conversations = Object.values(twitterData.conversations);
 
-    if (!conversations || conversations.length === 0) {
-      // 显示欢迎界面
-      if (welcomeEl) welcomeEl.style.display = 'block';
-      if (messagesEl) messagesEl.style.display = 'none';
-      return;
-    }
-
-    // 隐藏欢迎界面，显示对话列表
-    if (welcomeEl) welcomeEl.style.display = 'none';
-    if (messagesEl) messagesEl.style.display = 'block';
-
-    // 为每个对话获取最后一条消息和头像
-    const conversationsWithMessages = await Promise.all(conversations.map(async (conv) => {
-      try {
-        // 获取对话历史（使用短期记忆）
-        let lastMessage = '开始新对话...';
-        let lastTimestamp = conv.updatedAt || Date.now();
-
-        try {
-          const history = await roche.memory.getShortTerm({
-            conversationId: conv.id,
-            limit: 10  // 获取最近10条，确保能拿到最新的
-          });
-
-          if (history && history.length > 0) {
-            // 取最后一条消息（最新的）
-            const lastMsg = history[history.length - 1];
-            lastMessage = lastMsg.text || lastMsg.content || '开始新对话...';
-            lastTimestamp = lastMsg.timestamp || lastTimestamp;
-          }
-        } catch (e) {
-          console.log('[Twitter] 获取对话历史失败:', e);
-          // 保持默认值
-        }
-
-        // 获取 Char 头像
-        let avatarUrl = null;
-
-        // 1. 尝试通过 character API 获取
-        if (conv.id) {
-          try {
-            const character = await roche.character.get(conv.id);
-            if (character?.avatar) {
-              avatarUrl = character.avatar;
-            }
-          } catch (e) {
-            console.log('[Twitter] character API 调用失败:', e);
-          }
-        }
-
-        // 2. 如果还没有头像，检查 conversation 本身的字段
-        if (!avatarUrl) {
-          const possibleFields = ['avatar', 'avatarUrl', 'image', 'imageUrl', 'icon', 'picture'];
-          for (const field of possibleFields) {
-            if (conv[field]) {
-              avatarUrl = conv[field];
-              break;
-            }
-          }
-        }
-
-        return {
-          ...conv,
-          lastMessage,
-          lastTimestamp,
-          avatarUrl,
-          unread: false // 可以后续添加未读逻辑
-        };
-      } catch (e) {
-        console.error('[Twitter] 处理对话失败:', e);
-        return null;
-      }
-    }));
-
-    // 过滤掉 null 值（没有消息记录的对话）
-    const validConversations = conversationsWithMessages.filter(conv => conv !== null);
-
-    // 如果没有有效对话，显示欢迎界面
-    if (validConversations.length === 0) {
-      if (welcomeEl) welcomeEl.style.display = 'block';
-      if (messagesEl) messagesEl.style.display = 'none';
-      return;
-    }
-
-    // 按时间排序
-    validConversations.sort((a, b) => b.lastTimestamp - a.lastTimestamp);
-
-    // 渲染对话列表
-    messagesEl.innerHTML = validConversations.map(conv => {
-      // 头像处理
-      const initial = conv.title ? conv.title.charAt(0).toUpperCase() : '?';
-      const avatarGradient = `linear-gradient(135deg, #667eea 0%, #764ba2 100%)`;
-
-      // 如果有真实头像，显示图片；否则显示首字母
-      const avatarHtml = conv.avatarUrl
-        ? `<img src="${conv.avatarUrl}" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; flex-shrink: 0;" alt="${conv.title || '头像'}">`
-        : `<div style="width: 48px; height: 48px; border-radius: 50%; background: ${avatarGradient}; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; font-weight: 700; flex-shrink: 0;">${initial}</div>`;
-
-      return `
-        <div class="message-item-wrapper" style="position: relative;" data-conv-id="${conv.id}">
-          <div class="message-item" data-conv-id="${conv.id}" style="padding: 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: background 0.2s; border-bottom: 1px solid #eff3f4; background: white;">
-            ${avatarHtml}
-            <div class="message-info" style="flex: 1; min-width: 0;">
-              <div class="message-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                <div class="message-name" style="font-size: 15px; font-weight: 700; color: #0f1419;">${conv.title || '未命名对话'}</div>
-                <div class="message-time" style="font-size: 13px; color: #536471;">${getTimeAgo(conv.lastTimestamp)}</div>
-              </div>
-              <div class="message-preview" style="font-size: 15px; color: #536471; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(conv.lastMessage.substring(0, 80))}</div>
-            </div>
-            ${conv.unread ? '<div class="message-unread-dot" style="width: 8px; height: 8px; border-radius: 50%; background: #1d9bf0; flex-shrink: 0;"></div>' : ''}
-          </div>
-        </div>
-      `;
-    }).join('');
-
-    // 绑定点击事件
-    messagesEl.querySelectorAll('.message-item').forEach(item => {
-      item.addEventListener('click', () => {
-        const convId = item.dataset.convId;
-        openChatWithConv(convId, roche);
-      });
-    });
-
-    // 添加长按删除功能
-    messagesEl.querySelectorAll('.message-item-wrapper').forEach(wrapper => {
-      const messageItem = wrapper.querySelector('.message-item');
-      let pressTimer = null;
-      let longPressTriggered = false;
-
-      // 触摸开始
-      messageItem.addEventListener('touchstart', (e) => {
-        longPressTriggered = false;
-        pressTimer = setTimeout(() => {
-          longPressTriggered = true;
-          // 长按触发删除确认
-          const convId = wrapper.dataset.convId;
-          showDeleteConversationDialog(roche, convId);
-        }, 800); // 长按 800ms
-      });
-
-      // 触摸结束
-      messageItem.addEventListener('touchend', () => {
-        if (pressTimer) {
-          clearTimeout(pressTimer);
-        }
-      });
-
-      // 触摸移动时取消长按
-      messageItem.addEventListener('touchmove', () => {
-        if (pressTimer) {
-          clearTimeout(pressTimer);
-        }
-      });
-    });
-
-    // 添加悬停效果
-    const style = document.createElement('style');
-    style.textContent = `
-      .message-item:hover {
-        background: rgba(0, 0, 0, 0.03);
-      }
-    `;
-    if (!document.getElementById('message-item-styles')) {
-      style.id = 'message-item-styles';
-      document.head.appendChild(style);
-    }
-
-  } catch (error) {
-    console.error('加载私信列表失败:', error);
+  if (!conversations || conversations.length === 0) {
     // 显示欢迎界面
     if (welcomeEl) welcomeEl.style.display = 'block';
     if (messagesEl) messagesEl.style.display = 'none';
+    return;
   }
+
+  // 隐藏欢迎界面，显示对话列表
+  if (welcomeEl) welcomeEl.style.display = 'none';
+  if (messagesEl) messagesEl.style.display = 'block';
+
+  // 按最后消息时间排序
+  conversations.sort((a, b) => {
+    const aLast = a.messages && a.messages.length > 0
+      ? a.messages[a.messages.length - 1].timestamp
+      : 0;
+    const bLast = b.messages && b.messages.length > 0
+      ? b.messages[b.messages.length - 1].timestamp
+      : 0;
+    return bLast - aLast;
+  });
+
+  // 渲染对话列表
+  messagesEl.innerHTML = conversations.map(conv => {
+    const user = twitterData.users[conv.userId];
+    if (!user) return '';
+
+    const lastMsg = conv.messages && conv.messages.length > 0
+      ? conv.messages[conv.messages.length - 1]
+      : null;
+
+    const lastMessage = lastMsg ? lastMsg.content : '开始新对话...';
+    const lastTimestamp = lastMsg ? lastMsg.timestamp : Date.now();
+
+    return `
+      <div class="message-item-wrapper" data-user-id="${user.id}">
+        <div class="message-item" data-user-id="${user.id}">
+          <img class="message-avatar" src="${user.avatar}" alt="">
+          <div class="message-info">
+            <div class="message-header">
+              <div class="message-name">${user.name}</div>
+              <div class="message-time">${getTimeAgo(lastTimestamp)}</div>
+            </div>
+            <div class="message-preview">${escapeHtml(lastMessage)}</div>
+          </div>
+          ${conv.unread ? '<div class="message-unread-dot"></div>' : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // 绑定点击事件 - 打开 Twitter 用户私信
+  messagesEl.querySelectorAll('.message-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const userId = item.dataset.userId;
+      openChat(userId, roche);
+    });
+  });
 }
 
 /**
