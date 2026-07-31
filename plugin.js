@@ -5939,9 +5939,6 @@ async function shareTweetToConversation(tweet, convId, roche) {
     showToast('分享失败: ' + error.message, 'error');
   }
 }
-    showToast('分享失败: ' + error.message, 'error');
-  }
-}
 
 /**
  * 处理推文操作
