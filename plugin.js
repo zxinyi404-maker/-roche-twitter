@@ -105,7 +105,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '5.6.4',
+    version: '5.6.5',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -5913,25 +5913,29 @@ async function shareTweetToConversation(tweet, convId, roche) {
 
     const shareMessage = `【分享推文】\n\n@${tweetUser.username}: ${tweet.content}\n\n—— 来自 Twitter`;
 
-    // 使用 roche.ai.chat 发送分享消息
-    await roche.ai.chat({
-      conversationId: convId,
-      message: shareMessage,
-      stream: false
-    });
+    showToast('正在分享...', 'success');
+
+    // 先切换到私信页面并打开对话
+    switchView('messages');
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    // 打开聊天界面
+    await openChatWithConv(convId, roche);
+    await new Promise(resolve => setTimeout(resolve, 200));
+
+    // 设置当前对话 ID，以便 sendMessageToConv 使用
+    currentConversationId = convId;
+
+    // 使用 sendMessageToConv 发送消息（会显示在界面上并获取 AI 回复）
+    await sendMessageToConv(roche, shareMessage);
 
     showToast('已分享到私信', 'success');
 
-    // 切换到私信页面并打开对话
-    setTimeout(() => {
-      switchView('messages');
-      // 加载消息列表后打开对话
-      setTimeout(() => {
-        openChatWithConv(roche, convId);
-      }, 100);
-    }, 300);
   } catch (error) {
     console.error('分享失败:', error);
+    showToast('分享失败: ' + error.message, 'error');
+  }
+}
     showToast('分享失败: ' + error.message, 'error');
   }
 }
