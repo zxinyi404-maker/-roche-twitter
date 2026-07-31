@@ -41,7 +41,10 @@ let twitterData = {
   lastNPCCleanup: Date.now(), // 上次清理时间
   lastNPCGeneration: Date.now(), // 上次生成时间
   lastReplyCheck: Date.now(), // 上次检查回复的时间
-  npcReplyCounts: {}          // NPC 每日回复计数 { npcId: { date: '2026-07-31', count: 3 } }
+  npcReplyCounts: {},         // NPC 每日回复计数 { npcId: { date: '2026-07-31', count: 3 } }
+
+  // 聊天历史（Roche Char 对话）
+  chatHistory: {}             // 聊天历史 { conversationId: [ { from: 'user'|'ai', content, timestamp, avatar } ] }
 };
 
 // 插件设置
@@ -105,7 +108,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '5.6.5',
+    version: '5.6.6',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -7377,16 +7380,45 @@ async function openChatWithConv(convId, roche) {
     // 更新聊天头部
     document.getElementById('chat-user-name').textContent = conv.title || '未命名对话';
 
-    // 清空聊天界面（不显示短期记忆）
+    // 加载并显示聊天历史
     const chatMessages = document.getElementById('chat-messages');
-    chatMessages.innerHTML = `
-      <div style="padding: 40px 20px; text-align: center; color: #536471;">
-        <div style="font-size: 15px; margin-bottom: 8px;">开始新的对话</div>
-        <div style="font-size: 13px;">历史消息不会显示在此处</div>
-      </div>
-    `;
 
-    console.log('[Twitter] 聊天界面已清空，准备开始新对话');
+    // 初始化该对话的历史记录
+    if (!twitterData.chatHistory[convId]) {
+      twitterData.chatHistory[convId] = [];
+    }
+
+    const history = twitterData.chatHistory[convId];
+
+    if (history.length === 0) {
+      // 没有历史消息
+      chatMessages.innerHTML = `
+        <div style="padding: 40px 20px; text-align: center; color: #536471;">
+          <div style="font-size: 15px; margin-bottom: 8px;">开始新的对话</div>
+          <div style="font-size: 13px;">发送消息与 ${conv.title || 'AI'} 聊天</div>
+        </div>
+      `;
+    } else {
+      // 渲染历史消息
+      chatMessages.innerHTML = history.map(msg => {
+        const isOwn = msg.from === 'user';
+        return `
+          <div class="chat-message ${isOwn ? 'own' : ''}" style="display: flex; gap: 8px; margin-bottom: 12px; ${isOwn ? 'flex-direction: row-reverse;' : ''}">
+            <img class="chat-message-avatar" src="${msg.avatar}" alt="" style="width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; object-fit: cover;">
+            <div class="chat-message-bubble" style="
+              background: ${isOwn ? '#1d9bf0' : '#eff3f4'};
+              color: ${isOwn ? 'white' : '#0f1419'};
+              padding: 8px 12px;
+              border-radius: 18px;
+              max-width: 70%;
+              word-wrap: break-word;
+            ">${escapeHtml(msg.content)}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    console.log('[Twitter] 加载了', history.length, '条历史消息');
 
     // 滚动到底部
     setTimeout(() => {
@@ -7738,6 +7770,19 @@ async function sendMessageToConv(roche, content) {
     chatMessages.insertAdjacentHTML('beforeend', userMessageHtml);
     chatMessages.scrollTop = chatMessages.scrollHeight;
 
+    // 初始化该对话的历史记录
+    if (!twitterData.chatHistory[currentConversationId]) {
+      twitterData.chatHistory[currentConversationId] = [];
+    }
+
+    // 保存用户消息到历史
+    twitterData.chatHistory[currentConversationId].push({
+      from: 'user',
+      content: content,
+      timestamp: Date.now(),
+      avatar: userAvatar
+    });
+
     // 2. 调用 Roche AI API（Roche 会自动处理记忆和上下文）
     console.log('[Twitter] 调用 roche.ai.chat');
     const response = await roche.ai.chat({
@@ -7800,7 +7845,18 @@ async function sendMessageToConv(roche, content) {
       `;
       chatMessages.insertAdjacentHTML('beforeend', aiMessageHtml);
       chatMessages.scrollTop = chatMessages.scrollHeight;
+
+      // 保存 AI 消息到历史（每句都保存）
+      twitterData.chatHistory[currentConversationId].push({
+        from: 'ai',
+        content: sentence,
+        timestamp: Date.now(),
+        avatar: charAvatar
+      });
     }
+
+    // 保存到 localStorage
+    await saveData(roche);
 
     console.log('[Twitter] 消息发送完成，AI 分句回复完毕');
 
