@@ -19,7 +19,13 @@ const NPC_CONFIG = {
   postIntervalMin: 2,        // 最小发帖间隔（分钟）- 改为 2 分钟
   postIntervalMax: 15,       // 最大发帖间隔（分钟）- 改为 15 分钟
   interestDecayRate: 0.95,   // 兴趣度每天衰减率
-  minInterestForRecommend: 0.3  // 推荐的最小兴趣度
+  minInterestForRecommend: 0.3,  // 推荐的最小兴趣度
+  // NPC 智能回复配置
+  enableAutoReply: true,     // 启用 NPC 自动回复
+  replyProbability: 0.3,     // 基础回复概率（30%）
+  maxRepliesPerNPCDaily: 5,  // 每个 NPC 每天最多回复次数
+  minInterestForReply: 0.4,  // 回复的最小兴趣度阈值
+  replyCheckInterval: 3      // 检查新推文的间隔（分钟）
 };
 
 // 初始化数据结构
@@ -33,7 +39,9 @@ let twitterData = {
   npcs: {},                  // NPC 数据 { npcId: { ...persona, lastPostTime, postCount, ... } }
   npcInterests: {},          // 用户对 NPC 的兴趣度 { userId: { npcId: score } }
   lastNPCCleanup: Date.now(), // 上次清理时间
-  lastNPCGeneration: Date.now() // 上次生成时间
+  lastNPCGeneration: Date.now(), // 上次生成时间
+  lastReplyCheck: Date.now(), // 上次检查回复的时间
+  npcReplyCounts: {}          // NPC 每日回复计数 { npcId: { date: '2026-07-31', count: 3 } }
 };
 
 // 插件设置
@@ -97,7 +105,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '5.5.0',
+    version: '5.6.0',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -3222,6 +3230,16 @@ function renderUI(container, roche) {
               <span class="toggle-slider"></span>
             </label>
           </div>
+          <div class="setting-item setting-toggle">
+            <div class="setting-info">
+              <div class="setting-label">启用智能回复</div>
+              <div class="setting-description">NPC 会自动回复你的推文</div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggle-npc-reply" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
           <div class="setting-item" id="setting-npc-count">
             <div class="setting-info">
               <div class="setting-label">NPC 数量</div>
@@ -4195,6 +4213,13 @@ async function postTweet(roche, content) {
   renderTweets(roche);
 
   showToast('推文已发布！', 'success');
+
+  // 触发 NPC 智能回复（异步，不阻塞）
+  setTimeout(() => {
+    npcSmartReply(tweet.id, roche).catch(err => {
+      console.error('[NPC 回复] 触发失败:', err);
+    });
+  }, 2000 + Math.random() * 3000); // 2-5秒后随机触发，模拟真实延迟
 }
 
 /**
@@ -8531,6 +8556,21 @@ function showSettings(roche) {
     });
   }
 
+  // 绑定 NPC 智能回复开关
+  const toggleNPCReply = document.getElementById('toggle-npc-reply');
+  if (toggleNPCReply) {
+    toggleNPCReply.checked = NPC_CONFIG.enableAutoReply !== false; // 默认开启
+    toggleNPCReply.replaceWith(toggleNPCReply.cloneNode(true));
+    document.getElementById('toggle-npc-reply').addEventListener('change', async (e) => {
+      NPC_CONFIG.enableAutoReply = e.target.checked;
+      await saveSettings(roche);
+      showToast(NPC_CONFIG.enableAutoReply ? '已启用 NPC 智能回复' : '已禁用 NPC 智能回复', 'success');
+      if (NPC_CONFIG.enableAutoReply && settings.enableNPC) {
+        startNPCReplySystem(roche);
+      }
+    });
+  }
+
   // 绑定 NPC 数量设置
   const settingNPCCount = document.getElementById('setting-npc-count');
   if (settingNPCCount) {
@@ -9594,6 +9634,261 @@ async function sendNPCPostNotification(npcId, content, tweetId, roche) {
 }
 
 /**
+ * NPC 智能回复用户推文
+ * 根据兴趣度和推文内容决定是否回复
+ */
+async function npcSmartReply(tweetId, roche) {
+  if (!settings.enableNPC || !NPC_CONFIG.enableAutoReply) return;
+
+  const tweet = twitterData.tweets.find(t => t.id === tweetId);
+  if (!tweet) return;
+
+  // 只回复真实用户的推文，不回复 NPC 的推文
+  if (twitterData.npcs[tweet.userId]) return;
+
+  // 不回复回复（避免无限循环）
+  if (tweet.replyTo) return;
+
+  const userId = tweet.userId;
+  const userInterests = twitterData.npcInterests[userId] || {};
+
+  // 获取所有对该用户有兴趣的 NPC
+  const interestedNPCs = Object.entries(userInterests)
+    .filter(([npcId, interest]) => {
+      const npc = twitterData.npcs[npcId];
+      if (!npc) return false;
+
+      // 兴趣度必须达到阈值
+      if (interest < NPC_CONFIG.minInterestForReply) return false;
+
+      // 检查 NPC 今日回复次数
+      const todayStr = new Date().toISOString().split('T')[0];
+      const replyCount = twitterData.npcReplyCounts[npcId];
+
+      if (replyCount && replyCount.date === todayStr) {
+        if (replyCount.count >= NPC_CONFIG.maxRepliesPerNPCDaily) {
+          return false; // 今日回复次数已达上限
+        }
+      }
+
+      return true;
+    })
+    .map(([npcId, interest]) => ({ npcId, interest }))
+    .sort((a, b) => b.interest - a.interest); // 按兴趣度排序
+
+  if (interestedNPCs.length === 0) return;
+
+  // 随机选择 1-2 个 NPC 回复（基于概率）
+  const repliers = [];
+  for (const { npcId, interest } of interestedNPCs) {
+    // 兴趣度越高，回复概率越大
+    const replyChance = NPC_CONFIG.replyProbability * (interest / NPC_CONFIG.minInterestForReply);
+
+    if (Math.random() < replyChance) {
+      repliers.push(npcId);
+      if (repliers.length >= 2) break; // 最多 2 个 NPC 回复
+    }
+  }
+
+  // 执行回复
+  for (const npcId of repliers) {
+    try {
+      await generateNPCReply(npcId, tweet, roche);
+
+      // 更新回复计数
+      const todayStr = new Date().toISOString().split('T')[0];
+      if (!twitterData.npcReplyCounts[npcId] || twitterData.npcReplyCounts[npcId].date !== todayStr) {
+        twitterData.npcReplyCounts[npcId] = { date: todayStr, count: 0 };
+      }
+      twitterData.npcReplyCounts[npcId].count++;
+
+      console.log('[NPC 回复] NPC', npcId, '回复了推文', tweetId);
+    } catch (error) {
+      console.error('[NPC 回复] 生成回复失败:', error);
+    }
+  }
+
+  await saveData(roche);
+}
+
+/**
+ * 生成 NPC 回复内容
+ */
+async function generateNPCReply(npcId, originalTweet, roche) {
+  const npc = twitterData.npcs[npcId];
+  if (!npc) return;
+
+  const originalUser = twitterData.users[originalTweet.userId];
+
+  try {
+    let replyContent = '';
+
+    // 优先使用自定义后端 API
+    if (settings.npcBackendAPI) {
+      const response = await fetch(settings.npcBackendAPI, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'reply',
+          npcId: npcId,
+          persona: {
+            name: npc.name,
+            bio: npc.bio,
+            personality: npc.personality,
+            occupation: npc.occupation,
+            interests: npc.interests,
+            talkStyle: npc.talkStyle
+          },
+          context: {
+            originalTweet: originalTweet.content,
+            originalAuthor: originalUser.name,
+            platform: 'twitter'
+          }
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        replyContent = data.content || '';
+      }
+    }
+
+    // 使用通用 API 配置
+    if (!replyContent && settings.apiConfig.url && settings.apiConfig.apiKey) {
+      const prompt = `你是 ${npc.name}，${npc.bio}。
+性格：${npc.personality}
+职业：${npc.occupation}
+兴趣：${npc.interests.join('、')}
+说话风格：${npc.talkStyle}
+
+${originalUser.name} 发了一条推文："${originalTweet.content}"
+
+请以你的角色口吻回复这条推文（不超过280字）。回复要：
+- 符合你的人设和说话风格
+- 自然、友好、有建设性
+- 可以表达赞同、提问、分享观点或补充信息
+- 不要重复原推文内容
+
+只返回回复内容，不要有其他说明。`;
+
+      const response = await fetch(settings.apiConfig.url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${settings.apiConfig.apiKey}`
+        },
+        body: JSON.stringify({
+          model: settings.apiConfig.model,
+          messages: [{ role: 'user', content: prompt }],
+          temperature: settings.apiConfig.temperature || 0.8,
+          max_tokens: 200
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        replyContent = data.choices?.[0]?.message?.content ||
+                      data.choices?.[0]?.text ||
+                      data.content ||
+                      data.response || '';
+      }
+    }
+
+    if (!replyContent) {
+      console.error('[NPC 回复] 未配置 API 或生成失败');
+      return;
+    }
+
+    // 创建回复推文
+    const reply = {
+      id: twitterData.nextTweetId++,
+      userId: npcId,
+      content: replyContent.trim(),
+      timestamp: Date.now(),
+      likes: [],
+      retweets: [],
+      replies: [],
+      replyTo: originalTweet.id,
+      isNPC: true
+    };
+
+    twitterData.tweets.unshift(reply);
+
+    // 将回复添加到原推文的回复列表
+    if (!originalTweet.replies) {
+      originalTweet.replies = [];
+    }
+    originalTweet.replies.push(reply.id);
+
+    // 更新 NPC 统计
+    twitterData.npcs[npcId].lastPostTime = Date.now();
+    twitterData.npcs[npcId].postCount++;
+
+    console.log('[NPC 回复] 生成成功:', twitterData.users[npcId].name, '→', replyContent.substring(0, 30));
+
+    // 发送通知给原推文作者
+    await sendNPCReplyNotification(npcId, originalTweet, reply, roche);
+
+  } catch (error) {
+    console.error('[NPC 回复] 生成失败:', error);
+    throw error;
+  }
+}
+
+/**
+ * 发送 NPC 回复通知
+ */
+async function sendNPCReplyNotification(npcId, originalTweet, reply, roche) {
+  try {
+    const npcUser = twitterData.users[npcId];
+    if (!npcUser) return;
+
+    // 使用 Roche 的通知系统
+    if (roche.notification?.send) {
+      await roche.notification.send({
+        title: `${npcUser.name} 回复了你的推文`,
+        body: reply.content.substring(0, 100) + (reply.content.length > 100 ? '...' : ''),
+        icon: npcUser.avatar,
+        data: {
+          type: 'npc_reply',
+          npcId: npcId,
+          tweetId: reply.id,
+          originalTweetId: originalTweet.id,
+          pluginId: PLUGIN_ID
+        },
+        actions: [
+          { action: 'view', title: '查看' },
+          { action: 'dismiss', title: '忽略' }
+        ]
+      });
+    }
+
+    // 添加到插件内的通知列表
+    if (!twitterData.notifications) {
+      twitterData.notifications = [];
+    }
+
+    twitterData.notifications.unshift({
+      id: Date.now(),
+      type: 'npc_reply',
+      userId: npcId,
+      tweetId: reply.id,
+      originalTweetId: originalTweet.id,
+      timestamp: Date.now(),
+      read: false
+    });
+
+    // 限制通知数量
+    if (twitterData.notifications.length > 100) {
+      twitterData.notifications = twitterData.notifications.slice(0, 100);
+    }
+
+  } catch (error) {
+    console.error('[通知] 发送 NPC 回复通知失败:', error);
+  }
+}
+
+/**
  * 更新用户对 NPC 的兴趣度
  */
 function updateNPCInterest(userId, npcId, action) {
@@ -9833,6 +10128,67 @@ function startNPCPostingSystem(roche) {
 }
 
 /**
+ * 启动 NPC 智能回复系统
+ */
+function startNPCReplySystem(roche) {
+  if (!settings.enableNPC || !NPC_CONFIG.enableAutoReply) {
+    console.log('[NPC 回复] NPC 智能回复系统已禁用');
+    return;
+  }
+
+  console.log('[NPC 回复] 启动 NPC 智能回复系统');
+
+  // 定期检查是否有新推文需要回复
+  setInterval(async () => {
+    try {
+      const now = Date.now();
+      const checkInterval = NPC_CONFIG.replyCheckInterval * 60 * 1000; // 转换为毫秒
+
+      // 获取最近一段时间的用户推文（非 NPC、非回复）
+      const recentTweets = twitterData.tweets.filter(tweet => {
+        // 只检查真实用户的推文
+        if (twitterData.npcs[tweet.userId]) return false;
+
+        // 不回复回复
+        if (tweet.replyTo) return false;
+
+        // 只检查最近发布的推文
+        const tweetAge = now - tweet.timestamp;
+        if (tweetAge > checkInterval * 2) return false; // 检查最近两个周期的推文
+
+        // 检查是否已经有 NPC 回复过
+        const hasNPCReply = tweet.replies && tweet.replies.some(replyId => {
+          const reply = twitterData.tweets.find(t => t.id === replyId);
+          return reply && twitterData.npcs[reply.userId];
+        });
+
+        // 如果已经有回复，降低再次回复的概率
+        if (hasNPCReply && Math.random() > 0.2) return false;
+
+        return true;
+      });
+
+      // 为每条推文尝试触发 NPC 回复
+      for (const tweet of recentTweets) {
+        // 随机延迟，避免所有回复同时触发
+        await new Promise(resolve => setTimeout(resolve, Math.random() * 2000));
+
+        try {
+          await npcSmartReply(tweet.id, roche);
+        } catch (error) {
+          console.error('[NPC 回复] 回复推文失败:', tweet.id, error);
+        }
+      }
+
+    } catch (error) {
+      console.error('[NPC 回复] 检查系统出错:', error);
+    }
+  }, NPC_CONFIG.replyCheckInterval * 60 * 1000); // 定期检查
+
+  console.log('[NPC 回复] 智能回复系统已启动，检查间隔:', NPC_CONFIG.replyCheckInterval, '分钟');
+}
+
+/**
  * 初始化 NPC 系统
  */
 async function initNPCSystem(roche) {
@@ -9851,6 +10207,9 @@ async function initNPCSystem(roche) {
 
     // 启动定时发帖
     startNPCPostingSystem(roche);
+
+    // 启动 NPC 智能回复检查系统
+    startNPCReplySystem(roche);
 
     // 每天执行一次清理和生成
     setInterval(async () => {
