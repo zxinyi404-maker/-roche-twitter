@@ -108,7 +108,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '5.6.6',
+    version: '5.6.7',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -168,6 +168,11 @@ async function loadData(roche) {
     }
     if (!twitterData.lastNPCGeneration) {
       twitterData.lastNPCGeneration = Date.now();
+    }
+    // 兼容旧版本数据：添加聊天历史字段
+    if (!twitterData.chatHistory) {
+      twitterData.chatHistory = {};
+      console.log('[Twitter] 初始化 chatHistory 字段');
     }
   }
 }
