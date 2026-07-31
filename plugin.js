@@ -105,7 +105,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '5.6.1',
+    version: '5.6.2',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -7358,59 +7358,16 @@ async function openChatWithConv(convId, roche) {
     // 更新聊天头部
     document.getElementById('chat-user-name').textContent = conv.title || '未命名对话';
 
-    // 获取聊天历史（使用短期记忆 API）
+    // 清空聊天界面（不显示短期记忆）
     const chatMessages = document.getElementById('chat-messages');
+    chatMessages.innerHTML = `
+      <div style="padding: 40px 20px; text-align: center; color: #536471;">
+        <div style="font-size: 15px; margin-bottom: 8px;">开始新的对话</div>
+        <div style="font-size: 13px;">历史消息不会显示在此处</div>
+      </div>
+    `;
 
-    try {
-      const history = await roche.memory.getShortTerm({
-        conversationId: convId,
-        limit: 50
-      });
-
-      console.log('[Twitter] 获取到的聊天历史:', history);
-
-      if (history && history.length > 0) {
-        // 渲染聊天历史
-        const currentUserData = twitterData.users[currentUser];
-        const userAvatar = currentUserData?.avatar || generateAvatar(currentUserData?.name || 'User');
-
-        chatMessages.innerHTML = history.map(msg => {
-          const isOwn = msg.role === 'user' || msg.senderId === currentUser;
-          const avatar = isOwn ? userAvatar : charAvatar;
-          const content = msg.text || msg.content || '';
-
-          return `
-            <div class="chat-message ${isOwn ? 'own' : ''}" style="display: flex; gap: 8px; margin-bottom: 16px; ${isOwn ? 'flex-direction: row-reverse;' : ''}">
-              <img class="chat-message-avatar" src="${avatar}" alt="" style="width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; object-fit: cover;">
-              <div class="chat-message-bubble" style="
-                background: ${isOwn ? '#1d9bf0' : '#eff3f4'};
-                color: ${isOwn ? 'white' : '#0f1419'};
-                padding: 12px 16px;
-                border-radius: 18px;
-                max-width: 70%;
-                word-wrap: break-word;
-              ">${escapeHtml(content)}</div>
-            </div>
-          `;
-        }).join('');
-      } else {
-        // 没有历史消息
-        chatMessages.innerHTML = `
-          <div style="text-align: center; padding: 40px 20px; color: #536471;">
-            <div style="font-size: 15px; margin-bottom: 8px;">开始新对话</div>
-            <div style="font-size: 13px;">发送消息与 ${conv.title || 'AI'} 聊天</div>
-          </div>
-        `;
-      }
-    } catch (error) {
-      console.error('[Twitter] 获取聊天历史失败:', error);
-      chatMessages.innerHTML = `
-        <div style="text-align: center; padding: 40px 20px; color: #536471;">
-          <div style="font-size: 15px; margin-bottom: 8px;">开始新对话</div>
-          <div style="font-size: 13px;">发送消息与 ${conv.title || 'AI'} 聊天</div>
-        </div>
-      `;
-    }
+    console.log('[Twitter] 聊天界面已清空，准备开始新对话');
 
     // 滚动到底部
     setTimeout(() => {
@@ -7762,86 +7719,91 @@ async function sendMessageToConv(roche, content) {
     chatMessages.insertAdjacentHTML('beforeend', userMessageHtml);
     chatMessages.scrollTop = chatMessages.scrollHeight;
 
-    // 2. 获取短期记忆（最近的聊天历史）
-    let messages = [];
+    // 2. 获取短期记忆和长期记忆（只用于发送给 AI，不显示在界面）
+    let contextMessages = [];
 
+    // 获取短期记忆（最近的聊天历史）
     try {
-      const history = await roche.memory.getShortTerm({
+      const shortTerm = await roche.memory.getShortTerm({
         conversationId: currentConversationId,
         limit: 20
       });
 
-      console.log('[Twitter] 获取到的短期记忆:', history);
-
-      if (history && history.length > 0) {
-        messages = history.map(msg => ({
+      if (shortTerm && shortTerm.length > 0) {
+        contextMessages = shortTerm.map(msg => ({
           role: msg.role || (msg.senderId === currentUser ? 'user' : 'assistant'),
           content: msg.text || msg.content || ''
         }));
       }
     } catch (e) {
-      console.log('[Twitter] 获取短期记忆失败，使用空上下文:', e);
+      console.log('[Twitter] 获取短期记忆失败:', e);
     }
 
-    // 3. 添加当前用户消息
-    messages.push({
+    // 获取长期记忆（向量召回）
+    let longTermContext = '';
+    try {
+      const longTerm = await roche.memory.getLongTerm({
+        conversationId: currentConversationId,
+        limit: 5
+      });
+
+      if (longTerm && longTerm.length > 0) {
+        longTermContext = longTerm.map(m => m.text || m.content || '').join('\n');
+        console.log('[Twitter] 长期记忆上下文:', longTermContext);
+      }
+    } catch (e) {
+      console.log('[Twitter] 获取长期记忆失败:', e);
+    }
+
+    // 3. 将长期记忆作为系统消息添加到上下文
+    if (longTermContext) {
+      contextMessages.unshift({
+        role: 'system',
+        content: `相关记忆：\n${longTermContext}`
+      });
+    }
+
+    // 4. 添加当前用户消息
+    contextMessages.push({
       role: 'user',
       content: content
     });
 
-    console.log('[Twitter] 发送给 AI 的完整消息列表:', messages);
-
-    // 4. 获取长期记忆（向量召回测试）
-    try {
-      const longTermMemory = await roche.memory.getLongTerm({
-        conversationId: currentConversationId,
-        limit: 5
-      });
-      console.log('[Twitter] 长期记忆（向量数据）:', longTermMemory);
-    } catch (e) {
-      console.log('[Twitter] 无法访问长期记忆:', e);
-    }
+    console.log('[Twitter] 发送给 AI 的完整上下文（包含短期+长期记忆）:', contextMessages);
 
     // 5. 获取角色信息
     let character = null;
     try {
       character = await roche.character.get(currentConversationId);
-      console.log('[Twitter] 角色信息:', character);
     } catch (e) {
       console.log('[Twitter] 获取角色信息失败:', e);
     }
 
     // 6. 调用 Roche AI API
-    console.log('[Twitter] 开始调用 roche.ai.chat...');
     const response = await roche.ai.chat({
       conversationId: currentConversationId,
-      messages: messages,
+      message: content,  // 只发送当前消息，Roche 会自动处理上下文
       stream: false
     });
 
-    console.log('[Twitter] AI 回复:', response);
+    const aiReplyText = response.text || response.message || response.content || '';
+    console.log('[Twitter] AI 完整回复:', aiReplyText);
 
-    // 7. 显示 AI 回复
+    // 7. 分句发送 AI 回复（像真人一样）
     let charAvatar = null;
 
-    // 使用角色头像
+    // 获取角色头像
     if (character?.avatar) {
       charAvatar = character.avatar;
-    }
-
-    if (!charAvatar) {
-      // 如果没有角色信息，尝试从 conversation 获取
+    } else {
       try {
         const conversations = await roche.conversation.list();
         const conv = conversations.find(c => c.id === currentConversationId);
-        if (conv?.avatar) {
-          charAvatar = conv.avatar;
-        }
+        charAvatar = conv?.avatar || conv?.avatarUrl || conv?.image;
       } catch (e) {}
     }
 
     if (!charAvatar) {
-      // 使用默认头像
       const conversations = await roche.conversation.list();
       const conv = conversations.find(c => c.id === currentConversationId);
       const initial = (conv?.title || '?').charAt(0).toUpperCase();
@@ -7853,28 +7815,83 @@ async function sendMessageToConv(roche, content) {
       `)}`;
     }
 
-    const aiMessageHtml = `
-      <div class="chat-message" style="display: flex; gap: 8px; margin-bottom: 16px;">
-        <img class="chat-message-avatar" src="${charAvatar}" alt="" style="width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; object-fit: cover;">
-        <div class="chat-message-bubble" style="
-          background: #eff3f4;
-          color: #0f1419;
-          padding: 12px 16px;
-          border-radius: 18px;
-          max-width: 70%;
-          word-wrap: break-word;
-        ">${escapeHtml(response.text || response.message || '')}</div>
-      </div>
-    `;
-    chatMessages.insertAdjacentHTML('beforeend', aiMessageHtml);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
+    // 按句子分割 AI 回复
+    const sentences = splitIntoSentences(aiReplyText);
+    console.log('[Twitter] 分割后的句子:', sentences);
 
-    console.log('[Twitter] 消息发送成功，AI 回复:', response.text);
+    // 逐句发送，模拟真人打字
+    for (let i = 0; i < sentences.length; i++) {
+      const sentence = sentences[i];
+      if (!sentence.trim()) continue;
+
+      // 随机延迟（模拟打字速度）
+      const delay = 500 + Math.random() * 1000; // 0.5-1.5秒
+      await new Promise(resolve => setTimeout(resolve, delay));
+
+      const aiMessageHtml = `
+        <div class="chat-message" style="display: flex; gap: 8px; margin-bottom: 16px;">
+          <img class="chat-message-avatar" src="${charAvatar}" alt="" style="width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; object-fit: cover;">
+          <div class="chat-message-bubble" style="
+            background: #eff3f4;
+            color: #0f1419;
+            padding: 12px 16px;
+            border-radius: 18px;
+            max-width: 70%;
+            word-wrap: break-word;
+          ">${escapeHtml(sentence)}</div>
+        </div>
+      `;
+      chatMessages.insertAdjacentHTML('beforeend', aiMessageHtml);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    console.log('[Twitter] 消息发送完成，AI 分句回复完毕');
 
   } catch (error) {
     console.error('[Twitter] 发送消息失败:', error);
     showToast('发送失败: ' + error.message, 'error');
   }
+}
+
+/**
+ * 将文本分割成句子（用于分句发送）
+ */
+function splitIntoSentences(text) {
+  if (!text) return [];
+
+  // 按中文句号、问号、感叹号、英文句号等分割
+  const sentences = text.split(/([。！？\.!\?]+)/);
+
+  // 重新组合句子和标点
+  const result = [];
+  for (let i = 0; i < sentences.length; i += 2) {
+    const sentence = sentences[i];
+    const punctuation = sentences[i + 1] || '';
+    if (sentence.trim()) {
+      result.push((sentence + punctuation).trim());
+    }
+  }
+
+  // 如果没有分割出句子，按换行符分割
+  if (result.length === 0) {
+    return text.split('\n').filter(s => s.trim());
+  }
+
+  // 如果句子太短（小于 5 个字），合并相邻句子
+  const merged = [];
+  let buffer = '';
+  for (const sentence of result) {
+    buffer += sentence;
+    if (buffer.length >= 15 || sentence.match(/[。！？\.!\?]$/)) {
+      merged.push(buffer);
+      buffer = '';
+    }
+  }
+  if (buffer) {
+    merged.push(buffer);
+  }
+
+  return merged.length > 0 ? merged : [text];
 }
 
 /**
