@@ -105,7 +105,7 @@ function showToast(message, type = 'success') {
   window.RochePlugin.register({
     id: PLUGIN_ID,
     name: 'Twitter',
-    version: '5.6.2',
+    version: '5.6.3',
     icon: '𝕏',
     apps: [{
       id: 'twitter-home',
@@ -7074,55 +7074,64 @@ async function showNewMessageDialog(roche) {
   // 获取对话角色列表（char）
   const conversations = await roche.conversation.list();
 
-  // 为每个对话获取记忆摘要和头像
+  // 为每个对话获取最后一条消息、时间和头像
   const conversationsWithInfo = await Promise.all(conversations.map(async (conv) => {
     try {
-      // 获取长期记忆
-      const longTerm = await roche.memory.getLongTerm({ conversationId: conv.id, limit: 5 });
-      const memories = [...(longTerm.facts || []), ...(longTerm.vectors || [])];
-      const memorySummary = memories.length > 0
-        ? (memories[0].summaryText || memories[0].text || '').substring(0, 50)
-        : '暂无记忆';
+      // 获取最后一条消息
+      let lastMessage = '开始新对话...';
+      let lastTimestamp = conv.updatedAt || Date.now();
+
+      try {
+        const history = await roche.memory.getShortTerm({
+          conversationId: conv.id,
+          limit: 10
+        });
+
+        if (history && history.length > 0) {
+          // 取最后一条消息（最新的）
+          const lastMsg = history[history.length - 1];
+          lastMessage = lastMsg.text || lastMsg.content || '开始新对话...';
+          lastTimestamp = lastMsg.timestamp || lastTimestamp;
+
+          // 截断过长的消息
+          if (lastMessage.length > 50) {
+            lastMessage = lastMessage.substring(0, 50) + '...';
+          }
+        }
+      } catch (e) {
+        console.log('[Twitter] 获取对话历史失败:', e);
+      }
 
       // 获取 Char 头像
       let avatarUrl = null;
 
-      // 1. 尝试通过 persona API 获取
-      if (conv.id) {
-        try {
-          const persona = await roche.persona.get(conv.id);
-          if (persona?.avatar) {
-            avatarUrl = persona.avatar;
-          }
-        } catch (e) {
-          // persona API 失败
-        }
-      }
-
-      // 2. 检查 conversation 本身的字段
-      if (!avatarUrl) {
-        const possibleFields = ['avatar', 'avatarUrl', 'image', 'imageUrl', 'icon', 'picture'];
-        for (const field of possibleFields) {
-          if (conv[field]) {
-            avatarUrl = conv[field];
-            break;
-          }
+      // 检查 conversation 本身的字段
+      const possibleFields = ['avatar', 'avatarUrl', 'image', 'imageUrl', 'icon', 'picture'];
+      for (const field of possibleFields) {
+        if (conv[field]) {
+          avatarUrl = conv[field];
+          break;
         }
       }
 
       return {
         ...conv,
-        memorySummary,
+        lastMessage,
+        lastTimestamp,
         avatarUrl
       };
     } catch (e) {
       return {
         ...conv,
-        memorySummary: '暂无记忆',
+        lastMessage: '开始新对话...',
+        lastTimestamp: Date.now(),
         avatarUrl: null
       };
     }
   }));
+
+  // 按最后消息时间排序（最新的在前面）
+  conversationsWithInfo.sort((a, b) => b.lastTimestamp - a.lastTimestamp);
 
   // 创建遮罩层
   const overlay = document.createElement('div');
@@ -7156,7 +7165,7 @@ async function showNewMessageDialog(roche) {
 
   dialog.innerHTML = `
     <div style="padding: 16px; border-bottom: 1px solid #eff3f4; display: flex; align-items: center; justify-content: space-between;">
-      <div style="font-size: 20px; font-weight: 700; color: #0f1419;">新建私信</div>
+      <div style="font-size: 20px; font-weight: 700; color: #0f1419;">选择联系人</div>
       <div class="dialog-close-btn" style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 50%; cursor: pointer; transition: background 0.2s;">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="#0f1419"><path d="M10.59 12L4.54 5.96l1.42-1.42L12 10.59l6.04-6.05 1.42 1.42L13.41 12l6.05 6.04-1.42 1.42L12 13.41l-6.04 6.05-1.42-1.42L10.59 12z"></path></svg>
       </div>
@@ -7179,12 +7188,18 @@ async function showNewMessageDialog(roche) {
           ? `<img src="${conv.avatarUrl}" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; flex-shrink: 0;" alt="${conv.title || '头像'}">`
           : `<div style="width: 48px; height: 48px; border-radius: 50%; background: ${avatarGradient}; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; font-weight: 700;">${initial}</div>`;
 
+        // 格式化时间
+        const timeAgo = getTimeAgo(conv.lastTimestamp);
+
         return `
-        <div class="contact-item" data-conv-id="${conv.id}" style="padding: 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: background 0.2s;">
+        <div class="contact-item" data-conv-id="${conv.id}" style="padding: 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: background 0.2s; border-bottom: 1px solid #eff3f4;">
           ${avatarHtml}
           <div style="flex: 1; min-width: 0;">
-            <div style="font-size: 15px; font-weight: 700; color: #0f1419;">${conv.title || '未命名对话'}</div>
-            <div style="font-size: 13px; color: #536471; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${conv.memorySummary}</div>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+              <div style="font-size: 15px; font-weight: 700; color: #0f1419;">${conv.title || '未命名对话'}</div>
+              <div style="font-size: 13px; color: #536471;">${timeAgo}</div>
+            </div>
+            <div style="font-size: 13px; color: #536471; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(conv.lastMessage)}</div>
           </div>
         </div>
       `}).join('')}
